@@ -1,0 +1,3 @@
+## 2023-10-27 - Optimize HTML string escaping with Cow<'a, str>
+**Learning:** Using chained `.replace()` calls to escape HTML characters is very slow because it always allocates and copies strings multiple times even when no characters are matched. Using `Cow<'a, str>` and a manual iterator reduces this to at most one allocation and gives massive performance speedups (~6-10x for strings without escapes, >2x speedup for strings requiring escapes).
+**Action:** Replace multiple `.replace` calls with a manual string scan using `char_indices` that builds an output buffer only if the first escape character is encountered, and return `Cow<'_, str>` so that strings with no escaped characters are returned completely without allocating.

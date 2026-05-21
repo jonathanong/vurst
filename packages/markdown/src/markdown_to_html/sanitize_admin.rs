@@ -99,16 +99,64 @@ pub fn sanitize_admin_html_with_options(html: &str, opts: &AdminHtmlOptions<'_>)
     render_children(fragment.tree.root(), opts)
 }
 
-fn escape_text(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
+fn escape_text(s: &str) -> Cow<'_, str> {
+    let mut last_idx = 0;
+    let mut out: Option<String> = None;
+
+    for (i, c) in s.char_indices() {
+        let replacement = match c {
+            '&' => "&amp;",
+            '<' => "&lt;",
+            '>' => "&gt;",
+            _ => continue,
+        };
+
+        if out.is_none() {
+            out = Some(String::with_capacity(s.len() + 16));
+        }
+        let out_str = out.as_mut().unwrap();
+
+        out_str.push_str(&s[last_idx..i]);
+        out_str.push_str(replacement);
+        last_idx = i + c.len_utf8();
+    }
+
+    if let Some(mut out_str) = out {
+        out_str.push_str(&s[last_idx..]);
+        Cow::Owned(out_str)
+    } else {
+        Cow::Borrowed(s)
+    }
 }
 
-fn escape_attr_val(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('"', "&quot;")
-        .replace('<', "&lt;")
+fn escape_attr_val(s: &str) -> Cow<'_, str> {
+    let mut last_idx = 0;
+    let mut out: Option<String> = None;
+
+    for (i, c) in s.char_indices() {
+        let replacement = match c {
+            '&' => "&amp;",
+            '"' => "&quot;",
+            '<' => "&lt;",
+            _ => continue,
+        };
+
+        if out.is_none() {
+            out = Some(String::with_capacity(s.len() + 16));
+        }
+        let out_str = out.as_mut().unwrap();
+
+        out_str.push_str(&s[last_idx..i]);
+        out_str.push_str(replacement);
+        last_idx = i + c.len_utf8();
+    }
+
+    if let Some(mut out_str) = out {
+        out_str.push_str(&s[last_idx..]);
+        Cow::Owned(out_str)
+    } else {
+        Cow::Borrowed(s)
+    }
 }
 
 fn render_children(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions<'_>) -> String {
@@ -194,7 +242,7 @@ fn render_element_attrs(
 
 fn render_node(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions<'_>) -> String {
     match node.value() {
-        Node::Text(text) => escape_text(text),
+        Node::Text(text) => escape_text(text).into_owned(),
         Node::Element(elem) => {
             let tag: &str = elem.name.local.as_ref();
 
