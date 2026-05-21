@@ -85,7 +85,10 @@ And an unsafe link: [unsafe](javascript:alert(1)).
 
     assert_eq!(
         result.link_urls,
-        vec!["https://example.com".to_string(), "http://test.com".to_string()]
+        vec![
+            "https://example.com".to_string(),
+            "http://test.com".to_string()
+        ]
     );
     assert_eq!(
         result.image_urls,
