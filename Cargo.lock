@@ -2545,15 +2545,16 @@ name = "vurst"
 version = "0.1.0"
 dependencies = [
  "ammonia",
+ "anyhow",
  "boilerstrip",
  "breadchunks",
  "comrak",
  "data-encoding",
  "ego-tree",
+ "entities",
  "hex",
  "hmac",
  "is-it-slop",
- "markup5ever 0.39.0",
  "ort",
  "regex",
  "scraper",

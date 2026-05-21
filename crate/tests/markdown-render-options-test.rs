@@ -98,6 +98,20 @@ fn admin_external_links_dofollow() {
     assert!(result.contains(r#"target="_blank""#));
 }
 
+#[test]
+fn admin_html_external_links_can_get_nofollow() {
+    let result = render_markdown_to_html_with_options(
+        "<a href=\"https://example.com\">Link</a>",
+        &MarkdownRenderOptions {
+            allow_html: true,
+            nofollow_links: true,
+            ..MarkdownRenderOptions::default()
+        },
+    );
+    assert!(result.contains(r#"rel="nofollow ugc noopener""#));
+    assert!(result.contains(r#"target="_blank""#));
+}
+
 // === Image proxying ===
 
 #[test]
@@ -177,6 +191,17 @@ fn proxy_with_admin_html_images() {
     );
     assert!(result.contains(r#"src="/proxy/"#));
     assert!(!result.contains("example.com/admin.png"));
+
+    let local_result = render_markdown_to_html_with_options(
+        "<img src=\"/images/admin.png\" alt=\"admin\">",
+        &MarkdownRenderOptions {
+            allow_html: true,
+            nofollow_links: false,
+            ..MarkdownRenderOptions::default()
+        },
+    );
+    assert!(local_result.contains(r#"src="/images/admin.png""#));
+    assert!(!local_result.contains("/proxy/"));
 }
 
 // === Default options ===

@@ -1,16 +1,18 @@
 mod helpers;
 mod sanitize_admin;
 
-use comrak::{format_html, parse_document, Arena, Options};
-use scraper::Html;
+use comrak::html::{render_sourcepos, ChildRendering};
+use comrak::nodes::NodeValue;
+use comrak::{create_formatter, parse_document, Arena, Options};
+use std::borrow::Cow;
+use std::fmt::Write as _;
 
 use crate::image_proxy::{
     is_external_http_url, rewrite_image_to_proxy, should_proxy_image,
     DEFAULT_IMAGE_PROXY_URL_PREFIX,
 };
-use crate::serialize_fragment_body;
-use helpers::{collect_urls, set_attr_md, walk_and_sanitize_urls};
-use sanitize_admin::sanitize_admin_html;
+use helpers::{collect_urls, walk_and_sanitize_urls};
+use sanitize_admin::{sanitize_admin_html_with_options, AdminHtmlOptions};
 
 pub struct MarkdownUrlsResult {
     pub link_urls: Vec<String>,
@@ -43,6 +45,113 @@ impl Default for MarkdownRenderOptions {
     }
 }
 
+#[derive(Default)]
+struct MarkdownHtmlFormatOptions {
+    nofollow_links: bool,
+    proxy_images: bool,
+    image_proxy_url_prefix: String,
+    image_proxy_signing_keys: Vec<String>,
+}
+
+impl From<&MarkdownRenderOptions> for MarkdownHtmlFormatOptions {
+    fn from(opts: &MarkdownRenderOptions) -> Self {
+        Self {
+            nofollow_links: opts.nofollow_links,
+            proxy_images: opts.proxy_images,
+            image_proxy_url_prefix: opts.image_proxy_url_prefix.clone(),
+            image_proxy_signing_keys: opts.image_proxy_signing_keys.clone(),
+        }
+    }
+}
+
+fn rendered_image_src<'a>(url: &'a str, opts: &MarkdownHtmlFormatOptions) -> Cow<'a, str> {
+    if opts.proxy_images && should_proxy_image(url, &opts.image_proxy_url_prefix) {
+        Cow::Owned(rewrite_image_to_proxy(
+            url,
+            &opts.image_proxy_url_prefix,
+            &opts.image_proxy_signing_keys,
+        ))
+    } else {
+        Cow::Borrowed(url)
+    }
+}
+
+fn should_render_nested_link(node: &comrak::nodes::AstNode<'_>, opts: &Options) -> bool {
+    if !opts.parse.relaxed_autolinks {
+        return true;
+    }
+
+    match node.parent() {
+        Some(parent) => !matches!(parent.data().value, NodeValue::Link(_)),
+        None => true,
+    }
+}
+
+create_formatter!(MarkdownHtmlFormatter<MarkdownHtmlFormatOptions>, {
+    NodeValue::Link(ref link) => |context, node, entering| {
+        if !should_render_nested_link(node, context.options) {
+            return Ok(ChildRendering::HTML);
+        }
+
+        if entering {
+            context.write_str("<a")?;
+            render_sourcepos(context, node)?;
+            if !link.url.is_empty() {
+                context.write_str(" href=\"")?;
+                context.escape_href(&link.url)?;
+                context.write_str("\"")?;
+            }
+            if !link.title.is_empty() {
+                context.write_str(" title=\"")?;
+                context.escape(&link.title)?;
+                context.write_str("\"")?;
+            }
+            if is_external_http_url(&link.url) {
+                let rel = if context.user.nofollow_links {
+                    "nofollow ugc noopener"
+                } else {
+                    "noopener"
+                };
+                write!(context, " rel=\"{rel}\" target=\"_blank\"")?;
+            }
+            context.write_str(">")?;
+        } else {
+            context.write_str("</a>")?;
+        }
+    },
+    NodeValue::Image(ref image) => |context, node, entering| {
+        if entering {
+            if context.options.render.figure_with_caption {
+                context.write_str("<figure>")?;
+            }
+            context.write_str("<img")?;
+            render_sourcepos(context, node)?;
+            if !image.url.is_empty() {
+                let src = rendered_image_src(&image.url, &context.user);
+                context.write_str(" src=\"")?;
+                context.escape_href(src.as_ref())?;
+                context.write_str("\"")?;
+            }
+            context.write_str(" alt=\"")?;
+            return Ok(ChildRendering::Plain);
+        }
+
+        if !image.title.is_empty() {
+            context.write_str("\" title=\"")?;
+            context.escape(&image.title)?;
+        }
+        context.write_str("\" />")?;
+        if context.options.render.figure_with_caption {
+            if !image.title.is_empty() {
+                context.write_str("<figcaption>")?;
+                context.escape(&image.title)?;
+                context.write_str("</figcaption>")?;
+            }
+            context.write_str("</figure>")?;
+        }
+    },
+});
+
 /// Render markdown to HTML with structured options.
 #[allow(clippy::missing_panics_doc)]
 pub fn render_markdown_to_html_with_options(text: &str, opts: &MarkdownRenderOptions) -> String {
@@ -61,17 +170,24 @@ pub fn render_markdown_to_html_with_options(text: &str, opts: &MarkdownRenderOpt
     walk_and_sanitize_urls(root);
 
     let mut html = String::new();
-    format_html(root, &options, &mut html).expect("BUG: format_html failed");
+    MarkdownHtmlFormatter::format_document(root, &options, &mut html, opts.into())
+        .expect("BUG: format_html failed");
 
-    // If admin HTML is allowed, run the permissive sanitizer
     let html = if opts.allow_html {
-        sanitize_admin_html(&html)
+        sanitize_admin_html_with_options(
+            &html,
+            &AdminHtmlOptions {
+                nofollow_links: opts.nofollow_links,
+                proxy_images: opts.proxy_images,
+                image_proxy_url_prefix: opts.image_proxy_url_prefix.clone(),
+                image_proxy_signing_keys: opts.image_proxy_signing_keys.clone(),
+            },
+        )
     } else {
         html
     };
 
-    let result = post_process_html(&html, opts);
-    result.trim().to_string()
+    html.trim().to_string()
 }
 
 pub fn extract_markdown_urls_sync(text: &str) -> MarkdownUrlsResult {
@@ -91,69 +207,5 @@ pub fn extract_markdown_urls_sync(text: &str) -> MarkdownUrlsResult {
     }
 }
 
-fn post_process_html(html: &str, opts: &MarkdownRenderOptions) -> String {
-    if html.is_empty() {
-        return String::new();
-    }
-    let mut fragment = Html::parse_fragment(html);
-    let node_ids: Vec<_> = fragment.tree.nodes().map(|n| n.id()).collect();
-    for id in node_ids {
-        let mut node = fragment
-            .tree
-            .get_mut(id)
-            .expect("BUG: node id collected from the same tree should exist");
-        let scraper::Node::Element(ref mut element) = *node.value() else {
-            continue;
-        };
-        let tag: &str = element.name.local.as_ref();
-        match tag {
-            "a" => {
-                let href_val = element
-                    .attrs
-                    .iter()
-                    .find(|(n, _)| n.local.as_ref() == "href")
-                    .map(|(_, v)| v.as_ref().to_string());
-                match href_val.as_deref() {
-                    Some("") | None => {
-                        element.attrs.retain(|(n, _)| n.local.as_ref() != "href");
-                    }
-                    Some(url) if is_external_http_url(url) => {
-                        if opts.nofollow_links {
-                            set_attr_md(&mut element.attrs, "rel", "nofollow ugc noopener");
-                        } else {
-                            set_attr_md(&mut element.attrs, "rel", "noopener");
-                        }
-                        set_attr_md(&mut element.attrs, "target", "_blank");
-                    }
-                    _ => {}
-                }
-            }
-            "img" => {
-                let src_val = element
-                    .attrs
-                    .iter()
-                    .find(|(n, _)| n.local.as_ref() == "src")
-                    .map(|(_, v)| v.as_ref().to_string());
-                match src_val.as_deref() {
-                    Some("") => {
-                        element.attrs.retain(|(n, _)| n.local.as_ref() != "src");
-                    }
-                    Some(url)
-                        if opts.proxy_images
-                            && should_proxy_image(url, &opts.image_proxy_url_prefix) =>
-                    {
-                        let proxied = rewrite_image_to_proxy(
-                            url,
-                            &opts.image_proxy_url_prefix,
-                            &opts.image_proxy_signing_keys,
-                        );
-                        set_attr_md(&mut element.attrs, "src", &proxied);
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
-        }
-    }
-    serialize_fragment_body(&fragment)
-}
+#[cfg(test)]
+mod tests;

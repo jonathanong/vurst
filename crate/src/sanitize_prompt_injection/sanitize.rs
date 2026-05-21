@@ -1,29 +1,67 @@
+use super::entities::decode_html_entities;
 use regex::Regex;
 use std::sync::LazyLock;
 
-// Named HTML entity map — includes bracket/pipe chars used in control tokens
-// ([INST], [/INST], <|im_start|>) so that named-entity encoded forms are decoded
-// before the injection-pattern check runs.
-static HTML_ENTITIES: &[(&str, &str)] = &[
-    ("&amp;", "&"),
-    ("&lt;", "<"),
-    ("&gt;", ">"),
-    ("&quot;", "\""),
-    ("&#39;", "'"),
-    ("&apos;", "'"),
-    ("&nbsp;", " "),
-    ("&lsqb;", "["),
-    ("&rsqb;", "]"),
-    ("&lbrack;", "["),
-    ("&rbrack;", "]"),
-    ("&vert;", "|"),
-    ("&verbar;", "|"),
-    ("&sol;", "/"),
-];
+const HTML_BOUNDARY: char = '\u{E000}';
+const HTML_ROLE_BOUNDARY: char = '\u{E001}';
+const HTML_BOUNDARY_REPLACEMENT: &str = " \u{E000} ";
+const HTML_ROLE_BOUNDARY_REPLACEMENT: &str = " \u{E001} ";
 
-static HTML_ENTITY_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)&(?:[a-z]+|#\d+|#x[0-9a-f]+);").expect("BUG: invalid HTML_ENTITY_RE")
-});
+const ROLE_BOUNDARY_TAGS: &[&str] = &[
+    "address",
+    "article",
+    "aside",
+    "blockquote",
+    "body",
+    "br",
+    "caption",
+    "col",
+    "colgroup",
+    "dd",
+    "details",
+    "dialog",
+    "div",
+    "dl",
+    "dt",
+    "fieldset",
+    "figcaption",
+    "figure",
+    "footer",
+    "form",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "header",
+    "head",
+    "hr",
+    "html",
+    "legend",
+    "li",
+    "main",
+    "menu",
+    "nav",
+    "noscript",
+    "ol",
+    "p",
+    "pre",
+    "script",
+    "section",
+    "style",
+    "summary",
+    "table",
+    "tbody",
+    "template",
+    "td",
+    "tfoot",
+    "th",
+    "thead",
+    "title",
+    "tr",
+    "ul",
+];
 
 // Unicode format characters (Cf category): zero-width space (U+200B), zero-width
 // non-joiner (U+200C), zero-width joiner (U+200D), soft hyphen (U+00AD), BOM (U+FEFF),
@@ -33,6 +71,13 @@ static HTML_ENTITY_RE: LazyLock<Regex> = LazyLock::new(|| {
 // collapses to "ignore previous instructions" that INJECTION_RE then strips.
 static ZERO_WIDTH_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\p{Cf}").expect("BUG: invalid ZERO_WIDTH_RE"));
+
+fn html_boundary_separator_pattern() -> String {
+    format!(
+        r"[\s\x{{{:X}}}\x{{{:X}}}]+",
+        HTML_BOUNDARY as u32, HTML_ROLE_BOUNDARY as u32
+    )
+}
 
 // All injection patterns combined into a single alternation for one-pass replacement.
 // Each branch targets a specific adversarial vector:
@@ -57,13 +102,17 @@ static ZERO_WIDTH_RE: LazyLock<Regex> =
 // Word-boundary anchors (\b) prevent partial-word matches such as "helperignore previous
 // instructions" from being stripped, and avoid confusion with zero-width Unicode characters
 // adjacent to trigger words.
+// Internal HTML boundary markers are accepted as whitespace so phrases split
+// by stripped tags/comments still collapse for the second injection-pattern pass.
 // Matches are replaced with a space (not empty string) so that adjacent text around a
 // stripped phrase is not concatenated into a new word (e.g. "pretext ignore…suffix" →
 // "pretext  suffix" rather than "pretextsuffix").
 static INJECTION_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"(?i)(?:\bignore(?:\s+all)?\s+(?:(?:the|your|my|our)\s+)?previous\s+(?:instructions?|prompts?)|\bignore\s+all\s+(?:(?:the|your|my|our)\s+)?(?:instructions?|prompts?)|\bforget\s+(?:(?:the|your|my|our)\s+)*(?:(?:all|previous)\s+)+(?:(?:the|your|my|our)\s+)?(?:instructions?|prompts?|above)|\bforget\s+everything\s+above|\bdisregard\s+(?:all\s+)?(?:(?:the|your|my|our)\s+)?previous\s+(?:instructions?|prompts?)|\bdisregard\s+all\s+(?:(?:the|your|my|our)\s+)?(?:instructions?|prompts?)|<\|im_start\|>|<\|im_end\|>|<\|begin_of_text\|>|<\|start_header_id\|>|<\|end_header_id\|>|<\|eot_id\|>|\[INST\]|\[/INST\]|<system\b[^>]*>|</system\b[^>]*>)",
-    )
+    let sep = html_boundary_separator_pattern();
+
+    Regex::new(&format!(
+        r"(?i)(?:\bignore(?:{sep}all)?{sep}(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bignore{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|\bforget{sep}(?:(?:the|your|my|our){sep})*(?:(?:all|previous){sep})+(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?|above)|\bforget{sep}everything{sep}above|\bdisregard{sep}(?:all{sep})?(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bdisregard{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|<\|im_start\|>|<\|im_end\|>|<\|begin_of_text\|>|<\|start_header_id\|>|<\|end_header_id\|>|<\|eot_id\|>|\[INST\]|\[/INST\]|<system\b[^>]*>|</system\b[^>]*>)"
+    ))
     .expect("BUG: invalid INJECTION_RE")
 });
 
@@ -82,10 +131,17 @@ static HTML_TAG_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)</?[a-z][^>]*>").expect("BUG: invalid HTML_TAG_RE"));
 
 // Only system: and assistant: are removed — both are LLM-specific role labels with no
-// common legitimate use at line starts. user: is intentionally excluded: it appears
-// frequently in email headers ("User: Alice"), log entries, and form submissions.
+// common legitimate use at line starts or immediately after structural HTML boundaries.
+// user: is intentionally excluded: it appears frequently in email headers ("User: Alice"),
+// log entries, and form submissions.
 static ROLE_PREFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?im)^[^\S\n]*(system|assistant):[^\S\n]*").expect("BUG: invalid ROLE_PREFIX_RE")
+    let generic_boundary = format!(r"\x{{{:X}}}", HTML_BOUNDARY as u32);
+    let role_boundary = format!(r"\x{{{:X}}}", HTML_ROLE_BOUNDARY as u32);
+
+    Regex::new(&format!(
+        r"(?im)(^[^\S\n]*(?:{generic_boundary}[^\S\n]*)*|[^\S\n]*{role_boundary}(?:[^\S\n]*{generic_boundary})*[^\S\n]*)(system|assistant):[^\S\n]*"
+    ))
+        .expect("BUG: invalid ROLE_PREFIX_RE")
 });
 
 static HORIZONTAL_WHITESPACE_RE: LazyLock<Regex> =
@@ -97,41 +153,26 @@ static EXCESSIVE_NEWLINES_RE: LazyLock<Regex> =
 static ALL_WHITESPACE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[\p{White_Space}]+").expect("BUG: invalid ALL_WHITESPACE_RE"));
 
-fn decode_html_entities(text: &str) -> String {
-    HTML_ENTITY_RE
-        .replace_all(text, |caps: &regex::Captures| {
-            let m = &caps[0];
+fn html_tag_replacement(tag: &str) -> &'static str {
+    let tag_name_start = if tag.as_bytes().get(1) == Some(&b'/') {
+        2
+    } else {
+        1
+    };
 
-            // Check named entities first
-            for (entity, replacement) in HTML_ENTITIES {
-                if m.eq_ignore_ascii_case(entity) {
-                    return (*replacement).to_string();
-                }
-            }
+    let tag_name_end = tag[tag_name_start..]
+        .find(|c: char| !c.is_ascii_alphanumeric())
+        .map_or(tag.len(), |idx| tag_name_start + idx);
+    let tag_name = &tag[tag_name_start..tag_name_end];
 
-            // Handle numeric entities
-            let inner = &m[1..m.len() - 1]; // strip & and ;
-            if let Some(digits) = inner
-                .strip_prefix("#x")
-                .or_else(|| inner.strip_prefix("#X"))
-            {
-                return u32::from_str_radix(digits, 16)
-                    .ok()
-                    .and_then(char::from_u32)
-                    .map_or_else(|| m.to_string(), |c| c.to_string());
-            }
-
-            if let Some(digits) = inner.strip_prefix('#') {
-                return digits
-                    .parse::<u32>()
-                    .ok()
-                    .and_then(char::from_u32)
-                    .map_or_else(|| m.to_string(), |c| c.to_string());
-            }
-
-            m.to_string()
-        })
-        .into_owned()
+    if ROLE_BOUNDARY_TAGS
+        .iter()
+        .any(|role_boundary_tag| tag_name.eq_ignore_ascii_case(role_boundary_tag))
+    {
+        HTML_ROLE_BOUNDARY_REPLACEMENT
+    } else {
+        HTML_BOUNDARY_REPLACEMENT
+    }
 }
 
 /// Sanitize content to prevent prompt injection attacks.
@@ -141,46 +182,54 @@ fn decode_html_entities(text: &str) -> String {
 /// 2. Strip Unicode format/zero-width characters (Cf category)
 /// 3. Remove injection patterns (first pass — catches plain-text and entity-encoded)
 /// 4. Remove HTML comments
-/// 5. Strip HTML/XML tags
+/// 5. Strip HTML/XML tags while preserving internal markup boundaries
 /// 6. Remove injection patterns (second pass — catches phrases split across comments/tags)
-/// 7. Remove role prefixes at line starts
+/// 7. Remove role prefixes at line starts or after stripped HTML boundaries
 /// 8. Normalize whitespace
 /// 9. Trim
 ///
 /// Two injection passes are needed because comments and tags act as whitespace-free
 /// splitters: `ignore<!-- -->previous` or `ignore<span></span>previous` would bypass a
 /// single pre-stripping pass, but after step 4/5 the phrase resolves to
-/// `ignore  previous` which `\s+` in `INJECTION_RE` matches in step 6.
+/// `ignore  previous` which `INJECTION_RE` matches in step 6.
 ///
-/// # Limitations
-/// - Role-prefix removal (step 6) only matches at line starts. HTML block-tag merging
-///   in step 4 can place `system:` mid-line (e.g. `<p>text</p><p>system: bad</p>`
-///   → `text  system: bad`), which step 6 will not catch. For rich HTML input prefer
-///   the DOM-parser path (`sanitize_rss_html`) which preserves newline boundaries.
+/// Role-prefix removal uses a structural HTML boundary marker so block tags can expose
+/// `system:` or `assistant:` without broadening matches to normal prose such as
+/// `the system: design notes`.
 pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
     // Step 1: Decode HTML entities
     let mut sanitized = decode_html_entities(content);
 
     // Step 2: Strip Unicode format/zero-width characters (Cf category) — replacing with
     // a space so "ignore\u{200B}previous" becomes "ignore previous" rather than
-    // "ignoreprevious", allowing INJECTION_RE's \s+ to match in step 3.
+    // "ignoreprevious", allowing INJECTION_RE's whitespace separator to match in step 3.
     sanitized = ZERO_WIDTH_RE.replace_all(&sanitized, " ").into_owned();
+    sanitized = sanitized.replace(HTML_BOUNDARY, " ");
+    sanitized = sanitized.replace(HTML_ROLE_BOUNDARY, " ");
 
     // Step 3: Remove injection patterns — first pass catches plain-text and entity-encoded
     sanitized = INJECTION_RE.replace_all(&sanitized, " ").into_owned();
 
     // Step 4: Remove HTML comments
-    sanitized = HTML_COMMENT_RE.replace_all(&sanitized, " ").into_owned();
+    sanitized = HTML_COMMENT_RE
+        .replace_all(&sanitized, HTML_BOUNDARY_REPLACEMENT)
+        .into_owned();
 
     // Step 5: Strip HTML/XML tags
-    sanitized = HTML_TAG_RE.replace_all(&sanitized, " ").into_owned();
+    sanitized = HTML_TAG_RE
+        .replace_all(&sanitized, |caps: &regex::Captures| {
+            html_tag_replacement(&caps[0])
+        })
+        .into_owned();
 
     // Step 6: Remove injection patterns — second pass catches phrases that were split
     // across HTML comments or inline tags (e.g. ignore<!-- -->previous instructions)
     sanitized = INJECTION_RE.replace_all(&sanitized, " ").into_owned();
 
-    // Step 7: Remove role prefixes at line starts
-    sanitized = ROLE_PREFIX_RE.replace_all(&sanitized, "").into_owned();
+    // Step 7: Remove role prefixes at line starts or after structural HTML boundaries
+    sanitized = ROLE_PREFIX_RE.replace_all(&sanitized, "$1").into_owned();
+    sanitized = sanitized.replace(HTML_BOUNDARY, " ");
+    sanitized = sanitized.replace(HTML_ROLE_BOUNDARY, " ");
 
     // Step 8: Normalize whitespace
     if is_title {

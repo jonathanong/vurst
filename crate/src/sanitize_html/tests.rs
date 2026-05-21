@@ -44,7 +44,7 @@ fn test_first_image_src_skips_relative() {
 
 #[test]
 fn test_first_image_src_none_when_no_external_img() {
-    let html = r"<p>No images</p>";
+    let html = r#"<p>No images</p>"#;
     let result = sanitize(html);
     assert!(result.first_image_src.is_none());
 }
@@ -104,7 +104,7 @@ fn test_first_image_src_is_original_before_proxy() {
 
 #[test]
 fn test_dangerous_elements_removed() {
-    let html = r"<p>Hello</p><script>alert(1)</script>";
+    let html = r#"<p>Hello</p><script>alert(1)</script>"#;
     let result = sanitize(html);
     assert!(!result.html.contains("<script>"));
     assert!(result.html.contains("<p>Hello</p>"));
@@ -136,4 +136,49 @@ fn sanitizes_links_and_detaches_empty_containers() {
     assert!(result.html.contains(r#"target="_blank""#));
     assert!(!result.html.contains("<div>"));
     assert!(!result.html.contains("<span>"));
+}
+
+#[test]
+fn empty_container_preflight_skips_non_empty_fragments() {
+    assert!(!super::sanitize::may_have_empty_container(
+        "<p>Hello</p><img src=\"photo.jpg\">"
+    ));
+    assert!(!super::sanitize::may_have_empty_container("<div"));
+    assert!(!super::sanitize::may_have_empty_container("<div>&#;</div>"));
+}
+
+#[test]
+fn empty_container_preflight_detects_cleanup_candidates() {
+    assert!(super::sanitize::may_have_empty_container("<div></div>"));
+    assert!(super::sanitize::may_have_empty_container("<span> </span>"));
+    assert!(super::sanitize::may_have_empty_container(
+        "<section>\n</section>"
+    ));
+    assert!(super::sanitize::may_have_empty_container("<p>\t</p>"));
+    assert!(super::sanitize::may_have_empty_container(
+        "<article data-origin=\"rss\"> \n\t</article>"
+    ));
+    assert!(super::sanitize::may_have_empty_container(
+        "<div data-note=\">\"> </div>"
+    ));
+    assert!(super::sanitize::may_have_empty_container(
+        "<span title='>'> </span>"
+    ));
+    assert!(super::sanitize::may_have_empty_container(
+        "<figure>\n \t </figure>"
+    ));
+    assert!(super::sanitize::may_have_empty_container("<DIV></div>"));
+    assert!(super::sanitize::may_have_empty_container(
+        "<div>\u{00a0}</div>"
+    ));
+    assert!(super::sanitize::may_have_empty_container(
+        "<div>\u{2003}</div>"
+    ));
+    assert!(super::sanitize::may_have_empty_container(
+        "<section>&nbsp;</section>"
+    ));
+    assert!(super::sanitize::may_have_empty_container(
+        "<article>&#8195;</article>"
+    ));
+    assert!(super::sanitize::may_have_empty_container("<p>&#x2003;</p>"));
 }

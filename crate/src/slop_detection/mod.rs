@@ -4,14 +4,15 @@
 //! N-API layer and TypeScript moderation code can consume a stable result
 //! shape without depending on the crate directly.
 
-use std::sync::LazyLock;
+use std::{
+    any::{Any, TypeId},
+    panic::{catch_unwind, AssertUnwindSafe},
+    sync::LazyLock,
+};
 
-use is_it_slop::{Classification, Predictor, MODEL_VERSION};
+use is_it_slop::{Classification, Predictor, UnifiedPrediction, MODEL_VERSION};
 
-/// Singleton predictor — `Predictor::new()` loads an ONNX model so we amortize
-/// that cost across all calls. `Predictor::new` returns `Predictor` directly
-/// (not `Result`), so `.expect("BUG: …")` does not apply; any model-load
-/// failure propagates as a panic inside the crate.
+/// Singleton predictor for the upstream detector configuration.
 static PREDICTOR: LazyLock<Predictor> = LazyLock::new(Predictor::new);
 
 /// Result returned by [`detect_ai_generated_text`].
@@ -53,8 +54,9 @@ impl From<Classification> for SlopClassification {
 ///
 /// # Errors
 ///
-/// Returns an error when the threshold is outside `0.0..=1.0` or the upstream
-/// detector fails to score the text.
+/// Returns an error when the threshold is outside `0.0..=1.0`, the upstream
+/// detector fails to score the text, or the upstream detector panics while
+/// loading the model or predicting.
 ///
 pub fn detect_ai_generated_text(
     text: &str,
@@ -66,9 +68,16 @@ pub fn detect_ai_generated_text(
         ));
     }
 
-    let prediction = PREDICTOR
-        .predict(text)
-        .map_err(slop_prediction_error_message)?;
+    let mut predict = || PREDICTOR.predict(text);
+
+    build_slop_detection_result(confidence_threshold, run_slop_detector(&mut predict))
+}
+
+fn build_slop_detection_result(
+    confidence_threshold: f32,
+    prediction: Result<UnifiedPrediction, String>,
+) -> Result<SlopDetectionResult, String> {
+    let prediction = prediction?;
     let classification = prediction.prediction.classification(confidence_threshold);
 
     Ok(SlopDetectionResult {
@@ -81,8 +90,39 @@ pub fn detect_ai_generated_text(
     })
 }
 
-fn slop_prediction_error_message(err: impl std::fmt::Display) -> String {
+#[allow(clippy::needless_pass_by_value)]
+fn slop_prediction_error_message(err: anyhow::Error) -> String {
     format!("slop detector prediction failed: {err}")
+}
+
+fn run_slop_detector(
+    operation: &mut dyn FnMut() -> anyhow::Result<UnifiedPrediction>,
+) -> Result<UnifiedPrediction, String> {
+    match catch_unwind(AssertUnwindSafe(operation)) {
+        Ok(result) => result.map_err(slop_prediction_error_message),
+        Err(payload) => Err(slop_detector_panic_error_message(payload)),
+    }
+}
+
+#[allow(clippy::needless_pass_by_value)]
+fn slop_detector_panic_error_message(payload: Box<dyn Any + Send>) -> String {
+    let payload_type = payload.as_ref().type_id();
+
+    if payload_type == TypeId::of::<&str>() {
+        let message = payload
+            .downcast_ref::<&str>()
+            .expect("panic payload type checked before downcast");
+        return format!("slop detector unavailable: upstream detector panicked while loading the model or predicting: {message}");
+    }
+
+    if payload_type == TypeId::of::<String>() {
+        let message = payload
+            .downcast_ref::<String>()
+            .expect("panic payload type checked before downcast");
+        return format!("slop detector unavailable: upstream detector panicked while loading the model or predicting: {message}");
+    }
+
+    "slop detector unavailable: upstream detector panicked while loading the model or predicting: unknown panic".to_string()
 }
 
 #[cfg(test)]

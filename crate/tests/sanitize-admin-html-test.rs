@@ -19,6 +19,11 @@ fn allows_safe_formatting_tags() {
 }
 
 #[test]
+fn renders_empty_admin_html_as_empty_output() {
+    assert_eq!(render_markdown_to_html_with_options("", &admin_opts()), "");
+}
+
+#[test]
 fn strips_script_tags() {
     let result = render_markdown_to_html_with_options(
         "<p>safe</p><script>alert('xss')</script>",
@@ -96,6 +101,14 @@ fn allows_class_and_id_attrs() {
 }
 
 #[test]
+fn strips_unknown_attributes() {
+    let result =
+        render_markdown_to_html_with_options("<p aria-label=\"ignored\">text</p>", &admin_opts());
+    assert!(result.contains("<p>text</p>"));
+    assert!(!result.contains("aria-label"));
+}
+
+#[test]
 fn allows_table_structure() {
     let result = render_markdown_to_html_with_options(
         "<table><thead><tr><th>H</th></tr></thead><tbody><tr><td>D</td></tr></tbody></table>",
@@ -158,6 +171,16 @@ fn allows_query_string_links() {
     let result =
         render_markdown_to_html_with_options("<a href=\"?sort=new\">sort</a>", &admin_opts());
     assert!(result.contains("href=\"?sort=new\""));
+}
+
+#[test]
+fn allows_relative_admin_links_with_colons_after_boundaries() {
+    let result = render_markdown_to_html_with_options(
+        "<a href=\"/login?url=http://example.com\">redirect</a><a href=\"./path:with:colons\">path</a>",
+        &admin_opts(),
+    );
+    assert!(result.contains("href=\"/login?url=http://example.com\""));
+    assert!(result.contains("href=\"./path:with:colons\""));
 }
 
 #[test]

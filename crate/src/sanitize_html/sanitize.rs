@@ -76,7 +76,7 @@ pub struct SanitizeRssHtmlResult {
 /// - Strips img-specific attrs (srcset, sizes, width, height)
 /// - Adds safe defaults to links (rel="nofollow noopener", target="_blank")
 /// - Adds performance attributes to images (loading="lazy", etc.)
-/// - Optionally rewrites external `<img src>` URLs through the configured image-proxy prefix
+/// - Optionally rewrites external `<img src>` URLs to `/proxy/` proxy paths
 /// - Removes empty container elements left after sanitization
 ///
 /// Returns [`SanitizeRssHtmlResult`] containing the sanitized HTML and the raw
@@ -93,13 +93,17 @@ pub fn sanitize_rss_html_sync(html: &str, opts: &SanitizeRssHtmlOptions) -> Sani
     }
 
     // Pass 1: Ammonia owns the allowlist-based sanitization policy and fixed
-    // link/image attributes. The closure also preserves our image proxy
-    // rewriting and captures the first original external image URL.
+    // link/image attributes. The closure also preserves our `/proxy/` image
+    // proxy and captures the first original external image URL.
     let (sanitized, first_image_src) = sanitize_with_ammonia(html, opts);
 
-    // Pass 2: Keep the historical cleanup of empty RSS layout containers left
-    // behind after attribute/tag stripping.
-    let html = remove_empty_containers_from_html(&sanitized);
+    // Pass 2 only when needed: most RSS items do not contain containers that
+    // became empty after sanitization, so avoid reparsing those fragments.
+    let html = if may_have_empty_container(&sanitized) {
+        remove_empty_containers_from_html(&sanitized)
+    } else {
+        sanitized
+    };
 
     SanitizeRssHtmlResult {
         html,
@@ -111,7 +115,6 @@ fn sanitize_with_ammonia(html: &str, opts: &SanitizeRssHtmlOptions) -> (String, 
     let proxy_images = opts.proxy_images;
     let signing_keys = opts.image_proxy_signing_keys.clone();
     let url_prefix = opts.image_proxy_url_prefix.clone();
-    let url_prefix_for_filter = url_prefix.clone();
     let first_image_src = Arc::new(Mutex::new(None::<String>));
     let first_image_src_filter = Arc::clone(&first_image_src);
     let mut builder = Builder::default();
@@ -129,7 +132,7 @@ fn sanitize_with_ammonia(html: &str, opts: &SanitizeRssHtmlOptions) -> (String, 
             if (attr == "href" || attr == "src") && has_dangerous_url_scheme(value) {
                 return None;
             }
-            if tag == "img" && attr == "src" && should_proxy_image(value, &url_prefix_for_filter) {
+            if tag == "img" && attr == "src" && should_proxy_image(value, &url_prefix) {
                 let mut captured = first_image_src_filter
                     .lock()
                     .expect("BUG: first image capture mutex poisoned");
@@ -138,7 +141,7 @@ fn sanitize_with_ammonia(html: &str, opts: &SanitizeRssHtmlOptions) -> (String, 
                 if proxy_images {
                     return Some(Cow::Owned(rewrite_image_to_proxy(
                         value,
-                        &url_prefix_for_filter,
+                        &url_prefix,
                         &signing_keys,
                     )));
                 }
@@ -176,6 +179,116 @@ fn remove_empty_containers_from_html(html: &str) -> String {
     let mut fragment = Html::parse_fragment(html);
     remove_empty_containers(&mut fragment);
     serialize_fragment_body(&fragment)
+}
+
+fn html_whitespace_entity_len(rest: &str) -> Option<usize> {
+    if rest.starts_with("&nbsp;") {
+        return Some("&nbsp;".len());
+    }
+
+    let digits = rest.strip_prefix("&#")?;
+    let (digits, radix) = digits
+        .strip_prefix(['x', 'X'])
+        .map_or((digits, 10), |hex_digits| (hex_digits, 16));
+    let semicolon = digits.find(';')?;
+    if semicolon == 0 {
+        return None;
+    }
+
+    let codepoint = u32::from_str_radix(&digits[..semicolon], radix).ok()?;
+    char::from_u32(codepoint)
+        .is_some_and(char::is_whitespace)
+        .then_some(rest.len() - digits.len() + semicolon + 1)
+}
+
+fn empty_text_candidate_end(html: &str, mut i: usize) -> usize {
+    while i < html.len() {
+        let rest = &html[i..];
+        if let Some(entity_len) = html_whitespace_entity_len(rest) {
+            i += entity_len;
+            continue;
+        }
+
+        let ch = rest
+            .chars()
+            .next()
+            .expect("BUG: loop condition guarantees a non-empty remainder");
+        if !ch.is_whitespace() {
+            break;
+        }
+        i += ch.len_utf8();
+    }
+
+    i
+}
+
+fn opening_tag_end(bytes: &[u8], mut i: usize) -> Option<usize> {
+    let mut quote = None;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\'' | b'"' if quote == Some(bytes[i]) => quote = None,
+            b'\'' | b'"' if quote.is_none() => quote = Some(bytes[i]),
+            b'>' if quote.is_none() => return Some(i + 1),
+            _ => {}
+        }
+        i += 1;
+    }
+
+    None
+}
+
+pub(super) fn may_have_empty_container(html: &str) -> bool {
+    let bytes = html.as_bytes();
+    let mut i = 0;
+    let mut found = false;
+
+    while let Some(open_offset) = bytes[i..].iter().position(|b| *b == b'<') {
+        let open = i + open_offset;
+        let tag_start = open + 1;
+        if tag_start >= bytes.len()
+            || matches!(
+                bytes[tag_start],
+                b'/' | b'!' | b'?' | b'0'..=b'9' | b'-' | b'.'
+            )
+        {
+            i = tag_start;
+            continue;
+        }
+
+        let tag_end = bytes[tag_start..]
+            .iter()
+            .position(|b| !b.is_ascii_alphanumeric())
+            .map_or(bytes.len(), |offset| tag_start + offset);
+        let tag = &html[tag_start..tag_end];
+        if !CONTAINER_TAGS
+            .iter()
+            .any(|container| container.eq_ignore_ascii_case(tag))
+        {
+            i = tag_end;
+            continue;
+        }
+
+        let Some(open_end) = opening_tag_end(bytes, tag_end) else {
+            return false;
+        };
+
+        let content_end = empty_text_candidate_end(html, open_end);
+        if html[content_end..].starts_with("</") {
+            let close_tag_start = content_end + 2;
+            let close_tag_end = close_tag_start + tag.len();
+            let has_matching_close = close_tag_end <= bytes.len()
+                && html[close_tag_start..close_tag_end].eq_ignore_ascii_case(tag)
+                && bytes[close_tag_end..]
+                    .iter()
+                    .position(|b| !b.is_ascii_whitespace())
+                    .is_some_and(|offset| bytes[close_tag_end + offset] == b'>');
+            found = has_matching_close;
+        }
+
+        i = if found { bytes.len() } else { open_end };
+    }
+
+    found
 }
 
 /// Remove empty container elements via single-pass bottom-up traversal.
