@@ -1,4 +1,4 @@
-# @jonathanong/vurst
+# @jongleberry/vurst
 
 High-performance Rust + N-API utilities for Node.js: markdown chunking, HTML
 sanitization, markdown → HTML rendering, AI-generated-text detection, and
@@ -8,7 +8,7 @@ pool.
 ## Install
 
 ```sh
-npm install @jonathanong/vurst
+npm install @jongleberry/vurst
 ```
 
 Prebuilt binaries ship for:
@@ -23,7 +23,7 @@ install required. glibc 2.17+ compatible (manylinux2014).
 ## Quick start
 
 ```js
-import { chunk, sanitizeRssHtml, detectAiGeneratedText } from '@jonathanong/vurst'
+import { chunk, sanitizeRssHtml, detectAiGeneratedText } from '@jongleberry/vurst'
 
 const chunks = await chunk(Buffer.from('# Hello\n\nWorld'))
 const { html, firstImageSrc } = await sanitizeRssHtml(Buffer.from(rawHtml))

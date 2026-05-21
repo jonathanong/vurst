@@ -236,8 +236,8 @@ jobs:
         run: |
           set -euo pipefail
           version="${{ needs.prepare.outputs.version }}"
-          if npm view "@jonathanong/vurst@$version" version >/dev/null 2>&1; then
-            echo "@jonathanong/vurst $version is already on npm; skipping"
+          if npm view "@jongleberry/vurst@$version" version >/dev/null 2>&1; then
+            echo "@jongleberry/vurst $version is already on npm; skipping"
           else
             npm publish --access public --provenance
           fi

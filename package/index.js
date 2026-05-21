@@ -1,4 +1,4 @@
-// Auto-generated platform dispatcher for @jonathanong/vurst.
+// Auto-generated platform dispatcher for @jongleberry/vurst.
 //
 // On first require, set ORT_DYLIB_PATH to the bundled onnxruntime shared
 // library so `ort`'s load-dynamic feature can find it. Then load the platform
@@ -36,7 +36,7 @@ function loadBinding() {
     default:
       throw new Error(
         `Unsupported platform: ${platform}-${arch}. ` +
-          `@jonathanong/vurst supports darwin-arm64, linux-x64 (glibc), and linux-arm64 (glibc).`,
+          `@jongleberry/vurst supports darwin-arm64, linux-x64 (glibc), and linux-arm64 (glibc).`,
       )
   }
 }
