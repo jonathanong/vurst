@@ -1,0 +1,243 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semver bump type
+        type: choice
+        required: true
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  ONNXRUNTIME_VERSION: 1.23.2
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: v1-release
+          cache-bin: 'false'
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run Clippy (lib + bin)
+        run: cargo clippy --workspace -- -D warnings
+
+  prepare:
+    name: Prepare release
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - name: Check RELEASE_TOKEN is set
+        run: |
+          if [ -z "${{ secrets.RELEASE_TOKEN }}" ]; then
+            echo "::error::RELEASE_TOKEN secret is not set." >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.RELEASE_TOKEN }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump versions, commit, and tag
+        id: bump
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix package version "${{ inputs.bump }}" --no-git-tag-version
+          version="$(node -p "require('./package/package.json').version")"
+          node -e "
+            const fs = require('node:fs');
+            const version = process.argv[1];
+            for (const path of ['crate/Cargo.toml', 'package/Cargo.toml']) {
+              const cargo = fs.readFileSync(path, 'utf8')
+                .replace(/^version = \".*\"$/m, \`version = \"\${version}\"\`);
+              fs.writeFileSync(path, cargo);
+            }
+          " "$version"
+          cargo update -w
+          git add crate/Cargo.toml package/Cargo.toml Cargo.lock package/package.json
+          git commit -m "chore(release): v$version"
+          git tag -a "v$version" -m "v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify versions match
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.bump.outputs.version }}"
+          cargo_version="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys;m=json.load(sys.stdin);print(next(p["version"] for p in m["packages"] if p["name"]=="vurst"))')"
+          npm_version="$(node -p "require('./package/package.json').version")"
+          test "$tag" = "$cargo_version" || { echo "Cargo version $cargo_version != tag $tag"; exit 1; }
+          test "$tag" = "$npm_version" || { echo "npm version $npm_version != tag $tag"; exit 1; }
+
+      - name: Push release commit and tag
+        run: git push origin HEAD:main --follow-tags
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: aarch64-apple-darwin
+            ort_url_suffix: osx-arm64
+            ort_lib_name: libonnxruntime.dylib
+            platform_arch_key: darwin-arm64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ort_url_suffix: linux-x64
+            ort_lib_name: libonnxruntime.so
+            platform_arch_key: linux-x64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            ort_url_suffix: linux-aarch64
+            ort_lib_name: libonnxruntime.so
+            platform_arch_key: linux-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: v${{ needs.prepare.outputs.version }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: package -> ../target
+          prefix-key: v1-release-${{ matrix.target }}
+          cache-bin: 'false'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        working-directory: package
+        run: npm install
+
+      - name: Download onnxruntime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ort_url="https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-${{ matrix.ort_url_suffix }}-${ONNXRUNTIME_VERSION}.tgz"
+          curl -fsSL -o ort.tgz "$ort_url"
+          tar -xzf ort.tgz
+          mv "onnxruntime-${{ matrix.ort_url_suffix }}-${ONNXRUNTIME_VERSION}" onnxruntime
+          echo "ORT_DYLIB_PATH=$PWD/onnxruntime/lib/${{ matrix.ort_lib_name }}" >> "$GITHUB_ENV"
+
+      - name: Build native module
+        working-directory: package
+        run: npx napi build --platform --release --target ${{ matrix.target }}
+
+      - name: Stage onnxruntime dylib for the npm package
+        shell: bash
+        run: |
+          set -euo pipefail
+          dest="package/onnxruntime/${{ matrix.platform_arch_key }}"
+          mkdir -p "$dest"
+          cp "onnxruntime/lib/${{ matrix.ort_lib_name }}" "$dest/"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.target }}
+          path: |
+            package/*.node
+            package/onnxruntime/${{ matrix.platform_arch_key }}/${{ matrix.ort_lib_name }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: v${{ needs.prepare.outputs.version }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        working-directory: package
+        run: npm install
+
+      - name: Download all native binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: package
+          merge-multiple: true
+
+      - name: List staged files
+        run: |
+          ls -la package/
+          ls -la package/onnxruntime/ || true
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v${{ needs.prepare.outputs.version }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; skipping"
+          else
+            gh release create "$tag" --title "$tag" --generate-notes
+          fi
+
+      - name: Publish npm package
+        working-directory: package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          if npm view "@jonathanong/vurst@$version" version >/dev/null 2>&1; then
+            echo "@jonathanong/vurst $version is already on npm; skipping"
+          else
+            npm publish --access public --provenance
+          fi

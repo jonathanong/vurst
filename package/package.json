@@ -1,0 +1,54 @@
+{
+  "name": "@jonathanong/vurst",
+  "version": "0.1.0",
+  "description": "Rust + N-API utilities: markdown chunking, HTML sanitize, markdown to HTML, AI-text detection, content extraction.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonathanong/vurst.git"
+  },
+  "keywords": [
+    "rust",
+    "napi",
+    "chunking",
+    "markdown",
+    "html",
+    "sanitize",
+    "rag",
+    "embedding",
+    "ai-detection"
+  ],
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "*.node",
+    "onnxruntime/"
+  ],
+  "napi": {
+    "binaryName": "vurst",
+    "targets": [
+      "aarch64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-gnu"
+    ]
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "test": "node --test __test__/*.test.mjs",
+    "prepublishOnly": "napi prepublish -t npm"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.6.2"
+  }
+}

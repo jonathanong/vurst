@@ -1,0 +1,8 @@
+target/
+node_modules/
+*.node
+coverage/
+*.profraw
+package/*.tgz
+package/onnxruntime/
+.DS_Store

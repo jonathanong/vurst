@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy (lib + bin)
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: Run Clippy (tests, warnings only)
+        run: cargo clippy --workspace --tests
+
+      - name: Download onnxruntime (for slop detection at test time)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o ort.tgz https://github.com/microsoft/onnxruntime/releases/download/v1.23.2/onnxruntime-linux-x64-1.23.2.tgz
+          tar -xzf ort.tgz
+          mv onnxruntime-linux-x64-1.23.2 onnxruntime
+          echo "ORT_DYLIB_PATH=$PWD/onnxruntime/lib/libonnxruntime.so" >> "$GITHUB_ENV"
+
+      - name: Run Rust tests
+        run: cargo test --workspace --all-features
+
+      - name: Install node deps
+        working-directory: package
+        run: npm install
+
+      - name: Build native module (debug)
+        working-directory: package
+        run: npm run build:debug
+
+      - name: Stage onnxruntime dylib next to the .node
+        run: |
+          set -euo pipefail
+          mkdir -p package/onnxruntime/linux-x64
+          cp onnxruntime/lib/libonnxruntime.so package/onnxruntime/linux-x64/libonnxruntime.so
+
+      - name: Run Node smoke tests
+        working-directory: package
+        run: npm test
+
+  build-smoke:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: package -> ../target
+          prefix-key: v1-ci-${{ matrix.target }}
+
+      - name: Install node deps
+        working-directory: package
+        run: npm install
+
+      - name: Build native module (release)
+        working-directory: package
+        run: npx napi build --platform --release --target ${{ matrix.target }}
