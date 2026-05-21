@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Rust + N-API utilities: markdown chunking, HTML sanitize, markdown to HTML, AI-text detection, content extraction.",
   "main": "index.js",
   "types": "index.d.ts",
