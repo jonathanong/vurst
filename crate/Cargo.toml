@@ -1,6 +1,6 @@
 [package]
 name = "vurst"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 license = "MIT"
 description = "High-performance Rust text-processing utilities: chunking, HTML sanitization, markdown rendering, AI-text detection, and embeddings prep."
