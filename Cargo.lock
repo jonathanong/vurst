@@ -162,9 +162,9 @@ dependencies = [
 
 [[package]]
 name = "breadchunks"
-version = "0.1.7"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a3ae88f2b9efd15d0ce971eb96e64c11506426e25f8f91cd7201ba5f53ff85e"
+checksum = "493810d1d6f22858afe37747ce75bf59f7133cfcf701b8fca0d3d2030f11d715"
 dependencies = [
  "regex",
 ]
