@@ -86,7 +86,6 @@ pub struct NapiSanitizeRssHtmlResult {
     pub first_image_src: Option<String>,
 }
 
-#[cfg_attr(coverage, coverage(off))]
 #[napi]
 pub async fn sanitize_rss_html(
     html: Buffer,
@@ -114,7 +113,6 @@ pub async fn sanitize_rss_html(
     .await
 }
 
-#[cfg_attr(coverage, coverage(off))]
 #[napi]
 pub async fn sanitize_rss_html_batch(
     inputs: Vec<Buffer>,
@@ -157,7 +155,6 @@ pub async fn sanitize_rss_html_batch(
 // html_to_embedding_text
 // ============================================================================
 
-#[cfg_attr(coverage, coverage(off))]
 #[napi(js_name = "htmlToEmbeddingText")]
 pub async fn html_to_embedding_text_napi(html: Buffer) -> Result<String> {
     if html.len() > SANITIZE_MAX_INPUT_BYTES {
@@ -218,7 +215,6 @@ impl From<ExtractDomRemovalsResult> for Removals {
     }
 }
 
-#[cfg_attr(coverage, coverage(off))]
 #[napi]
 pub async fn extract_dom_removals(
     html_pages: Vec<Buffer>,
@@ -252,7 +248,6 @@ pub async fn extract_dom_removals(
     .await
 }
 
-#[cfg_attr(coverage, coverage(off))]
 #[napi]
 pub async fn apply_dom_removals_to_html(
     html: Buffer,
@@ -328,7 +323,6 @@ impl From<boilerstrip::ConvertResult> for CrawlerHtmlToMarkdownResult {
     }
 }
 
-#[cfg_attr(coverage, coverage(off))]
 #[napi]
 pub async fn get_content_from_html(
     html_buffer: Buffer,
@@ -355,7 +349,6 @@ pub async fn get_content_from_html(
 // sanitize_prompt_injection
 // ============================================================================
 
-#[cfg_attr(coverage, coverage(off))]
 #[napi(js_name = "sanitizePromptInjection")]
 pub async fn sanitize_prompt_injection_napi(
     content: Buffer,

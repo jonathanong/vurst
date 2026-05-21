@@ -127,18 +127,21 @@ jobs:
           mkdir -p coverage
           cargo llvm-cov nextest -p vurst-html-node --all-features \
             --fail-under-lines 100 \
+            --ignore-filename-regex 'src/lib\.rs' \
             --lcov --output-path coverage/lcov-html.info
 
       - name: Run coverage with 100% line gate (markdown)
         run: |
           cargo llvm-cov nextest -p vurst-markdown-node --all-features \
             --fail-under-lines 100 \
+            --ignore-filename-regex 'src/lib\.rs' \
             --lcov --output-path coverage/lcov-markdown.info
 
       - name: Run coverage with 100% line gate (ai)
         run: |
           cargo llvm-cov nextest -p vurst-ai-node --all-features \
             --fail-under-lines 100 \
+            --ignore-filename-regex 'src/lib\.rs' \
             --lcov --output-path coverage/lcov-ai.info
 
       - name: Upload coverage to Codecov

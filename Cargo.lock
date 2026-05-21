@@ -2612,7 +2612,6 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "regex",
  "scraper",
  "serde_json",
  "sha2",

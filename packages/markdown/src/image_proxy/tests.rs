@@ -75,3 +75,16 @@ fn test_rewrite_with_custom_prefix() {
     let result = rewrite_image_to_proxy("https://example.com/img.jpg", "/i/", &[]);
     assert!(result.starts_with("/i/"));
 }
+
+#[test]
+fn test_rewrite_invalid_hex_key_falls_back_unsigned() {
+    // Verifies the defensive fallback: an invalid hex key is silently skipped and
+    // the unsigned path is returned instead of crashing.
+    let result = rewrite_image_to_proxy(
+        "https://example.com/img.jpg",
+        PREFIX,
+        &["not-valid-hex".to_string()],
+    );
+    assert!(result.starts_with(PREFIX));
+    assert!(!result.contains("?sig="));
+}

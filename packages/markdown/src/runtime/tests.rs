@@ -11,6 +11,14 @@ fn returns_default_when_unset() {
 }
 
 #[test]
+#[allow(unsafe_code)]
+fn reads_set_env_var() {
+    // nextest runs each test in a separate process, so set_var is safe here
+    unsafe { std::env::set_var("VURST_TEST_ENV_SET_TO_16", "16") };
+    assert_eq!(super::env_usize("VURST_TEST_ENV_SET_TO_16", 4), 16);
+}
+
+#[test]
 fn parses_positive_integer() {
     assert_eq!(super::parse_positive_usize("VAR", "16"), 16);
 }
