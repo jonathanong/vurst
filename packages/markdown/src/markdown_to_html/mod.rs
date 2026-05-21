@@ -14,6 +14,7 @@ use crate::image_proxy::{
 use helpers::{collect_urls, walk_and_sanitize_urls};
 use sanitize_admin::{sanitize_admin_html_with_options, AdminHtmlOptions};
 
+#[derive(Debug, PartialEq)]
 pub struct MarkdownUrlsResult {
     pub link_urls: Vec<String>,
     pub image_urls: Vec<String>,
