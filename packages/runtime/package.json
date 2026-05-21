@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-runtime",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Shutdown drain wrapper for @jongleberry/vurst-* N-API packages.",
   "main": "index.js",
   "types": "index.d.ts",
