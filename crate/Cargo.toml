@@ -14,7 +14,7 @@ crate-type = ["rlib"]
 ammonia = "4.1.2"
 anyhow = "1"
 boilerstrip = "0.4"
-breadchunks = "=0.1.7"
+breadchunks = "=0.2.0"
 comrak = { version = "0.52", default-features = false }
 data-encoding = "2"
 ego-tree = "0.11"
