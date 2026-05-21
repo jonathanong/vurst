@@ -71,27 +71,27 @@ const ALLOWED_IMG_ATTRS: &[&str] = &["src", "alt", "title", "width", "height"];
 /// Attributes allowed on any element.
 const ALLOWED_GLOBAL_ATTRS: &[&str] = &["class", "id"];
 
-pub struct AdminHtmlOptions {
+pub struct AdminHtmlOptions<'a> {
     pub nofollow_links: bool,
     pub proxy_images: bool,
-    pub image_proxy_url_prefix: String,
-    pub image_proxy_signing_keys: Vec<String>,
+    pub image_proxy_url_prefix: &'a str,
+    pub image_proxy_signing_keys: &'a [String],
 }
 
-impl Default for AdminHtmlOptions {
+impl Default for AdminHtmlOptions<'_> {
     fn default() -> Self {
         Self {
             nofollow_links: false,
             proxy_images: false,
-            image_proxy_url_prefix: DEFAULT_IMAGE_PROXY_URL_PREFIX.to_string(),
-            image_proxy_signing_keys: Vec::new(),
+            image_proxy_url_prefix: DEFAULT_IMAGE_PROXY_URL_PREFIX,
+            image_proxy_signing_keys: &[],
         }
     }
 }
 
 /// Sanitize admin-authored HTML and apply render-time link/image policy in the
 /// same parsed fragment traversal.
-pub fn sanitize_admin_html_with_options(html: &str, opts: &AdminHtmlOptions) -> String {
+pub fn sanitize_admin_html_with_options(html: &str, opts: &AdminHtmlOptions<'_>) -> String {
     if html.is_empty() {
         return String::new();
     }
@@ -111,7 +111,7 @@ fn escape_attr_val(s: &str) -> String {
         .replace('<', "&lt;")
 }
 
-fn render_children(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions) -> String {
+fn render_children(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions<'_>) -> String {
     node.children()
         .map(|child| render_node(child, opts))
         .collect()
@@ -131,12 +131,12 @@ fn is_allowed_attr(tag: &str, attr_name: &str) -> bool {
     }
 }
 
-fn admin_img_src<'a>(src: &'a str, opts: &AdminHtmlOptions) -> Cow<'a, str> {
-    if opts.proxy_images && should_proxy_image(src, &opts.image_proxy_url_prefix) {
+fn admin_img_src<'a>(src: &'a str, opts: &AdminHtmlOptions<'_>) -> Cow<'a, str> {
+    if opts.proxy_images && should_proxy_image(src, opts.image_proxy_url_prefix) {
         Cow::Owned(rewrite_image_to_proxy(
             src,
-            &opts.image_proxy_url_prefix,
-            &opts.image_proxy_signing_keys,
+            opts.image_proxy_url_prefix,
+            opts.image_proxy_signing_keys,
         ))
     } else {
         Cow::Borrowed(src)
@@ -147,7 +147,7 @@ fn render_element_attrs(
     tag: &str,
     elem: &scraper::node::Element,
     children: &str,
-    opts: &AdminHtmlOptions,
+    opts: &AdminHtmlOptions<'_>,
 ) -> String {
     let is_void = VOID_ADMIN_TAGS.contains(&tag);
 
@@ -192,7 +192,7 @@ fn render_element_attrs(
     }
 }
 
-fn render_node(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions) -> String {
+fn render_node(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions<'_>) -> String {
     match node.value() {
         Node::Text(text) => escape_text(text),
         Node::Element(elem) => {
