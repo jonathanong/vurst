@@ -13,6 +13,7 @@ breadchunks = "=0.2.0"
 comrak = { version = "0.52", default-features = false }
 data-encoding = "2"
 ego-tree = "0.11"
+hex = "0.4"
 hmac = "0.13"
 napi = { version = "3", features = ["serde-json", "tokio_rt"] }
 napi-derive = "3"

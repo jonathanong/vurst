@@ -44,13 +44,6 @@ pub async fn await_blocking<R>(handle: JoinHandle<R>) -> napi::Result<R> {
         .map_err(|e| napi::Error::from_reason(format!("Task failed: {e}")))
 }
 
-pub async fn await_blocking_result<R>(handle: JoinHandle<napi::Result<R>>) -> napi::Result<R> {
-    match await_blocking(handle).await {
-        Ok(result) => result,
-        Err(error) => Err(error),
-    }
-}
-
 fn env_usize(name: &str, default: usize) -> usize {
     let Ok(raw) = std::env::var(name) else {
         return default;
