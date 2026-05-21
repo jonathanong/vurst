@@ -1,0 +1,10 @@
+--- .github/workflows/ci.yml
++++ .github/workflows/ci.yml
+@@ -75,6 +75,7 @@
+         uses: codecov/codecov-action@v5
+         with:
+           files: coverage/lcov-html.info,coverage/lcov-markdown.info,coverage/lcov-ai.info
++          fail_ci_if_error: false
+           token: ${{ secrets.CODECOV_TOKEN }}
+
+       - name: Install node deps (html)

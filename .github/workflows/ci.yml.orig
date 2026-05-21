@@ -76,7 +76,6 @@ jobs:
         with:
           files: coverage/lcov-html.info,coverage/lcov-markdown.info,coverage/lcov-ai.info
           fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Install node deps (html)
         working-directory: packages/html
