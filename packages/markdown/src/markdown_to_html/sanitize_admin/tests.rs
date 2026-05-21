@@ -83,3 +83,13 @@ fn sanitizer_options_apply_link_and_image_policy_during_render() {
     assert!(dofollow_html.contains(r#"rel="noopener" target="_blank""#));
     assert!(!dofollow_html.contains("nofollow"));
 }
+
+#[test]
+fn test_escape_text() {
+    assert_eq!(escape_text("hello world"), "hello world");
+    assert_eq!(escape_text("a & b"), "a &amp; b");
+    assert_eq!(escape_text("1 < 2"), "1 &lt; 2");
+    assert_eq!(escape_text("2 > 1"), "2 &gt; 1");
+    assert_eq!(escape_text("a & b < c > d"), "a &amp; b &lt; c &gt; d");
+    assert_eq!(escape_text("<>&"), "&lt;&gt;&amp;");
+}
