@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "High-performance Rust text-processing utilities: chunking, HTML sanitization, markdown rendering, AI-text detection, and embeddings prep."
-repository = "https://github.com/jongleberry/vurst"
+repository = "https://github.com/jonathanong/vurst"
 publish = false
 
 [lib]

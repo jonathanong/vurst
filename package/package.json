@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jongleberry/vurst.git"
+    "url": "git+https://github.com/jonathanong/vurst.git"
   },
   "keywords": [
     "rust",
