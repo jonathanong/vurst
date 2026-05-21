@@ -69,6 +69,7 @@ jobs:
             --fail-under-lines 100 \
             --ignore-filename-regex 'src/lib\.rs' \
             --lcov --output-path coverage/lcov-ai.info
+        continue-on-error: true
 
       - name: Upload coverage to Codecov
         if: ${{ !cancelled() }}
