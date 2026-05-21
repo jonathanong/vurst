@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 vurst = { path = "../crate" }
-boilerstrip = "0.3"
+boilerstrip = "0.4"
 napi = { version = "3", features = ["serde-json", "tokio_rt"] }
 napi-derive = "3"
 serde_json = "1.0"
