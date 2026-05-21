@@ -1,0 +1,10 @@
+{
+  "name": "@jongleberry/vurst-runtime",
+  "version": "0.0.1",
+  "description": "Shutdown drain wrapper for @jongleberry/vurst-* N-API packages.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/jonathanong/vurst.git" },
+  "publishConfig": { "access": "public", "provenance": true }
+}

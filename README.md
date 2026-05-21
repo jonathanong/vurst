@@ -1,14 +1,26 @@
-# @jongleberry/vurst
+# vurst monorepo
 
-High-performance Rust + N-API utilities for Node.js: markdown chunking, HTML
-sanitization, markdown → HTML rendering, AI-generated-text detection, and
-content extraction. All operations run off-thread on a bounded tokio blocking
-pool.
+High-performance Rust + N-API utilities for Node.js, split into independently
+publishable packages.
 
-## Install
+## Packages
+
+| Package | Description |
+| --- | --- |
+| [`@jongleberry/vurst-html`](packages/html) | HTML sanitization, extraction, embedding prep, and boilerstrip |
+| [`@jongleberry/vurst-markdown`](packages/markdown) | Markdown chunking and rendering |
+| [`@jongleberry/vurst-ai`](packages/ai) | ONNX-based AI-generated text detection |
+| [`@jongleberry/vurst-runtime`](packages/runtime) | Pure-TS shutdown drain wrapper for vurst N-API packages |
+
+All Rust packages run off-thread on a bounded tokio blocking pool.
+
+## Quick start
 
 ```sh
-npm install @jongleberry/vurst
+pnpm add @jongleberry/vurst-html
+pnpm add @jongleberry/vurst-markdown
+pnpm add @jongleberry/vurst-ai
+pnpm add @jongleberry/vurst-runtime
 ```
 
 Prebuilt binaries ship for:
@@ -17,38 +29,73 @@ Prebuilt binaries ship for:
 - Linux x64 glibc (`x86_64-unknown-linux-gnu`)
 - Linux arm64 glibc (`aarch64-unknown-linux-gnu`)
 
-The ONNX Runtime shared library is bundled inside the npm package — no system
-install required. glibc 2.17+ compatible (manylinux2014).
+The ONNX Runtime shared library is bundled inside `@jongleberry/vurst-ai` —
+no system install required. glibc 2.17+ compatible (manylinux2014).
 
-## Quick start
+## `@jongleberry/vurst-html`
 
 ```js
-import { chunk, sanitizeRssHtml, detectAiGeneratedText } from '@jongleberry/vurst'
-
-const chunks = await chunk(Buffer.from('# Hello\n\nWorld'))
-const { html, firstImageSrc } = await sanitizeRssHtml(Buffer.from(rawHtml))
-const slop = await detectAiGeneratedText(Buffer.from(text))
+import {
+  sanitizeRssHtml,
+  sanitizeRssHtmlBatch,
+  htmlToEmbeddingText,
+  extractDomRemovals,
+  applyDomRemovalsToHtml,
+  getContentFromHtml,
+  sanitizePromptInjection,
+} from '@jongleberry/vurst-html'
 ```
-
-## Functions
-
-All functions are async and accept inputs up to 10 MiB per call (batch
-functions check the total across all inputs).
 
 | Function | Description |
 | --- | --- |
-| `chunk(text, opts?)` | Heading-aware semantic chunking of Markdown. Wraps `breadchunks`. |
 | `sanitizeRssHtml(html, opts?)` | Sanitize raw RSS feed HTML with optional image-proxy URL rewriting. |
 | `sanitizeRssHtmlBatch(htmls, opts?)` | Batched form. |
-| `renderMarkdownToHtml(text, opts?)` | Render Markdown to HTML. Options: `allowHtml`, `nofollowLinks`, `proxyImages`, `imageProxyUrlPrefix`, `imageProxySigningKeys`. |
-| `renderMarkdownToHtmlBatch(texts, opts?)` | Batched form. |
-| `extractMarkdownUrls(text)` | Extract link and image URLs from Markdown. |
 | `htmlToEmbeddingText(html)` | Convert HTML to clean text suitable for embedding models. |
-| `detectAiGeneratedText(text, threshold?)` | ONNX-based AI/slop detection. |
 | `extractDomRemovals(htmlPages, opts?)` | Learn boilerplate CSS selectors across pages. Wraps `boilerstrip::learn`. |
 | `applyDomRemovalsToHtml(html, removals)` | Apply learned removals. Wraps `boilerstrip::apply_removals`. |
 | `getContentFromHtml(html, opts)` | Extract article content from HTML. Wraps `boilerstrip::convert`. |
 | `sanitizePromptInjection(content, isTitle?)` | Strip prompt-injection patterns from text. |
+
+## `@jongleberry/vurst-markdown`
+
+```js
+import {
+  chunk,
+  renderMarkdownToHtml,
+  renderMarkdownToHtmlBatch,
+  extractMarkdownUrls,
+} from '@jongleberry/vurst-markdown'
+```
+
+| Function | Description |
+| --- | --- |
+| `chunk(text, opts?)` | Heading-aware semantic chunking of Markdown. Wraps `breadchunks`. |
+| `renderMarkdownToHtml(text, opts?)` | Render Markdown to HTML. Options: `allowHtml`, `nofollowLinks`, `proxyImages`, `imageProxyUrlPrefix`, `imageProxySigningKeys`. |
+| `renderMarkdownToHtmlBatch(texts, opts?)` | Batched form. |
+| `extractMarkdownUrls(text)` | Extract link and image URLs from Markdown. |
+
+## `@jongleberry/vurst-ai`
+
+```js
+import { detectAiGeneratedText } from '@jongleberry/vurst-ai'
+```
+
+| Function | Description |
+| --- | --- |
+| `detectAiGeneratedText(text, threshold?)` | ONNX-based AI/slop detection. |
+
+## `@jongleberry/vurst-runtime`
+
+```js
+import {
+  wrapNativeAddon,
+  beginNativeAddonShutdown,
+  waitForNativeAddonWorkToDrain,
+} from '@jongleberry/vurst-runtime'
+```
+
+Wraps any vurst N-API addon with a shutdown drain so the process exits cleanly
+after all in-flight native work settles.
 
 ## Image proxy
 
@@ -60,9 +107,6 @@ URLs to your image-proxy endpoint.
 - `imageProxySigningKeys` — array of hex-encoded HMAC-SHA256 keys (newest
   first). When provided, proxied URLs include `?sig=<hmac>`. Empty array means
   unsigned (dev mode).
-
-The proxy endpoint is expected to decode the base64url path segment to
-recover the original URL.
 
 ## Runtime tuning
 

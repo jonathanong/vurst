@@ -1,5 +1,5 @@
 [workspace]
-members = ["crate", "package"]
+members = ["packages/ai", "packages/html", "packages/markdown"]
 resolver = "2"
 
 [profile.release]
