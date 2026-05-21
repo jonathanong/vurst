@@ -9,7 +9,10 @@ fn covers_slop_edge_paths() {
             // Depending on the environment, onnxruntime dylib might not be available
             // so we shouldn't fail the test if the error is about loading the dylib.
             if !e.contains("Failed to load ONNX Runtime dylib") {
-                panic!("Expected a successful classification or an ONNX loading error, but got: {}", e);
+                panic!(
+                    "Expected a successful classification or an ONNX loading error, but got: {}",
+                    e
+                );
             }
         }
     }

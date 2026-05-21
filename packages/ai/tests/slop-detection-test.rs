@@ -17,7 +17,7 @@ fn detect_ai_generated_text_returns_bounded_scores_and_metadata() {
                 result.flagged,
                 result.confidence_score >= result.confidence_threshold
             );
-        },
+        }
         Err(e) => {
             if !e.contains("Failed to load ONNX Runtime dylib") {
                 panic!("detector should succeed, but failed with: {}", e);
