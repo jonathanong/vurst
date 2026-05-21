@@ -1,5 +1,5 @@
 {
   "name": "vurst",
   "private": true,
-  "packageManager": "pnpm@10"
+  "packageManager": "pnpm@11.1.3"
 }

@@ -7,6 +7,7 @@
   "license": "MIT",
   "engines": { "node": ">= 18" },
   "repository": { "type": "git", "url": "git+https://github.com/jonathanong/vurst.git" },
+  "keywords": ["rust", "napi", "html", "sanitize", "embedding", "boilerstrip"],
   "files": ["index.js", "index.d.ts", "README.md", "*.node"],
   "napi": {
     "binaryName": "vurst-html",
