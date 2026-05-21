@@ -76,8 +76,14 @@ pub async fn detect_ai_generated_text_napi(
 
     let decoded = String::from_utf8(text.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in text: {e}")))?;
-    #[allow(clippy::cast_possible_truncation)] // 0.0..=1.0 fits losslessly in f32
-    let threshold = confidence_threshold.unwrap_or(0.95) as f32;
+    let threshold_f64 = confidence_threshold.unwrap_or(0.95);
+    if !threshold_f64.is_finite() || !(0.0..=1.0).contains(&threshold_f64) {
+        return Err(Error::from_reason(
+            "confidenceThreshold must be between 0.0 and 1.0".to_string(),
+        ));
+    }
+    #[allow(clippy::cast_possible_truncation)] // validated finite and bounded
+    let threshold = threshold_f64 as f32;
 
     runtime::await_blocking_result(runtime::spawn_blocking(move || {
         slop_detection::detect_ai_generated_text(&decoded, threshold)

@@ -127,7 +127,7 @@ const sharedRuntime = createNativeRuntime()
  */
 function wrapNativeAddon(addon, runtime) {
   const rt = runtime ?? sharedRuntime
-  /** @type {Map<PropertyKey, Function>} */
+  /** @type {Map<PropertyKey, { original: Function, wrapped: Function }>} */
   const wrappedFunctions = new Map()
 
   return new Proxy(addon, {
@@ -136,10 +136,10 @@ function wrapNativeAddon(addon, runtime) {
       if (typeof value !== 'function') return value
 
       const cached = wrappedFunctions.get(prop)
-      if (cached != null) return cached
+      if (cached != null && cached.original === value) return cached.wrapped
 
       const wrapped = (...args) => rt.runNativeFunction(value, target, args)
-      wrappedFunctions.set(prop, wrapped)
+      wrappedFunctions.set(prop, { original: value, wrapped })
       return wrapped
     },
   })

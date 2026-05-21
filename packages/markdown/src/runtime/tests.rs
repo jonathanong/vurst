@@ -1,18 +1,5 @@
-use super::env_usize;
-use std::sync::Mutex;
-
-// Serialize env mutation across tests in this module.
-static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-fn lock() -> std::sync::MutexGuard<'static, ()> {
-    ENV_LOCK.lock().expect("env lock should not be poisoned")
-}
-
-fn assert_env_panics(var: &'static str, val: &str, expected_msg: &str) {
-    let _g = lock();
-    unsafe { std::env::set_var(var, val) };
-    let result = std::panic::catch_unwind(|| env_usize(var, 4));
-    unsafe { std::env::remove_var(var) };
+fn assert_parse_panics(val: &str, expected_msg: &str) {
+    let result = std::panic::catch_unwind(|| super::parse_positive_usize("VAR", val));
     let err = result.expect_err("expected a panic");
     let msg = err.downcast_ref::<String>().map_or("", String::as_str);
     assert!(msg.contains(expected_msg), "unexpected panic: {msg}");
@@ -20,31 +7,27 @@ fn assert_env_panics(var: &'static str, val: &str, expected_msg: &str) {
 
 #[test]
 fn returns_default_when_unset() {
-    let _g = lock();
-    unsafe { std::env::remove_var("VURST_TEST_RUNTIME_DEFAULT") };
-    assert_eq!(env_usize("VURST_TEST_RUNTIME_DEFAULT", 4), 4);
+    assert_eq!(super::env_usize("VURST_TEST_ENV_GUARANTEED_UNSET", 4), 4);
 }
 
 #[test]
 fn parses_positive_integer() {
-    let _g = lock();
-    unsafe { std::env::set_var("VURST_TEST_RUNTIME_PARSE", "16") };
-    assert_eq!(env_usize("VURST_TEST_RUNTIME_PARSE", 4), 16);
-    unsafe { std::env::remove_var("VURST_TEST_RUNTIME_PARSE") };
+    assert_eq!(super::parse_positive_usize("VAR", "16"), 16);
+}
+
+#[test]
+fn trims_whitespace() {
+    assert_eq!(super::parse_positive_usize("VAR", "  8  "), 8);
 }
 
 #[test]
 fn panics_on_zero() {
-    assert_env_panics("VURST_TEST_RUNTIME_ZERO", "0", "must be a positive integer");
+    assert_parse_panics("0", "must be a positive integer");
 }
 
 #[test]
 fn panics_on_garbage() {
-    assert_env_panics(
-        "VURST_TEST_RUNTIME_GARBAGE",
-        "not-a-number",
-        "must be a positive integer",
-    );
+    assert_parse_panics("not-a-number", "must be a positive integer");
 }
 
 #[test]
