@@ -1,6 +1,9 @@
 [workspace]
-members = ["crate", "package"]
+members = ["packages/ai", "packages/html", "packages/markdown"]
 resolver = "2"
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
 
 [profile.release]
 lto = "thin"

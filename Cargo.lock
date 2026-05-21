@@ -2564,38 +2564,58 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
-name = "vurst"
-version = "0.1.7"
+name = "vurst-ai-node"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "is-it-slop",
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "ort",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "vurst-html-node"
+version = "0.0.1"
 dependencies = [
  "ammonia",
  "anyhow",
  "boilerstrip",
- "breadchunks",
- "comrak",
  "data-encoding",
  "ego-tree",
  "entities",
  "hex",
  "hmac",
- "is-it-slop",
- "ort",
+ "napi",
+ "napi-build",
+ "napi-derive",
  "regex",
  "scraper",
  "serde_json",
  "sha2",
+ "tokio",
 ]
 
 [[package]]
-name = "vurst-node"
-version = "0.1.7"
+name = "vurst-markdown-node"
+version = "0.0.1"
 dependencies = [
- "boilerstrip",
+ "breadchunks",
+ "comrak",
+ "data-encoding",
+ "ego-tree",
+ "hex",
+ "hmac",
  "napi",
  "napi-build",
  "napi-derive",
+ "scraper",
  "serde_json",
+ "sha2",
  "tokio",
- "vurst",
 ]
 
 [[package]]

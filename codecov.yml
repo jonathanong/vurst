@@ -10,3 +10,14 @@ coverage:
 comment:
   layout: "reach, diff, flags, files"
   require_changes: false
+
+flags:
+  html:
+    paths:
+      - packages/html/
+  markdown:
+    paths:
+      - packages/markdown/
+  ai:
+    paths:
+      - packages/ai/

@@ -13,7 +13,7 @@ env:
 
 jobs:
   test:
-    name: Test
+    name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -23,7 +23,10 @@ jobs:
           node-version: 22
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
+          components: clippy, rustfmt, llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-nextest
       - uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
@@ -43,66 +46,84 @@ jobs:
           mv onnxruntime-linux-x64-1.23.2 onnxruntime
           echo "ORT_DYLIB_PATH=$PWD/onnxruntime/lib/libonnxruntime.so" >> "$GITHUB_ENV"
 
-      - name: Run Rust tests
-        run: cargo test --workspace --all-features
-
-      - name: Install node deps
-        working-directory: package
-        run: npm install
-
-      - name: Build native module (debug)
-        working-directory: package
-        run: npm run build:debug
-
-      - name: Stage onnxruntime dylib next to the .node
-        run: |
-          set -euo pipefail
-          mkdir -p package/onnxruntime/linux-x64
-          cp onnxruntime/lib/libonnxruntime.so package/onnxruntime/linux-x64/libonnxruntime.so
-
-      - name: Run Node smoke tests
-        working-directory: package
-        run: npm test
-
-  coverage:
-    name: Coverage (vurst crate)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: llvm-tools-preview
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-llvm-cov,cargo-nextest
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: v1-coverage
-
-      - name: Download onnxruntime
-        run: |
-          set -euo pipefail
-          curl -fsSL -o ort.tgz https://github.com/microsoft/onnxruntime/releases/download/v1.23.2/onnxruntime-linux-x64-1.23.2.tgz
-          tar -xzf ort.tgz
-          mv onnxruntime-linux-x64-1.23.2 onnxruntime
-          echo "ORT_DYLIB_PATH=$PWD/onnxruntime/lib/libonnxruntime.so" >> "$GITHUB_ENV"
-
-      - name: Run coverage with 100% line gate
+      - name: Run Rust tests with coverage (html)
         run: |
           mkdir -p coverage
-          cargo llvm-cov nextest -p vurst --all-features \
+          cargo llvm-cov nextest -p vurst-html-node --all-features \
             --fail-under-lines 100 \
-            --lcov --output-path coverage/lcov.info
+            --ignore-filename-regex 'src/lib\.rs' \
+            --lcov --output-path coverage/lcov-html.info
+
+      - name: Run Rust tests with coverage (markdown)
+        run: |
+          cargo llvm-cov nextest -p vurst-markdown-node --all-features \
+            --fail-under-lines 100 \
+            --ignore-filename-regex 'src/lib\.rs' \
+            --lcov --output-path coverage/lcov-markdown.info
+
+      - name: Run Rust tests with coverage (ai)
+        run: |
+          cargo llvm-cov nextest -p vurst-ai-node --all-features \
+            --fail-under-lines 100 \
+            --ignore-filename-regex 'src/lib\.rs' \
+            --lcov --output-path coverage/lcov-ai.info
 
       - name: Upload coverage to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
         with:
-          files: coverage/lcov.info
+          files: coverage/lcov-html.info,coverage/lcov-markdown.info,coverage/lcov-ai.info
           fail_ci_if_error: false
+
+      - name: Install node deps (html)
+        working-directory: packages/html
+        run: npm install
+
+      - name: Build native module (html, debug)
+        working-directory: packages/html
+        run: npm run build:debug
+
+      - name: Run Node smoke tests (html)
+        working-directory: packages/html
+        run: npm test
+
+      - name: Install node deps (markdown)
+        working-directory: packages/markdown
+        run: npm install
+
+      - name: Build native module (markdown, debug)
+        working-directory: packages/markdown
+        run: npm run build:debug
+
+      - name: Run Node smoke tests (markdown)
+        working-directory: packages/markdown
+        run: npm test
+
+      - name: Install node deps (ai)
+        working-directory: packages/ai
+        run: npm install
+
+      - name: Build native module (ai, debug)
+        working-directory: packages/ai
+        run: npm run build:debug
+
+      - name: Stage onnxruntime dylib next to the ai .node
+        run: |
+          set -euo pipefail
+          mkdir -p packages/ai/onnxruntime/linux-x64
+          cp onnxruntime/lib/libonnxruntime.so packages/ai/onnxruntime/linux-x64/libonnxruntime.so
+
+      - name: Run Node smoke tests (ai)
+        working-directory: packages/ai
+        run: npm test
+
+      - name: Install node deps (runtime)
+        working-directory: packages/runtime
+        run: npm install
+
+      - name: Run Node tests (runtime)
+        working-directory: packages/runtime
+        run: node --test __test__/*.test.mjs
 
   build-smoke:
     name: Build ${{ matrix.target }}
@@ -128,13 +149,22 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: package -> ../target
           prefix-key: v1-ci-${{ matrix.target }}
 
-      - name: Install node deps
-        working-directory: package
-        run: npm install
+      - name: Install node deps and build (html)
+        working-directory: packages/html
+        run: |
+          npm install
+          npx napi build --platform --release --target ${{ matrix.target }}
 
-      - name: Build native module (release)
-        working-directory: package
-        run: npx napi build --platform --release --target ${{ matrix.target }}
+      - name: Install node deps and build (markdown)
+        working-directory: packages/markdown
+        run: |
+          npm install
+          npx napi build --platform --release --target ${{ matrix.target }}
+
+      - name: Install node deps and build (ai)
+        working-directory: packages/ai
+        run: |
+          npm install
+          npx napi build --platform --release --target ${{ matrix.target }}

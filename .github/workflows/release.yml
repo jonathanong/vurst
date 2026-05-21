@@ -81,32 +81,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm --prefix package version "${{ inputs.bump }}" --no-git-tag-version
-          version="$(node -p "require('./package/package.json').version")"
+          npm --prefix packages/html version "${{ inputs.bump }}" --no-git-tag-version
+          version="$(node -p "require('./packages/html/package.json').version")"
+          npm --prefix packages/markdown version "$version" --allow-same-version --no-git-tag-version
+          npm --prefix packages/ai version "$version" --allow-same-version --no-git-tag-version
+          npm --prefix packages/runtime version "$version" --allow-same-version --no-git-tag-version
           node -e "
             const fs = require('node:fs');
             const version = process.argv[1];
-            for (const path of ['crate/Cargo.toml', 'package/Cargo.toml']) {
+            for (const path of ['packages/ai/Cargo.toml', 'packages/html/Cargo.toml', 'packages/markdown/Cargo.toml']) {
               const cargo = fs.readFileSync(path, 'utf8')
                 .replace(/^version = \".*\"$/m, \`version = \"\${version}\"\`);
               fs.writeFileSync(path, cargo);
             }
           " "$version"
           cargo update -w
-          git add crate/Cargo.toml package/Cargo.toml Cargo.lock package/package.json
+          git add packages/ai/Cargo.toml packages/html/Cargo.toml packages/markdown/Cargo.toml Cargo.lock
+          git add packages/ai/package.json packages/html/package.json packages/markdown/package.json packages/runtime/package.json
           git commit -m "chore(release): v$version"
           git tag -a "v$version" -m "v$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Verify versions match
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag="${{ steps.bump.outputs.version }}"
-          cargo_version="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys;m=json.load(sys.stdin);print(next(p["version"] for p in m["packages"] if p["name"]=="vurst"))')"
-          npm_version="$(node -p "require('./package/package.json').version")"
-          test "$tag" = "$cargo_version" || { echo "Cargo version $cargo_version != tag $tag"; exit 1; }
-          test "$tag" = "$npm_version" || { echo "npm version $npm_version != tag $tag"; exit 1; }
 
       - name: Push release commit and tag
         run: git push origin HEAD:main --follow-tags
@@ -144,16 +138,11 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: package -> ../target
           prefix-key: v1-release-${{ matrix.target }}
           cache-bin: 'false'
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-
-      - name: Install dependencies
-        working-directory: package
-        run: npm install
 
       - name: Download onnxruntime
         shell: bash
@@ -165,25 +154,53 @@ jobs:
           mv "onnxruntime-${{ matrix.ort_url_suffix }}-${ONNXRUNTIME_VERSION}" onnxruntime
           echo "ORT_DYLIB_PATH=$PWD/onnxruntime/lib/${{ matrix.ort_lib_name }}" >> "$GITHUB_ENV"
 
-      - name: Build native module
-        working-directory: package
-        run: npx napi build --platform --release --target ${{ matrix.target }}
+      - name: Build html package
+        working-directory: packages/html
+        run: |
+          npm install
+          npx napi build --platform --release --target ${{ matrix.target }}
 
-      - name: Stage onnxruntime dylib for the npm package
+      - name: Build markdown package
+        working-directory: packages/markdown
+        run: |
+          npm install
+          npx napi build --platform --release --target ${{ matrix.target }}
+
+      - name: Build ai package
+        working-directory: packages/ai
+        run: |
+          npm install
+          npx napi build --platform --release --target ${{ matrix.target }}
+
+      - name: Stage onnxruntime dylib for the ai npm package
         shell: bash
         run: |
           set -euo pipefail
-          dest="package/onnxruntime/${{ matrix.platform_arch_key }}"
+          dest="packages/ai/onnxruntime/${{ matrix.platform_arch_key }}"
           mkdir -p "$dest"
           cp "onnxruntime/lib/${{ matrix.ort_lib_name }}" "$dest/"
 
-      - name: Upload artifact
+      - name: Upload html artifact
         uses: actions/upload-artifact@v7
         with:
-          name: bindings-${{ matrix.target }}
+          name: bindings-html-${{ matrix.target }}
+          path: packages/html/*.node
+          if-no-files-found: error
+
+      - name: Upload markdown artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bindings-markdown-${{ matrix.target }}
+          path: packages/markdown/*.node
+          if-no-files-found: error
+
+      - name: Upload ai artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bindings-ai-${{ matrix.target }}
           path: |
-            package/*.node
-            package/onnxruntime/${{ matrix.platform_arch_key }}/${{ matrix.ort_lib_name }}
+            packages/ai/*.node
+            packages/ai/onnxruntime/${{ matrix.platform_arch_key }}/${{ matrix.ort_lib_name }}
           if-no-files-found: error
 
   publish:
@@ -203,31 +220,111 @@ jobs:
       - name: Upgrade npm for OIDC trusted publishing
         run: npm install -g npm@latest
 
-      - name: Install dependencies
-        working-directory: package
+      - name: Install dependencies (html)
+        working-directory: packages/html
         run: npm install
 
-      - name: Download all native binaries
+      - name: Install dependencies (markdown)
+        working-directory: packages/markdown
+        run: npm install
+
+      - name: Install dependencies (ai)
+        working-directory: packages/ai
+        run: npm install
+
+      - name: Download html binaries
         uses: actions/download-artifact@v8
         with:
-          path: package
+          pattern: bindings-html-*
+          path: packages/html
+          merge-multiple: true
+
+      - name: Download markdown binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: bindings-markdown-*
+          path: packages/markdown
+          merge-multiple: true
+
+      - name: Download ai binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: bindings-ai-*
+          path: packages/ai
           merge-multiple: true
 
       - name: List staged files
         run: |
-          ls -la package/
-          ls -la package/onnxruntime/ || true
+          ls -la packages/html/
+          ls -la packages/markdown/
+          ls -la packages/ai/
+          ls -la packages/ai/onnxruntime/ || true
 
-      - name: Publish npm package
-        working-directory: package
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v${{ needs.prepare.outputs.version }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; skipping"
+          else
+            gh release create "$tag" --title "$tag" --generate-notes
+          fi
+
+      - name: Publish @jongleberry/vurst-html
+        working-directory: packages/html
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
           version="${{ needs.prepare.outputs.version }}"
-          if npm view "@jongleberry/vurst@$version" version >/dev/null 2>&1; then
-            echo "@jongleberry/vurst $version is already on npm; skipping"
+          if npm view "@jongleberry/vurst-html@$version" version >/dev/null 2>&1; then
+            echo "@jongleberry/vurst-html $version is already on npm; skipping"
+          else
+            npm publish --access public --provenance
+          fi
+
+      - name: Publish @jongleberry/vurst-markdown
+        working-directory: packages/markdown
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          if npm view "@jongleberry/vurst-markdown@$version" version >/dev/null 2>&1; then
+            echo "@jongleberry/vurst-markdown $version is already on npm; skipping"
+          else
+            npm publish --access public --provenance
+          fi
+
+      - name: Publish @jongleberry/vurst-ai
+        working-directory: packages/ai
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          if npm view "@jongleberry/vurst-ai@$version" version >/dev/null 2>&1; then
+            echo "@jongleberry/vurst-ai $version is already on npm; skipping"
+          else
+            npm publish --access public --provenance
+          fi
+
+      - name: Publish @jongleberry/vurst-runtime
+        working-directory: packages/runtime
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          if npm view "@jongleberry/vurst-runtime@$version" version >/dev/null 2>&1; then
+            echo "@jongleberry/vurst-runtime $version is already on npm; skipping"
           else
             npm publish --access public --provenance
           fi

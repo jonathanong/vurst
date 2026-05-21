@@ -1,0 +1,24 @@
+{
+  "name": "@jongleberry/vurst-html",
+  "version": "0.0.1",
+  "description": "Rust + N-API: HTML sanitization, extraction, and boilerstrip.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "engines": { "node": ">= 18" },
+  "repository": { "type": "git", "url": "git+https://github.com/jonathanong/vurst.git" },
+  "keywords": ["rust", "napi", "html", "sanitize", "embedding", "boilerstrip"],
+  "files": ["index.js", "index.d.ts", "README.md", "*.node"],
+  "napi": {
+    "binaryName": "vurst-html",
+    "targets": ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu"]
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "test": "node --test __test__/*.test.mjs",
+    "prepublishOnly": "napi prepublish -t npm"
+  },
+  "publishConfig": { "access": "public", "provenance": true },
+  "devDependencies": { "@napi-rs/cli": "^3.6.2", "@types/node": "^24" }
+}
