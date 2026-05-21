@@ -1,13 +1,31 @@
 {
   "name": "@jongleberry/vurst-runtime",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Shutdown drain wrapper for @jongleberry/vurst-* N-API packages.",
   "main": "index.js",
   "types": "index.d.ts",
   "license": "MIT",
-  "engines": { "node": ">= 18" },
-  "repository": { "type": "git", "url": "git+https://github.com/jonathanong/vurst.git" },
-  "files": ["index.js", "index.d.ts", "README.md"],
-  "keywords": ["rust", "napi", "shutdown", "drain", "graceful"],
-  "publishConfig": { "access": "public", "provenance": true }
+  "engines": {
+    "node": ">= 18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonathanong/vurst.git"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md"
+  ],
+  "keywords": [
+    "rust",
+    "napi",
+    "shutdown",
+    "drain",
+    "graceful"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
 }
