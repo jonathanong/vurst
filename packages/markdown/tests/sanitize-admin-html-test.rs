@@ -1,4 +1,6 @@
-use vurst_markdown_node::markdown_to_html::{render_markdown_to_html_with_options, MarkdownRenderOptions};
+use vurst_markdown_node::markdown_to_html::{
+    render_markdown_to_html_with_options, MarkdownRenderOptions,
+};
 
 fn admin_opts() -> MarkdownRenderOptions {
     MarkdownRenderOptions {

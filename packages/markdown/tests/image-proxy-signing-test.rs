@@ -1,5 +1,7 @@
 use data_encoding::BASE64URL_NOPAD;
-use vurst_markdown_node::markdown_to_html::{render_markdown_to_html_with_options, MarkdownRenderOptions};
+use vurst_markdown_node::markdown_to_html::{
+    render_markdown_to_html_with_options, MarkdownRenderOptions,
+};
 
 const TEST_KEY: &str = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 const OTHER_KEY: &str = "cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe";
