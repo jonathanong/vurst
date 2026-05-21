@@ -26,12 +26,9 @@ fn test_redos_extremely_long_line() {
     // Just verify it completes without hanging (no timing assertions for CI stability)
     let chunks = chunk(&text, None);
 
-    // KNOWN ISSUE: Extremely long headers currently produce 0 chunks
-    // This is a bug that should be fixed - non-empty input should always produce >= 1 chunk
-    // For now, we just verify it doesn't crash or timeout
-    if chunks.is_empty() {
-        println!("WARN: Long header produced 0 chunks (should be >= 1)");
-    }
+    // Ensure that non-empty input produces >= 1 chunk, even for extremely long headers
+    // that would otherwise be parsed as empty sections.
+    assert!(!chunks.is_empty(), "Long header produced 0 chunks");
 }
 
 #[test]

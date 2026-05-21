@@ -26,7 +26,32 @@ mod runtime;
 pub mod image_proxy;
 pub mod markdown_to_html;
 
-pub use breadchunks::{chunk, default_length_counter, Chunk, ChunkOptions};
+pub use breadchunks::{default_length_counter, Chunk, ChunkOptions};
+
+/// Chunks a markdown document into semantic sections.
+/// Wraps `breadchunks::chunk` but adds a workaround for extremely long headers
+/// or documents consisting entirely of headers without body text, which
+/// normally produce 0 chunks in `breadchunks`.
+pub fn chunk(text: &str, options: Option<ChunkOptions>) -> Vec<Chunk> {
+    let mut chunks = breadchunks::chunk(text, options.clone());
+
+    if chunks.is_empty() && !text.trim().is_empty() {
+        let dummy_text = format!("{text}\n\n\u{200B}");
+        chunks = breadchunks::chunk(&dummy_text, options);
+        if let Some(c) = chunks.last_mut() {
+            c.text = c.text.trim_end_matches('\u{200B}').to_string();
+            let full_text = if c.breadcrumb.is_empty() {
+                c.text.clone()
+            } else {
+                format!("{}\n\n{}", c.breadcrumb, c.text)
+            };
+            c.length = default_length_counter(&full_text);
+        }
+    }
+
+    chunks
+}
+
 pub use markdown_to_html::{
     extract_markdown_urls_sync, render_markdown_to_html_with_options, MarkdownRenderOptions,
     MarkdownUrlsResult,
