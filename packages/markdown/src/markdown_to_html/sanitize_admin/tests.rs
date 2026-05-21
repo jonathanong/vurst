@@ -1,6 +1,19 @@
 use super::*;
 
 #[test]
+fn test_escape_attr_val() {
+    assert_eq!(escape_attr_val(""), "");
+    assert_eq!(escape_attr_val("hello world"), "hello world");
+    assert_eq!(escape_attr_val("a & b"), "a &amp; b");
+    assert_eq!(escape_attr_val("\"quoted\""), "&quot;quoted&quot;");
+    assert_eq!(escape_attr_val("<tag>"), "&lt;tag>");
+    assert_eq!(
+        escape_attr_val("<a href=\"&\">"),
+        "&lt;a href=&quot;&amp;&quot;>"
+    );
+}
+
+#[test]
 fn sanitizer_private_helpers_cover_empty_and_attr_paths() {
     assert_eq!(
         sanitize_admin_html_with_options("", &AdminHtmlOptions::default()),
