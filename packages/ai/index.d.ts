@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 export interface SlopDetectionResult {
   flagged: boolean
   confidenceScore: number

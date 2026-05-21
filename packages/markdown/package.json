@@ -19,5 +19,5 @@
     "prepublishOnly": "napi prepublish -t npm"
   },
   "publishConfig": { "access": "public", "provenance": true },
-  "devDependencies": { "@napi-rs/cli": "^3.6.2" }
+  "devDependencies": { "@napi-rs/cli": "^3.6.2", "@types/node": "^24" }
 }

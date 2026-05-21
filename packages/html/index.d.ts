@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 export interface NapiSanitizeRssHtmlOptions {
   proxyImages?: boolean
   imageProxyUrlPrefix?: string

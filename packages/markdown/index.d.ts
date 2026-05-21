@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 export interface Chunk {
   level: number
   header?: string
