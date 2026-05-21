@@ -81,8 +81,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm --prefix packages/html version "${{ inputs.bump }}" --no-git-tag-version
-          version="$(node -p "require('./packages/html/package.json').version")"
+          npm version "${{ inputs.bump }}" --no-git-tag-version
+          version="$(node -p "require('./package.json').version")"
+          npm --prefix packages/html version "$version" --allow-same-version --no-git-tag-version
           npm --prefix packages/markdown version "$version" --allow-same-version --no-git-tag-version
           npm --prefix packages/ai version "$version" --allow-same-version --no-git-tag-version
           npm --prefix packages/runtime version "$version" --allow-same-version --no-git-tag-version
@@ -95,7 +96,9 @@ jobs:
               fs.writeFileSync(path, cargo);
             }
           " "$version"
+          npm run check:versions
           cargo update -w
+          git add package.json scripts/check-versions.mjs
           git add packages/ai/Cargo.toml packages/html/Cargo.toml packages/markdown/Cargo.toml Cargo.lock
           git add packages/ai/package.json packages/html/package.json packages/markdown/package.json packages/runtime/package.json
           git commit -m "chore(release): v$version"
@@ -260,6 +263,27 @@ jobs:
           ls -la packages/ai/
           ls -la packages/ai/onnxruntime/ || true
 
+      - name: Check package versions
+        run: npm run check:versions
+
+      - name: Show npm publish state
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          for package in \
+            "@jongleberry/vurst-runtime" \
+            "@jongleberry/vurst-html" \
+            "@jongleberry/vurst-markdown" \
+            "@jongleberry/vurst-ai"
+          do
+            if npm view "$package@$version" version >/dev/null 2>&1; then
+              echo "$package $version is already on npm and will be skipped"
+            else
+              echo "$package $version is not on npm and will be published"
+            fi
+          done
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
@@ -271,6 +295,20 @@ jobs:
             echo "Release $tag already exists; skipping"
           else
             gh release create "$tag" --title "$tag" --generate-notes
+          fi
+
+      - name: Publish @jongleberry/vurst-runtime
+        working-directory: packages/runtime
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          if npm view "@jongleberry/vurst-runtime@$version" version >/dev/null 2>&1; then
+            echo "@jongleberry/vurst-runtime $version is already on npm; skipping"
+          else
+            npm publish --access public --provenance
           fi
 
       - name: Publish @jongleberry/vurst-html
@@ -311,20 +349,6 @@ jobs:
           version="${{ needs.prepare.outputs.version }}"
           if npm view "@jongleberry/vurst-ai@$version" version >/dev/null 2>&1; then
             echo "@jongleberry/vurst-ai $version is already on npm; skipping"
-          else
-            npm publish --access public --provenance
-          fi
-
-      - name: Publish @jongleberry/vurst-runtime
-        working-directory: packages/runtime
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="${{ needs.prepare.outputs.version }}"
-          if npm view "@jongleberry/vurst-runtime@$version" version >/dev/null 2>&1; then
-            echo "@jongleberry/vurst-runtime $version is already on npm; skipping"
           else
             npm publish --access public --provenance
           fi
