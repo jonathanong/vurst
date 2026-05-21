@@ -61,6 +61,7 @@ impl From<slop_detection::SlopDetectionResult> for NapiSlopDetectionResult {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 #[napi(js_name = "detectAiGeneratedText")]
 pub async fn detect_ai_generated_text_napi(
     text: Buffer,

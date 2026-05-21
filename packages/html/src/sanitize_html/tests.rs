@@ -44,7 +44,7 @@ fn test_first_image_src_skips_relative() {
 
 #[test]
 fn test_first_image_src_none_when_no_external_img() {
-    let html = r#"<p>No images</p>"#;
+    let html = r"<p>No images</p>";
     let result = sanitize(html);
     assert!(result.first_image_src.is_none());
 }
@@ -104,7 +104,7 @@ fn test_first_image_src_is_original_before_proxy() {
 
 #[test]
 fn test_dangerous_elements_removed() {
-    let html = r#"<p>Hello</p><script>alert(1)</script>"#;
+    let html = r"<p>Hello</p><script>alert(1)</script>";
     let result = sanitize(html);
     assert!(!result.html.contains("<script>"));
     assert!(result.html.contains("<p>Hello</p>"));

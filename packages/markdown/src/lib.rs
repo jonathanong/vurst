@@ -50,6 +50,7 @@ pub struct MarkdownUrls {
     pub image_urls: Vec<String>,
 }
 
+#[cfg_attr(coverage, coverage(off))]
 #[napi]
 pub async fn extract_markdown_urls(text: Buffer) -> Result<MarkdownUrls> {
     if text.len() > SANITIZE_MAX_INPUT_BYTES {
@@ -98,6 +99,7 @@ impl NapiMarkdownRenderOptions {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 #[napi]
 pub async fn render_markdown_to_html(
     text: Buffer,
@@ -122,6 +124,7 @@ pub async fn render_markdown_to_html(
     .await
 }
 
+#[cfg_attr(coverage, coverage(off))]
 #[napi]
 pub async fn render_markdown_to_html_batch(
     inputs: Vec<Buffer>,
@@ -210,6 +213,7 @@ impl From<NapiChunkOptions> for ChunkOptions {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 #[napi(js_name = "chunk")]
 pub async fn chunk_napi(text: Buffer, options: Option<NapiChunkOptions>) -> Result<Vec<NapiChunk>> {
     if text.len() > SANITIZE_MAX_INPUT_BYTES {

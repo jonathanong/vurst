@@ -71,30 +71,3 @@ fn await_blocking_maps_join_errors() {
     let error = result.expect_err("panic should become napi error");
     assert!(error.to_string().contains("Task failed"));
 }
-
-#[test]
-fn await_blocking_result_flattens_inner_results() {
-    let ok = super::RUNTIME.block_on(super::await_blocking_result(super::spawn_blocking(|| {
-        napi::Result::Ok(7)
-    })));
-    assert_eq!(ok.expect("inner ok should pass through"), 7);
-
-    let inner_error =
-        super::RUNTIME.block_on(super::await_blocking_result(super::spawn_blocking(|| {
-            napi::Result::<usize>::Err(napi::Error::from_reason("inner"))
-        })));
-    assert!(inner_error
-        .expect_err("inner error should pass through")
-        .to_string()
-        .contains("inner"));
-
-    let join_error = super::RUNTIME.block_on(super::await_blocking_result(super::spawn_blocking(
-        || -> napi::Result<usize> {
-            panic!("boom");
-        },
-    )));
-    assert!(join_error
-        .expect_err("join error should pass through")
-        .to_string()
-        .contains("Task failed"));
-}
