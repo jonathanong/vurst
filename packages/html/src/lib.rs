@@ -98,7 +98,7 @@ pub async fn sanitize_rss_html(
         )));
     }
 
-    let decoded_html = String::from_utf8(html.to_vec())
+    let decoded_html = String::from_utf8(html.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in HTML: {e}")))?;
 
     let opts = options.unwrap_or_default().into_sanitize_options();
@@ -163,7 +163,7 @@ pub async fn html_to_embedding_text_napi(html: Buffer) -> Result<String> {
             html.len()
         )));
     }
-    let decoded = String::from_utf8(html.to_vec())
+    let decoded = String::from_utf8(html.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in HTML: {e}")))?;
     runtime::await_blocking(runtime::spawn_blocking(move || {
         embedding_content::html_to_embedding_text(&decoded)
@@ -230,7 +230,7 @@ pub async fn extract_dom_removals(
         .into_iter()
         .enumerate()
         .map(|(index, html_page)| {
-            String::from_utf8(html_page.to_vec()).map_err(|e| {
+            String::from_utf8(html_page.into()).map_err(|e| {
                 Error::from_reason(format!(
                     "Invalid UTF-8 in html_pages[{index}]. Expected UTF-8 encoded HTML: {e}"
                 ))
@@ -259,7 +259,7 @@ pub async fn apply_dom_removals_to_html(
             html.len()
         )));
     }
-    let decoded_html = String::from_utf8(html.to_vec())
+    let decoded_html = String::from_utf8(html.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in HTML: {e}")))?;
     let internal_removals: Removals = removals.into();
 
@@ -334,7 +334,7 @@ pub async fn get_content_from_html(
             html_buffer.len()
         )));
     }
-    let html = String::from_utf8(html_buffer.to_vec())
+    let html = String::from_utf8(html_buffer.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in HTML: {e}")))?;
 
     let internal_options: ConvertOptions = options.into();
@@ -361,7 +361,7 @@ pub async fn sanitize_prompt_injection_napi(
         )));
     }
 
-    let decoded = String::from_utf8(content.to_vec())
+    let decoded = String::from_utf8(content.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in content: {e}")))?;
 
     runtime::await_blocking(runtime::spawn_blocking(move || {

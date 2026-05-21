@@ -73,7 +73,7 @@ pub async fn detect_ai_generated_text_napi(
         )));
     }
 
-    let decoded = String::from_utf8(text.to_vec())
+    let decoded = String::from_utf8(text.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in text: {e}")))?;
     #[allow(clippy::cast_possible_truncation)] // 0.0..=1.0 fits losslessly in f32
     let threshold = confidence_threshold.unwrap_or(0.95) as f32;

@@ -58,7 +58,7 @@ pub async fn extract_markdown_urls(text: Buffer) -> Result<MarkdownUrls> {
             text.len()
         )));
     }
-    let decoded = String::from_utf8(text.to_vec())
+    let decoded = String::from_utf8(text.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in text: {e}")))?;
     runtime::await_blocking(runtime::spawn_blocking(move || {
         let result = markdown_to_html::extract_markdown_urls_sync(&decoded);
@@ -109,7 +109,7 @@ pub async fn render_markdown_to_html(
             text.len()
         )));
     }
-    let decoded = String::from_utf8(text.to_vec())
+    let decoded = String::from_utf8(text.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in text: {e}")))?;
     let opts = options.map_or_else(
         MarkdownRenderOptions::default,
@@ -218,7 +218,7 @@ pub async fn chunk_napi(text: Buffer, options: Option<NapiChunkOptions>) -> Resu
             text.len()
         )));
     }
-    let decoded = String::from_utf8(text.to_vec())
+    let decoded = String::from_utf8(text.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in text: {e}")))?;
 
     runtime::await_blocking(runtime::spawn_blocking(move || {
