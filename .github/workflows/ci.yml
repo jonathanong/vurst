@@ -13,7 +13,7 @@ env:
 
 jobs:
   test:
-    name: Test
+    name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -23,7 +23,10 @@ jobs:
           node-version: 22
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
+          components: clippy, rustfmt, llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-nextest
       - uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
@@ -43,8 +46,34 @@ jobs:
           mv onnxruntime-linux-x64-1.23.2 onnxruntime
           echo "ORT_DYLIB_PATH=$PWD/onnxruntime/lib/libonnxruntime.so" >> "$GITHUB_ENV"
 
-      - name: Run Rust tests
-        run: cargo test --workspace --all-features
+      - name: Run Rust tests with coverage (html)
+        run: |
+          mkdir -p coverage
+          cargo llvm-cov nextest -p vurst-html-node --all-features \
+            --fail-under-lines 100 \
+            --ignore-filename-regex 'src/lib\.rs' \
+            --lcov --output-path coverage/lcov-html.info
+
+      - name: Run Rust tests with coverage (markdown)
+        run: |
+          cargo llvm-cov nextest -p vurst-markdown-node --all-features \
+            --fail-under-lines 100 \
+            --ignore-filename-regex 'src/lib\.rs' \
+            --lcov --output-path coverage/lcov-markdown.info
+
+      - name: Run Rust tests with coverage (ai)
+        run: |
+          cargo llvm-cov nextest -p vurst-ai-node --all-features \
+            --fail-under-lines 100 \
+            --ignore-filename-regex 'src/lib\.rs' \
+            --lcov --output-path coverage/lcov-ai.info
+
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
+        with:
+          files: coverage/lcov-html.info,coverage/lcov-markdown.info,coverage/lcov-ai.info
+          fail_ci_if_error: false
 
       - name: Install node deps (html)
         working-directory: packages/html
@@ -95,61 +124,6 @@ jobs:
       - name: Run Node tests (runtime)
         working-directory: packages/runtime
         run: node --test __test__/*.test.mjs
-
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: llvm-tools-preview
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-llvm-cov,cargo-nextest
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: v1-coverage
-
-      - name: Download onnxruntime
-        run: |
-          set -euo pipefail
-          curl -fsSL -o ort.tgz https://github.com/microsoft/onnxruntime/releases/download/v1.23.2/onnxruntime-linux-x64-1.23.2.tgz
-          tar -xzf ort.tgz
-          mv onnxruntime-linux-x64-1.23.2 onnxruntime
-          echo "ORT_DYLIB_PATH=$PWD/onnxruntime/lib/libonnxruntime.so" >> "$GITHUB_ENV"
-
-      - name: Run coverage with 100% line gate (html)
-        run: |
-          mkdir -p coverage
-          cargo llvm-cov nextest -p vurst-html-node --all-features \
-            --fail-under-lines 100 \
-            --ignore-filename-regex 'src/lib\.rs' \
-            --lcov --output-path coverage/lcov-html.info
-
-      - name: Run coverage with 100% line gate (markdown)
-        run: |
-          cargo llvm-cov nextest -p vurst-markdown-node --all-features \
-            --fail-under-lines 100 \
-            --ignore-filename-regex 'src/lib\.rs' \
-            --lcov --output-path coverage/lcov-markdown.info
-
-      - name: Run coverage with 100% line gate (ai)
-        run: |
-          cargo llvm-cov nextest -p vurst-ai-node --all-features \
-            --fail-under-lines 100 \
-            --ignore-filename-regex 'src/lib\.rs' \
-            --lcov --output-path coverage/lcov-ai.info
-
-      - name: Upload coverage to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
-        with:
-          files: coverage/lcov-html.info,coverage/lcov-markdown.info,coverage/lcov-ai.info
-          fail_ci_if_error: false
 
   build-smoke:
     name: Build ${{ matrix.target }}
