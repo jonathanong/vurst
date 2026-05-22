@@ -14,8 +14,8 @@ fn rendered_image_src_only_proxies_when_enabled_and_external() {
     let opts = MarkdownHtmlFormatOptions {
         nofollow_links: true,
         proxy_images: true,
-        image_proxy_url_prefix: crate::image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX.to_string(),
-        image_proxy_signing_keys: Vec::new(),
+        image_proxy_url_prefix: crate::image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX,
+        image_proxy_signing_keys: &[],
     };
 
     assert!(rendered_image_src("https://example.com/a.png", &opts).starts_with("/proxy/"));

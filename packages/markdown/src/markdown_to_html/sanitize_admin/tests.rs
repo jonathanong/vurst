@@ -41,7 +41,7 @@ fn sanitizer_private_helpers_cover_empty_and_attr_paths() {
             &AdminHtmlOptions {
                 nofollow_links: false,
                 proxy_images: true,
-                image_proxy_signing_keys: Vec::new(),
+                image_proxy_signing_keys: &[],
                 ..AdminHtmlOptions::default()
             },
         ),
@@ -61,7 +61,7 @@ fn sanitizer_options_apply_link_and_image_policy_during_render() {
         &AdminHtmlOptions {
             nofollow_links: true,
             proxy_images: true,
-            image_proxy_signing_keys: Vec::new(),
+            image_proxy_signing_keys: &[],
             ..AdminHtmlOptions::default()
         },
     );
@@ -76,7 +76,7 @@ fn sanitizer_options_apply_link_and_image_policy_during_render() {
         &AdminHtmlOptions {
             nofollow_links: false,
             proxy_images: false,
-            image_proxy_signing_keys: Vec::new(),
+            image_proxy_signing_keys: &[],
             ..AdminHtmlOptions::default()
         },
     );
