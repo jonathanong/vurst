@@ -117,10 +117,7 @@ fn escape_attr_val(s: &str) -> Cow<'_, str> {
     })
 }
 
-fn escape_text_chars(
-    s: &str,
-    replacement: impl Fn(char) -> Option<&'static str>,
-) -> Cow<'_, str> {
+fn escape_text_chars(s: &str, replacement: impl Fn(char) -> Option<&'static str>) -> Cow<'_, str> {
     let mut last_idx = 0;
     let mut out: Option<String> = None;
 
@@ -239,7 +236,7 @@ fn write_attr_escape(open: &mut String, attr_name: &str, escaped_value: Cow<'_, 
     let _ = write!(open, " {attr_name}=\"{}\"", escaped_value.as_ref());
 }
 
-fn render_node(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions<'_>) -> Cow<'_, str> {
+fn render_node<'a>(node: NodeRef<'a, Node>, opts: &'a AdminHtmlOptions<'a>) -> Cow<'a, str> {
     match node.value() {
         Node::Text(text) => escape_text(text),
         Node::Element(elem) => {
