@@ -19,9 +19,12 @@ fn detect_ai_generated_text_returns_bounded_scores_and_metadata() {
             );
         }
         Err(e) => {
-            if !e.contains("Failed to load ONNX Runtime dylib") {
-                panic!("detector should succeed, but failed with: {}", e);
+            if e.contains("Failed to load ONNX Runtime dylib") {
+                eprintln!("Skipping AI behavior test: ONNX Runtime dylib unavailable");
+                return;
             }
+
+            panic!("detector should succeed, but failed with: {}", e);
         }
     }
 }

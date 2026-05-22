@@ -100,45 +100,33 @@ pub fn sanitize_admin_html_with_options(html: &str, opts: &AdminHtmlOptions<'_>)
 }
 
 fn escape_text(s: &str) -> Cow<'_, str> {
-    let mut last_idx = 0;
-    let mut out: Option<String> = None;
-
-    for (i, c) in s.char_indices() {
-        let replacement = match c {
-            '&' => "&amp;",
-            '<' => "&lt;",
-            '>' => "&gt;",
-            _ => continue,
-        };
-
-        if out.is_none() {
-            out = Some(String::with_capacity(s.len() + 16));
-        }
-        let out_str = out.as_mut().unwrap();
-
-        out_str.push_str(&s[last_idx..i]);
-        out_str.push_str(replacement);
-        last_idx = i + c.len_utf8();
-    }
-
-    if let Some(mut out_str) = out {
-        out_str.push_str(&s[last_idx..]);
-        Cow::Owned(out_str)
-    } else {
-        Cow::Borrowed(s)
-    }
+    escape_text_chars(s, |c| match c {
+        '&' => Some("&amp;"),
+        '<' => Some("&lt;"),
+        '>' => Some("&gt;"),
+        _ => None,
+    })
 }
 
 fn escape_attr_val(s: &str) -> Cow<'_, str> {
+    escape_text_chars(s, |c| match c {
+        '&' => Some("&amp;"),
+        '"' => Some("&quot;"),
+        '<' => Some("&lt;"),
+        _ => None,
+    })
+}
+
+fn escape_text_chars(
+    s: &str,
+    replacement: impl Fn(char) -> Option<&'static str>,
+) -> Cow<'_, str> {
     let mut last_idx = 0;
     let mut out: Option<String> = None;
 
     for (i, c) in s.char_indices() {
-        let replacement = match c {
-            '&' => "&amp;",
-            '"' => "&quot;",
-            '<' => "&lt;",
-            _ => continue,
+        let Some(replacement) = replacement(c) else {
+            continue;
         };
 
         if out.is_none() {
@@ -160,9 +148,14 @@ fn escape_attr_val(s: &str) -> Cow<'_, str> {
 }
 
 fn render_children(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions<'_>) -> String {
-    node.children()
-        .map(|child| render_node(child, opts))
-        .collect()
+    let mut out = String::new();
+    for child in node.children() {
+        match render_node(child, opts) {
+            Cow::Borrowed(text) => out.push_str(text),
+            Cow::Owned(text) => out.push_str(&text),
+        }
+    }
+    out
 }
 
 fn is_allowed_attr(tag: &str, attr_name: &str) -> bool {
@@ -220,7 +213,8 @@ fn render_element_attrs(
         } else {
             Cow::Borrowed(val.as_ref())
         };
-        let _ = write!(open, " {attr_name}=\"{}\"", escape_attr_val(&attr_value));
+
+        write_attr_escape(&mut open, attr_name, escape_attr_val(&attr_value));
     }
 
     if has_external_href {
@@ -229,7 +223,8 @@ fn render_element_attrs(
         } else {
             "noopener"
         };
-        let _ = write!(open, " rel=\"{}\" target=\"_blank\"", escape_attr_val(rel));
+        write_attr_escape(&mut open, "rel", escape_attr_val(rel));
+        let _ = write!(open, " target=\"_blank\"");
     }
     open.push('>');
 
@@ -240,26 +235,30 @@ fn render_element_attrs(
     }
 }
 
-fn render_node(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions<'_>) -> String {
+fn write_attr_escape(open: &mut String, attr_name: &str, escaped_value: Cow<'_, str>) {
+    let _ = write!(open, " {attr_name}=\"{}\"", escaped_value.as_ref());
+}
+
+fn render_node(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions<'_>) -> Cow<'_, str> {
     match node.value() {
-        Node::Text(text) => escape_text(text).into_owned(),
+        Node::Text(text) => escape_text(text),
         Node::Element(elem) => {
             let tag: &str = elem.name.local.as_ref();
 
             if DANGEROUS_ADMIN_TAGS.contains(&tag) {
-                return String::new();
+                return Cow::Borrowed("");
             }
 
             let children = render_children(node, opts);
 
             if !ALLOWED_ADMIN_TAGS.contains(&tag) {
-                return children;
+                return Cow::Owned(children);
             }
 
-            render_element_attrs(tag, elem, &children, opts)
+            Cow::Owned(render_element_attrs(tag, elem, &children, opts))
         }
-        Node::Document | Node::Fragment => render_children(node, opts),
-        _ => String::new(),
+        Node::Document | Node::Fragment => Cow::Owned(render_children(node, opts)),
+        _ => Cow::Borrowed(""),
     }
 }
 
