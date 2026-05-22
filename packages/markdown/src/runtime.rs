@@ -44,20 +44,16 @@ pub async fn await_blocking<R>(handle: JoinHandle<R>) -> napi::Result<R> {
         .map_err(|e| napi::Error::from_reason(format!("Task failed: {e}")))
 }
 
-pub(crate) fn parse_positive_usize(name: &str, raw: &str) -> usize {
+pub(crate) fn parse_positive_usize(raw: &str) -> Option<usize> {
     let trimmed = raw.trim();
-    trimmed
-        .parse::<usize>()
-        .ok()
-        .filter(|n| *n > 0)
-        .unwrap_or_else(|| panic!("{name} must be a positive integer, got \"{raw}\""))
+    trimmed.parse::<usize>().ok().filter(|n| *n > 0)
 }
 
 fn env_usize(name: &str, default: usize) -> usize {
     let Ok(raw) = std::env::var(name) else {
         return default;
     };
-    parse_positive_usize(name, &raw)
+    parse_positive_usize(&raw).unwrap_or(default)
 }
 
 #[cfg(test)]

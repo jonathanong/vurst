@@ -1,10 +1,3 @@
-fn assert_parse_panics(val: &str, expected_msg: &str) {
-    let result = std::panic::catch_unwind(|| super::parse_positive_usize("VAR", val));
-    let err = result.expect_err("expected a panic");
-    let msg = err.downcast_ref::<String>().map_or("", String::as_str);
-    assert!(msg.contains(expected_msg), "unexpected panic: {msg}");
-}
-
 #[test]
 fn returns_default_when_unset() {
     assert_eq!(super::env_usize("VURST_TEST_ENV_GUARANTEED_UNSET", 4), 4);
@@ -19,23 +12,31 @@ fn reads_set_env_var() {
 }
 
 #[test]
+#[allow(unsafe_code)]
+fn env_usize_falls_back_to_default_on_garbage() {
+    // nextest runs each test in a separate process, so set_var is safe here
+    unsafe { std::env::set_var("VURST_TEST_ENV_GARBAGE", "not-a-number") };
+    assert_eq!(super::env_usize("VURST_TEST_ENV_GARBAGE", 4), 4);
+}
+
+#[test]
 fn parses_positive_integer() {
-    assert_eq!(super::parse_positive_usize("VAR", "16"), 16);
+    assert_eq!(super::parse_positive_usize("16"), Some(16));
 }
 
 #[test]
 fn trims_whitespace() {
-    assert_eq!(super::parse_positive_usize("VAR", "  8  "), 8);
+    assert_eq!(super::parse_positive_usize("  8  "), Some(8));
 }
 
 #[test]
-fn panics_on_zero() {
-    assert_parse_panics("0", "must be a positive integer");
+fn returns_none_on_zero() {
+    assert_eq!(super::parse_positive_usize("0"), None);
 }
 
 #[test]
-fn panics_on_garbage() {
-    assert_parse_panics("not-a-number", "must be a positive integer");
+fn returns_none_on_garbage() {
+    assert_eq!(super::parse_positive_usize("not-a-number"), None);
 }
 
 #[test]
