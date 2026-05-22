@@ -21,8 +21,6 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
-mod runtime;
-
 pub mod embedding_content;
 pub mod image_proxy;
 pub mod sanitize_html;
@@ -103,7 +101,7 @@ pub async fn sanitize_rss_html(
 
     let opts = options.unwrap_or_default().into_sanitize_options();
 
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         let result = sanitize_html::sanitize_rss_html_sync(&decoded_html, &opts);
         NapiSanitizeRssHtmlResult {
             html: Buffer::from(result.html.into_bytes()),
@@ -136,7 +134,7 @@ pub async fn sanitize_rss_html_batch(
 
     let opts = options.unwrap_or_default().into_sanitize_options();
 
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         htmls
             .iter()
             .map(|html| {
@@ -165,7 +163,7 @@ pub async fn html_to_embedding_text_napi(html: Buffer) -> Result<String> {
     }
     let decoded = String::from_utf8(html.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in HTML: {e}")))?;
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         embedding_content::html_to_embedding_text(&decoded)
     }))
     .await
@@ -240,7 +238,7 @@ pub async fn extract_dom_removals(
 
     let internal_options = options.map(std::convert::Into::into).unwrap_or_default();
 
-    runtime::await_blocking_result(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking_result(vurst_runtime_rs::spawn_blocking(move || {
         learn(&decoded_pages, &internal_options)
             .map_err(|e| Error::from_reason(e.to_string()))
             .map(std::convert::Into::into)
@@ -263,7 +261,7 @@ pub async fn apply_dom_removals_to_html(
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in HTML: {e}")))?;
     let internal_removals: Removals = removals.into();
 
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         let cleaned = apply_removals(&decoded_html, &internal_removals);
         Buffer::from(cleaned.into_bytes())
     }))
@@ -339,7 +337,7 @@ pub async fn get_content_from_html(
 
     let internal_options: ConvertOptions = options.into();
 
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         convert(&html, &internal_options).into()
     }))
     .await
@@ -364,7 +362,7 @@ pub async fn sanitize_prompt_injection_napi(
     let decoded = String::from_utf8(content.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in content: {e}")))?;
 
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         let sanitized = sanitize_prompt_injection::sanitize_prompt_injection_sync(
             &decoded,
             is_title.unwrap_or(false),

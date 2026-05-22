@@ -21,8 +21,6 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
-mod runtime;
-
 pub mod slop_detection;
 
 pub use slop_detection::{detect_ai_generated_text, SlopClassification, SlopDetectionResult};
@@ -84,7 +82,7 @@ pub async fn detect_ai_generated_text_napi(
     #[allow(clippy::cast_possible_truncation)] // validated finite and bounded
     let threshold = threshold_f64 as f32;
 
-    runtime::await_blocking_result(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking_result(vurst_runtime_rs::spawn_blocking(move || {
         slop_detection::detect_ai_generated_text(&decoded, threshold)
             .map(std::convert::Into::into)
             .map_err(Error::from_reason)

@@ -21,8 +21,6 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
-mod runtime;
-
 pub mod image_proxy;
 pub mod markdown_to_html;
 
@@ -60,7 +58,7 @@ pub async fn extract_markdown_urls(text: Buffer) -> Result<MarkdownUrls> {
     }
     let decoded = String::from_utf8(text.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in text: {e}")))?;
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         let result = markdown_to_html::extract_markdown_urls_sync(&decoded);
         MarkdownUrls {
             link_urls: result.link_urls,
@@ -115,7 +113,7 @@ pub async fn render_markdown_to_html(
         MarkdownRenderOptions::default,
         NapiMarkdownRenderOptions::into_render_options,
     );
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         let html = markdown_to_html::render_markdown_to_html_with_options(&decoded, &opts);
         Buffer::from(html.into_bytes())
     }))
@@ -146,7 +144,7 @@ pub async fn render_markdown_to_html_batch(
         NapiMarkdownRenderOptions::into_render_options,
     );
 
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         texts
             .iter()
             .map(|text| {
@@ -221,7 +219,7 @@ pub async fn chunk_napi(text: Buffer, options: Option<NapiChunkOptions>) -> Resu
     let decoded = String::from_utf8(text.into())
         .map_err(|e| Error::from_reason(format!("Invalid UTF-8 in text: {e}")))?;
 
-    runtime::await_blocking(runtime::spawn_blocking(move || {
+    vurst_runtime_rs::await_blocking(vurst_runtime_rs::spawn_blocking(move || {
         let internal_options = options.map(std::convert::Into::into);
         chunk(&decoded, internal_options)
             .into_iter()
