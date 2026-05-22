@@ -45,3 +45,13 @@ test('sanitizeRssHtml rejects oversized input', async () => {
   const oversized = Buffer.alloc(10 * 1024 * 1024 + 1, 0x20)
   await assert.rejects(sanitizeRssHtml(oversized), /Input too large/)
 })
+
+test('sanitizeRssHtml rejects invalid UTF-8 input', async () => {
+  const invalidUtf8 = Buffer.from([0xff, 0xfe, 0xfd])
+  await assert.rejects(sanitizeRssHtml(invalidUtf8), /Invalid UTF-8 in HTML/)
+})
+
+test('sanitizeRssHtmlBatch rejects invalid UTF-8 input', async () => {
+  const invalidUtf8 = Buffer.from([0xff, 0xfe, 0xfd])
+  await assert.rejects(sanitizeRssHtmlBatch([invalidUtf8]), /Invalid UTF-8 in inputs\[0\]/)
+})
