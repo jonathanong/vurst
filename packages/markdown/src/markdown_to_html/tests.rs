@@ -116,3 +116,20 @@ fn extract_markdown_urls_sync_plain_text_has_no_urls() {
         }
     );
 }
+
+#[test]
+fn should_not_render_nested_link_when_parent_is_link() {
+    let mut options = Options::default();
+    options.parse.relaxed_autolinks = true;
+    let arena = Arena::new();
+
+    let root1 = parse_document(&arena, "[parent](https://a.com)", &options);
+    let parent_link = first_link_node(root1).expect("expected parent link");
+
+    let root2 = parse_document(&arena, "[child](https://b.com)", &options);
+    let child_link = first_link_node(root2).expect("expected child link");
+
+    parent_link.append(child_link);
+
+    assert!(!should_render_nested_link(child_link, &options));
+}
