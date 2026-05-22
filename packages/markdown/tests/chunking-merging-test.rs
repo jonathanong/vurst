@@ -3,7 +3,7 @@ use vurst_markdown_node::{chunk, ChunkOptions};
 
 fn read_fixture(name: &str) -> String {
     let path = format!("tests/fixtures/{}", name);
-    fs::read_to_string(&path).expect(&format!("Failed to read fixture: {}", path))
+    fs::read_to_string(&path).unwrap_or_else(|err| panic!("Failed to read fixture {path}: {err}"))
 }
 
 // Phase tests
@@ -160,7 +160,7 @@ fn test_header_regex_valid_only() {
         .any(|c| c.header == Some("Valid H1".to_string())));
     assert!(!chunks
         .iter()
-        .any(|c| c.header.as_ref().map_or(false, |h| h.contains("##Invalid"))));
+        .any(|c| c.header.as_ref().is_some_and(|h| h.contains("##Invalid"))));
     assert!(chunks.iter().any(|c| c.text.contains("#hashtag")));
 }
 

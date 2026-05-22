@@ -3,7 +3,7 @@ use vurst_markdown_node::{chunk, ChunkOptions};
 
 fn read_fixture(name: &str) -> String {
     let path = format!("tests/fixtures/{}", name);
-    fs::read_to_string(&path).expect(&format!("Failed to read fixture: {}", path))
+    fs::read_to_string(&path).unwrap_or_else(|err| panic!("Failed to read fixture {path}: {err}"))
 }
 
 // Fixture-based tests
