@@ -6,3 +6,4 @@ coverage/
 package/*.tgz
 package/onnxruntime/
 .DS_Store
+.jules/
