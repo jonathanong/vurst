@@ -46,30 +46,30 @@ impl Default for MarkdownRenderOptions {
 }
 
 #[derive(Default)]
-struct MarkdownHtmlFormatOptions {
+struct MarkdownHtmlFormatOptions<'a> {
     nofollow_links: bool,
     proxy_images: bool,
-    image_proxy_url_prefix: String,
-    image_proxy_signing_keys: Vec<String>,
+    image_proxy_url_prefix: &'a str,
+    image_proxy_signing_keys: &'a [String],
 }
 
-impl From<&MarkdownRenderOptions> for MarkdownHtmlFormatOptions {
-    fn from(opts: &MarkdownRenderOptions) -> Self {
+impl<'a> From<&'a MarkdownRenderOptions> for MarkdownHtmlFormatOptions<'a> {
+    fn from(opts: &'a MarkdownRenderOptions) -> Self {
         Self {
             nofollow_links: opts.nofollow_links,
             proxy_images: opts.proxy_images,
-            image_proxy_url_prefix: opts.image_proxy_url_prefix.clone(),
-            image_proxy_signing_keys: opts.image_proxy_signing_keys.clone(),
+            image_proxy_url_prefix: &opts.image_proxy_url_prefix,
+            image_proxy_signing_keys: &opts.image_proxy_signing_keys,
         }
     }
 }
 
-fn rendered_image_src<'a>(url: &'a str, opts: &MarkdownHtmlFormatOptions) -> Cow<'a, str> {
-    if opts.proxy_images && should_proxy_image(url, &opts.image_proxy_url_prefix) {
+fn rendered_image_src<'a>(url: &'a str, opts: &MarkdownHtmlFormatOptions<'_>) -> Cow<'a, str> {
+    if opts.proxy_images && should_proxy_image(url, opts.image_proxy_url_prefix) {
         Cow::Owned(rewrite_image_to_proxy(
             url,
-            &opts.image_proxy_url_prefix,
-            &opts.image_proxy_signing_keys,
+            opts.image_proxy_url_prefix,
+            opts.image_proxy_signing_keys,
         ))
     } else {
         Cow::Borrowed(url)
@@ -87,7 +87,7 @@ fn should_render_nested_link(node: &comrak::nodes::AstNode<'_>, opts: &Options) 
     }
 }
 
-create_formatter!(MarkdownHtmlFormatter<MarkdownHtmlFormatOptions>, {
+create_formatter!(MarkdownHtmlFormatter<MarkdownHtmlFormatOptions<'a>>, {
     NodeValue::Link(ref link) => |context, node, entering| {
         if !should_render_nested_link(node, context.options) {
             return Ok(ChildRendering::HTML);
@@ -179,8 +179,8 @@ pub fn render_markdown_to_html_with_options(text: &str, opts: &MarkdownRenderOpt
             &AdminHtmlOptions {
                 nofollow_links: opts.nofollow_links,
                 proxy_images: opts.proxy_images,
-                image_proxy_url_prefix: opts.image_proxy_url_prefix.clone(),
-                image_proxy_signing_keys: opts.image_proxy_signing_keys.clone(),
+                image_proxy_url_prefix: &opts.image_proxy_url_prefix,
+                image_proxy_signing_keys: &opts.image_proxy_signing_keys,
             },
         )
     } else {
