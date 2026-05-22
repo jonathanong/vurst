@@ -123,3 +123,61 @@ fn test_image_before_link_in_same_content() {
     assert!(!result.contains("img.jpg"), "image src should be stripped");
     assert!(!result.contains("url"), "link url should be stripped");
 }
+
+#[test]
+fn test_strips_reference_style_link_definitions() {
+    let html = "<p>Here is some text.</p>\n<p>[ref]: https://example.com \"Title\"</p>";
+    let result = html_to_embedding_text(html);
+    assert!(
+        result.contains("Here is some text."),
+        "normal text should be kept"
+    );
+    assert!(
+        !result.contains("[ref]:"),
+        "reference definition should be stripped"
+    );
+    assert!(
+        !result.contains("https://example.com"),
+        "reference URL should be stripped"
+    );
+    assert!(
+        !result.contains("Title"),
+        "reference title should be stripped"
+    );
+}
+
+#[test]
+fn test_strips_reference_style_link_definitions_no_title() {
+    let html = "<p>Here is some text.</p>\n<p>[ref]: https://example.com</p>";
+    let result = html_to_embedding_text(html);
+    assert!(
+        result.contains("Here is some text."),
+        "normal text should be kept"
+    );
+    assert!(
+        !result.contains("[ref]:"),
+        "reference definition should be stripped"
+    );
+    assert!(
+        !result.contains("https://example.com"),
+        "reference URL should be stripped"
+    );
+}
+
+#[test]
+fn test_strips_reference_style_link_definitions_with_brackets() {
+    let html = "<p>Here is some text.</p>\n<p>[ref]: &lt;https://example.com&gt;</p>";
+    let result = html_to_embedding_text(html);
+    assert!(
+        result.contains("Here is some text."),
+        "normal text should be kept"
+    );
+    assert!(
+        !result.contains("[ref]:"),
+        "reference definition should be stripped"
+    );
+    assert!(
+        !result.contains("https://example.com"),
+        "reference URL should be stripped"
+    );
+}
