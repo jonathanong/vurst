@@ -6,7 +6,6 @@ use crate::image_proxy::{
 use ego_tree::NodeRef;
 use scraper::{node::Node, Html};
 use std::borrow::Cow;
-use std::fmt::Write as _;
 
 /// Tags allowed in admin HTML content (permissive allowlist).
 const ALLOWED_ADMIN_TAGS: &[&str] = &[
@@ -100,32 +99,36 @@ pub fn sanitize_admin_html_with_options(html: &str, opts: &AdminHtmlOptions<'_>)
 }
 
 fn escape_text(s: &str) -> Cow<'_, str> {
+    // ⚡ Bolt: Pass u8 to avoid UTF-8 decoding overhead when searching for ASCII chars
     escape_text_chars(s, |c| match c {
-        '&' => Some("&amp;"),
-        '<' => Some("&lt;"),
-        '>' => Some("&gt;"),
+        b'&' => Some("&amp;"),
+        b'<' => Some("&lt;"),
+        b'>' => Some("&gt;"),
         _ => None,
     })
 }
 
 fn escape_attr_val(s: &str) -> Cow<'_, str> {
+    // ⚡ Bolt: Pass u8 to avoid UTF-8 decoding overhead when searching for ASCII chars
     escape_text_chars(s, |c| match c {
-        '&' => Some("&amp;"),
-        '"' => Some("&quot;"),
-        '<' => Some("&lt;"),
+        b'&' => Some("&amp;"),
+        b'"' => Some("&quot;"),
+        b'<' => Some("&lt;"),
         _ => None,
     })
 }
 
 fn escape_text_chars(
     s: &str,
-    find_replacement: impl Fn(char) -> Option<&'static str>,
+    find_replacement: impl Fn(u8) -> Option<&'static str>,
 ) -> Cow<'_, str> {
     let mut last_idx = 0;
     let mut out: Option<String> = None;
 
-    for (i, c) in s.char_indices() {
-        let Some(escaped) = find_replacement(c) else {
+    // ⚡ Bolt: Iterate over raw bytes to avoid decoding overhead.
+    // ASCII chars are valid UTF-8 and don't overlap with multibyte sequences.
+    for (i, &b) in s.as_bytes().iter().enumerate() {
+        let Some(escaped) = find_replacement(b) else {
             continue;
         };
 
@@ -136,7 +139,7 @@ fn escape_text_chars(
 
         out_str.push_str(&s[last_idx..i]);
         out_str.push_str(escaped);
-        last_idx = i + c.len_utf8();
+        last_idx = i + 1;
     }
 
     if let Some(mut out_str) = out {
@@ -224,7 +227,7 @@ fn render_element_attrs(
             "noopener"
         };
         write_attr_escape(&mut open, "rel", escape_attr_val(rel));
-        let _ = write!(open, " target=\"_blank\"");
+        open.push_str(" target=\"_blank\"");
     }
     open.push('>');
 
@@ -236,7 +239,12 @@ fn render_element_attrs(
 }
 
 fn write_attr_escape(open: &mut String, attr_name: &str, escaped_value: Cow<'_, str>) {
-    let _ = write!(open, " {attr_name}=\"{}\"", escaped_value.as_ref());
+    // ⚡ Bolt: Replace the fmt::Write macro with direct push/push_str calls for speed
+    open.push(' ');
+    open.push_str(attr_name);
+    open.push_str("=\"");
+    open.push_str(escaped_value.as_ref());
+    open.push('"');
 }
 
 fn render_node<'a>(node: NodeRef<'a, Node>, opts: &'a AdminHtmlOptions<'a>) -> Cow<'a, str> {
