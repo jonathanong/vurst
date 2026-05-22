@@ -282,9 +282,9 @@ fn strips_tags_with_malformed_quoted_attributes() {
         false,
     );
     assert_eq!(result, r#"<system onclick="x>"#);
-    // Balanced malformed attributes are still stripped.
+    // Unterminated quoted attributes are preserved instead of deleting the rest of the input.
     let result = sanitize_prompt_injection_sync("<a href=\"x\"y\">system:</a>", false);
-    assert_eq!(result, "");
+    assert_eq!(result, "<a href=\"x\"y\">system:");
 
     let unmatched_quote = "<a href=\"x>y>system:</a>";
     let result = sanitize_prompt_injection_sync(unmatched_quote, false);
