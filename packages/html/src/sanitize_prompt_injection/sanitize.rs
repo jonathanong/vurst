@@ -89,7 +89,7 @@ fn html_boundary_separator_pattern() -> String {
 //   - disregard all [the|your|my|our] instructions/prompts
 //   - LLM control tokens: ChatML (<|im_start|>, <|im_end|>), Llama 2 ([INST], [/INST]),
 //     Llama 3 (<|begin_of_text|>, <|start_header_id|>, <|end_header_id|>, <|eot_id|>)
-// Note: `<system>` tags are removed earlier by HTML tag stripping in `HTML_TAG_RE`.
+// Note: `<system>` tags are removed by the HTML tag stripping pass.
 // Optional article/pronoun (the|your|my|our) between the verb and qualifier prevents
 // bypasses like "forget the previous instructions" or "ignore your previous prompts".
 // Intentionally excluded:
@@ -104,38 +104,23 @@ fn html_boundary_separator_pattern() -> String {
 // adjacent to trigger words.
 // Internal HTML boundary markers are accepted as whitespace so phrases split
 // by stripped tags/comments still collapse for the second injection-pattern pass.
-//
-// This fragment intentionally accepts:
-// - unquoted attribute text
-// - complete quoted attributes (quoted values cannot contain `<`, `"` and `'`)
-// - malformed quoted attributes are handled by a separate fallback pattern
-const HTML_TAG_FRAGMENT_RE: &str = r#"(?:[^"'><]+|"[^"<]*"|'[^'<]*')"#;
-
 // Matches are replaced with a space (not empty string) so that adjacent text around a
 // stripped phrase is not concatenated into a new word (e.g. "pretext ignore…suffix" →
 // "pretext  suffix" rather than "pretextsuffix").
 static INJECTION_RE: LazyLock<Regex> = LazyLock::new(|| {
     let sep = html_boundary_separator_pattern();
+    let html_tag_remainder = r#"(?:(?:"[^"]*"|'[^']*'|[^>"'])*)"#;
 
     Regex::new(&format!(
-        r"(?is)(?:\bignore(?:{sep}all)?{sep}(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bignore{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|\bforget{sep}(?:(?:the|your|my|our){sep})*(?:(?:all|previous){sep})+(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?|above)|\bforget{sep}everything{sep}above|\bdisregard{sep}(?:all{sep})?(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bdisregard{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|<\|im_start\|>|<\|im_end\|>|<\|begin_of_text\|>|<\|start_header_id\|>|<\|end_header_id\|>|<\|eot_id\|>|\[INST\]|\[/INST\])"
+        r"(?i)(?:\bignore(?:{sep}all)?{sep}(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bignore{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|\bforget{sep}(?:(?:the|your|my|our){sep})*(?:(?:all|previous){sep})+(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?|above)|\bforget{sep}everything{sep}above|\bdisregard{sep}(?:all{sep})?(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bdisregard{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|<\|im_start\|>|<\|im_end\|>|<\|begin_of_text\|>|<\|start_header_id\|>|<\|end_header_id\|>|<\|eot_id\|>|\[INST\]|\[/INST\]|<system\b{html_tag_remainder}>|</system\b{html_tag_remainder}>)"
     ))
     .expect("BUG: invalid INJECTION_RE")
 });
 
 // Also strips CDATA sections (<![CDATA[...]]>) which RSS feeds use to embed HTML;
-// HTML_TAG_RE does not match <! prefixes so CDATA must be removed here.
+// comment/block-style markup is handled separately from tag stripping.
 static HTML_COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?s)(?:<!--.*?-->|<!\[CDATA\[.*?\]\]>)").expect("BUG: invalid HTML_COMMENT_RE")
-});
-
-// For inputs containing arbitrary HTML attributes, always preprocess with
-// sanitize_rss_html (DOM-parser path) before calling sanitize_prompt_injection_sync.
-static HTML_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(
-        r#"(?is)</?[a-z]{HTML_TAG_FRAGMENT_RE}*>|</?[a-z](?:{HTML_TAG_FRAGMENT_RE})*(?:"[^"<]*>|'[^'<]*>)"#
-    ))
-    .expect("BUG: invalid HTML_TAG_RE")
 });
 
 // Only system: and assistant: are removed — both are LLM-specific role labels with no
@@ -197,20 +182,77 @@ fn remove_injection_patterns(content: &str) -> String {
     INJECTION_RE.replace_all(content, " ").into_owned()
 }
 
+fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static str)> {
+    let bytes = content.as_bytes();
+    let len = bytes.len();
+
+    let mut cursor = tag_start + 1;
+    if cursor >= len {
+        return None;
+    }
+
+    if bytes[cursor] == b'/' {
+        cursor += 1;
+        if cursor >= len {
+            return None;
+        }
+    }
+
+    if !bytes[cursor].is_ascii_alphabetic() {
+        return None;
+    }
+
+    let mut quote: Option<u8> = None;
+    while cursor < len {
+        let b = bytes[cursor];
+
+        if let Some(quote_char) = quote {
+            if b == quote_char {
+                quote = None;
+            }
+        } else if b == b'"' || b == b'\'' {
+            quote = Some(b);
+        } else if b == b'>' {
+            return Some((
+                cursor + 1,
+                html_tag_replacement(&content[tag_start..=cursor]),
+            ));
+        }
+
+        cursor += 1;
+    }
+
+    None
+}
+
 fn strip_html_markup(content: &str) -> String {
     // Remove HTML comments
-    let mut sanitized = HTML_COMMENT_RE
+    let sanitized = HTML_COMMENT_RE
         .replace_all(content, HTML_BOUNDARY_REPLACEMENT)
         .into_owned();
 
-    // Strip HTML/XML tags
-    sanitized = HTML_TAG_RE
-        .replace_all(&sanitized, |caps: &regex::Captures| {
-            html_tag_replacement(&caps[0])
-        })
-        .into_owned();
+    let bytes = sanitized.as_bytes();
+    let mut cursor = 0;
+    let mut stripped = String::with_capacity(sanitized.len());
 
-    sanitized
+    while cursor < bytes.len() {
+        if bytes[cursor] == b'<' {
+            if let Some((next_cursor, replacement)) = strip_html_tag(&sanitized, cursor) {
+                stripped.push_str(replacement);
+                cursor = next_cursor;
+                continue;
+            }
+        }
+
+        let ch = sanitized[cursor..]
+            .chars()
+            .next()
+            .expect("BUG: invalid UTF-8 in sanitized content");
+        stripped.push(ch);
+        cursor += ch.len_utf8();
+    }
+
+    stripped
 }
 
 fn remove_role_prefixes(content: &str) -> String {
