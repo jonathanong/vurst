@@ -232,7 +232,7 @@ fn normalize_whitespace(content: &str, is_title: bool) -> String {
 ///
 /// Applies a 9-step pipeline:
 /// 1. Decode HTML entities
-/// 2. Strip Unicode format/zero-width characters (Cf category)
+/// 2. Strip Unicode format/zero-width characters (Cf category) and internal HTML boundary markers
 /// 3. Remove injection patterns (first pass — catches plain-text and entity-encoded)
 /// 4. Remove HTML comments
 /// 5. Strip HTML/XML tags while preserving internal markup boundaries
