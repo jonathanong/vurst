@@ -117,7 +117,10 @@ fn escape_attr_val(s: &str) -> Cow<'_, str> {
     })
 }
 
-fn escape_text_chars(s: &str, find_replacement: impl Fn(char) -> Option<&'static str>) -> Cow<'_, str> {
+fn escape_text_chars(
+    s: &str,
+    find_replacement: impl Fn(char) -> Option<&'static str>,
+) -> Cow<'_, str> {
     let mut last_idx = 0;
     let mut out: Option<String> = None;
 
