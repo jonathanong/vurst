@@ -113,3 +113,20 @@ fn extracts_urls_no_links() {
     assert!(result.link_urls.is_empty());
     assert!(result.image_urls.is_empty());
 }
+
+#[test]
+fn should_not_render_nested_link_when_parent_is_link() {
+    let mut options = Options::default();
+    options.parse.relaxed_autolinks = true;
+    let arena = Arena::new();
+
+    let root1 = parse_document(&arena, "[parent](https://a.com)", &options);
+    let parent_link = first_link_node(root1).expect("expected parent link");
+
+    let root2 = parse_document(&arena, "[child](https://b.com)", &options);
+    let child_link = first_link_node(root2).expect("expected child link");
+
+    parent_link.append(child_link);
+
+    assert!(!should_render_nested_link(child_link, &options));
+}
