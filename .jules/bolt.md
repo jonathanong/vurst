@@ -1,3 +1,0 @@
-## 2025-02-18 - String allocation in URL sanitization bottleneck
-**Learning:** In the `vurst-html` package, `has_dangerous_url_scheme` was collecting URL chars into a newly allocated `String` for every `href` and `src` attribute check to sanitize them. This caused significant heap allocation overhead on a hot path.
-**Action:** Replaced the String allocation (`.collect::<String>()`) with a zero-allocation byte-level iterator comparison. UTF-8 multi-byte characters are safe to iterate via `.bytes()` in this context because they will never collide with ASCII whitespace or lowercased ASCII byte schemes.
