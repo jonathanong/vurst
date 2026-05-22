@@ -26,36 +26,37 @@ mod runtime;
 pub mod image_proxy;
 pub mod markdown_to_html;
 
+use breadchunks::chunk as breadchunks_chunk;
+pub use markdown_to_html::{
+    extract_markdown_urls_sync, render_markdown_to_html_with_options, MarkdownRenderOptions,
+    MarkdownUrlsResult,
+};
+
 pub use breadchunks::{default_length_counter, Chunk, ChunkOptions};
 
-/// Chunks a markdown document into semantic sections.
-/// Wraps `breadchunks::chunk` but adds a workaround for extremely long headers
-/// or documents consisting entirely of headers without body text, which
-/// normally produce 0 chunks in `breadchunks`.
+const ZERO_WIDTH_SPACE: char = '\u{200B}';
+
 pub fn chunk(text: &str, options: Option<ChunkOptions>) -> Vec<Chunk> {
-    let mut chunks = breadchunks::chunk(text, options.clone());
+    let mut chunks = breadchunks_chunk(text, options.clone());
 
     if chunks.is_empty() && !text.trim().is_empty() {
-        let dummy_text = format!("{text}\n\n\u{200B}");
-        chunks = breadchunks::chunk(&dummy_text, options);
-        if let Some(c) = chunks.last_mut() {
-            c.text = c.text.trim_end_matches('\u{200B}').to_string();
-            let full_text = if c.breadcrumb.is_empty() {
-                c.text.clone()
-            } else {
-                format!("{}\n\n{}", c.breadcrumb, c.text)
-            };
-            c.length = default_length_counter(&full_text);
+        let dummy_text = format!("{text}\n\n{ZERO_WIDTH_SPACE}");
+        chunks = breadchunks_chunk(&dummy_text, options);
+        if let Some(last_chunk) = chunks.last_mut() {
+            if last_chunk.text.ends_with(ZERO_WIDTH_SPACE) {
+                let _ = last_chunk.text.pop();
+                let full_text = if last_chunk.breadcrumb.is_empty() {
+                    last_chunk.text.clone()
+                } else {
+                    format!("{}\n\n{}", last_chunk.breadcrumb, last_chunk.text)
+                };
+                last_chunk.length = default_length_counter(&full_text);
+            }
         }
     }
 
     chunks
 }
-
-pub use markdown_to_html::{
-    extract_markdown_urls_sync, render_markdown_to_html_with_options, MarkdownRenderOptions,
-    MarkdownUrlsResult,
-};
 
 use image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX;
 
