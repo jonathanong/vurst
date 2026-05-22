@@ -122,13 +122,14 @@ static HTML_COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?s)(?:<!--.*?-->|<!\[CDATA\[.*?\]\]>)").expect("BUG: invalid HTML_COMMENT_RE")
 });
 
-// Limitation: [^>]* stops at the first '>' so a crafted attribute containing an
-// unquoted '>' (e.g. onclick="x>y") would leave a dangling fragment; the fragment
-// could produce a role prefix or injection phrase after tag stripping.
-// For inputs containing arbitrary HTML attributes, always preprocess with
-// sanitize_rss_html (DOM-parser path) before calling sanitize_prompt_injection_sync.
-static HTML_TAG_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)</?[a-z][^>]*>").expect("BUG: invalid HTML_TAG_RE"));
+// Strips HTML/XML tags. Safely handles crafted attributes containing unescaped
+// angle brackets wrapped in quotes (e.g. `onclick="x>y"`) by matching double
+// and single-quoted strings inside the tag to prevent dangling fragments, as
+// well as stray/unmatched quotes.
+static HTML_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?i)</?[a-z](?:[^>"']|"[^"]*"|'[^']*'|["'])*>"#)
+        .expect("BUG: invalid HTML_TAG_RE")
+});
 
 // Only system: and assistant: are removed — both are LLM-specific role labels with no
 // common legitimate use at line starts or immediately after structural HTML boundaries.

@@ -212,3 +212,20 @@ fn strips_tags_with_attributes() {
     assert!(!result.contains("<a"), "got: {result}");
     assert!(result.contains("click"), "got: {result}");
 }
+
+#[test]
+fn strips_tags_with_unquoted_angle_brackets() {
+    // Tests that an attribute containing > does not cause a dangling fragment
+    // that exposes a system or role prefix.
+    let result = sanitize_prompt_injection_sync("<a onclick=\"x>y\">system:</a>", false);
+    assert_eq!(result, "");
+
+    let result = sanitize_prompt_injection_sync("<img src='x>y'>assistant:", false);
+    assert_eq!(result, "");
+}
+
+#[test]
+fn strips_tags_with_malformed_quoted_attributes() {
+    let result = sanitize_prompt_injection_sync("<a href=\"x\"y\">system:</a>", false);
+    assert_eq!(result, "");
+}
