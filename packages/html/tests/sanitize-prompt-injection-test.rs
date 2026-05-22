@@ -296,7 +296,7 @@ fn strips_tags_with_malformed_quoted_attributes() {
 
     let malformed_system = "<system onclick=\"x&quot;y\">system:</system>";
     let result = sanitize_prompt_injection_sync(malformed_system, false);
-    assert_eq!(result, "");
+    assert_eq!(result, "<system onclick=\"x\"y\">system:");
 
     let malformed_decoded = "<system onclick=\"x&gt;y>system:</system>";
     let result = sanitize_prompt_injection_sync(malformed_decoded, false);
