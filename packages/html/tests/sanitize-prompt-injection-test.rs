@@ -212,3 +212,19 @@ fn strips_tags_with_attributes() {
     assert!(!result.contains("<a"), "got: {result}");
     assert!(result.contains("click"), "got: {result}");
 }
+
+#[test]
+fn strips_tags_with_unquoted_gt_in_attribute() {
+    let result = sanitize_prompt_injection_sync(r#"<system onclick="x>y">evil</system>"#, false);
+    assert!(!result.contains("<system"), "got: {result}");
+    assert!(result.contains("evil"), "got: {result}");
+    assert!(!result.contains("x>y"), "got: {result}");
+    assert!(!result.contains("\">"), "got: {result}");
+}
+
+#[test]
+fn strips_tags_with_multiline_attributes() {
+    let result = sanitize_prompt_injection_sync("<p\nclass=\"foo\"\n>multiline</p>", false);
+    assert!(!result.contains("<p"), "got: {result}");
+    assert!(result.contains("multiline"), "got: {result}");
+}

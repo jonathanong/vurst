@@ -89,7 +89,6 @@ fn html_boundary_separator_pattern() -> String {
 //   - disregard all [the|your|my|our] instructions/prompts
 //   - LLM control tokens: ChatML (<|im_start|>, <|im_end|>), Llama 2 ([INST], [/INST]),
 //     Llama 3 (<|begin_of_text|>, <|start_header_id|>, <|end_header_id|>, <|eot_id|>)
-//   - <system> tags (bare or with attributes)
 // Optional article/pronoun (the|your|my|our) between the verb and qualifier prevents
 // bypasses like "forget the previous instructions" or "ignore your previous prompts".
 // Intentionally excluded:
@@ -111,7 +110,7 @@ static INJECTION_RE: LazyLock<Regex> = LazyLock::new(|| {
     let sep = html_boundary_separator_pattern();
 
     Regex::new(&format!(
-        r"(?i)(?:\bignore(?:{sep}all)?{sep}(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bignore{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|\bforget{sep}(?:(?:the|your|my|our){sep})*(?:(?:all|previous){sep})+(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?|above)|\bforget{sep}everything{sep}above|\bdisregard{sep}(?:all{sep})?(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bdisregard{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|<\|im_start\|>|<\|im_end\|>|<\|begin_of_text\|>|<\|start_header_id\|>|<\|end_header_id\|>|<\|eot_id\|>|\[INST\]|\[/INST\]|<system\b[^>]*>|</system\b[^>]*>)"
+        r#"(?is)(?:\bignore(?:{sep}all)?{sep}(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bignore{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|\bforget{sep}(?:(?:the|your|my|our){sep})*(?:(?:all|previous){sep})+(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?|above)|\bforget{sep}everything{sep}above|\bdisregard{sep}(?:all{sep})?(?:(?:the|your|my|our){sep})?previous{sep}(?:instructions?|prompts?)|\bdisregard{sep}all{sep}(?:(?:the|your|my|our){sep})?(?:instructions?|prompts?)|<\|im_start\|>|<\|im_end\|>|<\|begin_of_text\|>|<\|start_header_id\|>|<\|end_header_id\|>|<\|eot_id\|>|\[INST\]|\[/INST\]|</?system\b(?:[^>"']|"[^"]*"|'[^']*')*>)"#
     ))
     .expect("BUG: invalid INJECTION_RE")
 });
@@ -122,13 +121,11 @@ static HTML_COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?s)(?:<!--.*?-->|<!\[CDATA\[.*?\]\]>)").expect("BUG: invalid HTML_COMMENT_RE")
 });
 
-// Limitation: [^>]* stops at the first '>' so a crafted attribute containing an
-// unquoted '>' (e.g. onclick="x>y") would leave a dangling fragment; the fragment
-// could produce a role prefix or injection phrase after tag stripping.
 // For inputs containing arbitrary HTML attributes, always preprocess with
 // sanitize_rss_html (DOM-parser path) before calling sanitize_prompt_injection_sync.
-static HTML_TAG_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)</?[a-z][^>]*>").expect("BUG: invalid HTML_TAG_RE"));
+static HTML_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?is)</?[a-z](?:[^>"']|"[^"]*"|'[^']*')*>"#).expect("BUG: invalid HTML_TAG_RE")
+});
 
 // Only system: and assistant: are removed — both are LLM-specific role labels with no
 // common legitimate use at line starts or immediately after structural HTML boundaries.
