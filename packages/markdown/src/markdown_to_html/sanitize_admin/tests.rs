@@ -85,7 +85,7 @@ fn sanitizer_options_apply_link_and_image_policy_during_render() {
 }
 
 #[test]
-fn test_escape_text() {
+fn sanitize_admin_escape_text() {
     assert_eq!(escape_text("hello world"), "hello world");
     assert_eq!(escape_text("a & b"), "a &amp; b");
     assert_eq!(escape_text("1 < 2"), "1 &lt; 2");
