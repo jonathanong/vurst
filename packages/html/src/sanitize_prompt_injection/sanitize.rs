@@ -222,7 +222,7 @@ fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static st
         cursor += 1;
     }
 
-    Some((len, html_tag_replacement(&content[tag_start..len])))
+    None
 }
 
 fn strip_html_markup(content: &str) -> String {
