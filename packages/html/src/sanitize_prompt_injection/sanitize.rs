@@ -89,7 +89,7 @@ fn html_boundary_separator_pattern() -> String {
 //   - disregard all [the|your|my|our] instructions/prompts
 //   - LLM control tokens: ChatML (<|im_start|>, <|im_end|>), Llama 2 ([INST], [/INST]),
 //     Llama 3 (<|begin_of_text|>, <|start_header_id|>, <|end_header_id|>, <|eot_id|>)
-//   - <system> tags (bare or with attributes)
+// Note: `<system>` tags are removed earlier by HTML tag stripping in `HTML_TAG_RE`.
 // Optional article/pronoun (the|your|my|our) between the verb and qualifier prevents
 // bypasses like "forget the previous instructions" or "ignore your previous prompts".
 // Intentionally excluded:
@@ -107,10 +107,9 @@ fn html_boundary_separator_pattern() -> String {
 //
 // This fragment intentionally accepts:
 // - unquoted attribute text
-// - complete quoted attributes
-// - unterminated quotes (used as a fallback to consume up to the next ">")
-// - no '<' to avoid consuming subsequent tags or payload text
-const HTML_TAG_FRAGMENT_RE: &str = r#"(?:[^"'><]+|\"[^\"]*\"|'[^']*'|\"[^\"]*?>|'[^']*?>)"#;
+// - complete quoted attributes (quoted values cannot contain `<`, `"` and `'`)
+// - malformed quoted attributes are handled by a separate fallback pattern
+const HTML_TAG_FRAGMENT_RE: &str = r#"(?:[^"'><]+|"[^"<]*"|'[^'<]*')"#;
 
 // Matches are replaced with a space (not empty string) so that adjacent text around a
 // stripped phrase is not concatenated into a new word (e.g. "pretext ignore…suffix" →
@@ -133,8 +132,10 @@ static HTML_COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
 // For inputs containing arbitrary HTML attributes, always preprocess with
 // sanitize_rss_html (DOM-parser path) before calling sanitize_prompt_injection_sync.
 static HTML_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"(?is)</?[a-z]{HTML_TAG_FRAGMENT_RE}*>"))
-        .expect("BUG: invalid HTML_TAG_RE")
+    Regex::new(&format!(
+        r#"(?is)</?[a-z]{HTML_TAG_FRAGMENT_RE}*>|</?[a-z](?:{HTML_TAG_FRAGMENT_RE})*(?:"[^"<]*>|'[^'<]*>)"#
+    ))
+    .expect("BUG: invalid HTML_TAG_RE")
 });
 
 // Only system: and assistant: are removed — both are LLM-specific role labels with no
