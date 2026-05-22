@@ -117,22 +117,22 @@ fn escape_attr_val(s: &str) -> Cow<'_, str> {
     })
 }
 
-fn escape_text_chars(s: &str, replacement: impl Fn(char) -> Option<&'static str>) -> Cow<'_, str> {
+fn escape_text_chars(s: &str, find_replacement: impl Fn(char) -> Option<&'static str>) -> Cow<'_, str> {
     let mut last_idx = 0;
     let mut out: Option<String> = None;
 
     for (i, c) in s.char_indices() {
-        let Some(replacement) = replacement(c) else {
+        let Some(escaped) = find_replacement(c) else {
             continue;
         };
 
         if out.is_none() {
-            out = Some(String::with_capacity(s.len() + 16));
+            out = Some(String::with_capacity(s.len().saturating_add(16)));
         }
         let out_str = out.as_mut().unwrap();
 
         out_str.push_str(&s[last_idx..i]);
-        out_str.push_str(replacement);
+        out_str.push_str(escaped);
         last_idx = i + c.len_utf8();
     }
 
