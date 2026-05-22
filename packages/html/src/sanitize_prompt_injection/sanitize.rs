@@ -204,8 +204,7 @@ pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
     // a space so "ignore\u{200B}previous" becomes "ignore previous" rather than
     // "ignoreprevious", allowing INJECTION_RE's whitespace separator to match in step 3.
     sanitized = ZERO_WIDTH_RE.replace_all(&sanitized, " ").into_owned();
-    sanitized = sanitized.replace(HTML_BOUNDARY, " ");
-    sanitized = sanitized.replace(HTML_ROLE_BOUNDARY, " ");
+    sanitized = sanitized.replace(&[HTML_BOUNDARY, HTML_ROLE_BOUNDARY][..], " ");
 
     // Step 3: Remove injection patterns — first pass catches plain-text and entity-encoded
     sanitized = INJECTION_RE.replace_all(&sanitized, " ").into_owned();
@@ -228,8 +227,7 @@ pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
 
     // Step 7: Remove role prefixes at line starts or after structural HTML boundaries
     sanitized = ROLE_PREFIX_RE.replace_all(&sanitized, "$1").into_owned();
-    sanitized = sanitized.replace(HTML_BOUNDARY, " ");
-    sanitized = sanitized.replace(HTML_ROLE_BOUNDARY, " ");
+    sanitized = sanitized.replace(&[HTML_BOUNDARY, HTML_ROLE_BOUNDARY][..], " ");
 
     // Step 8: Normalize whitespace
     if is_title {
