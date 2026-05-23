@@ -105,4 +105,7 @@ fn sanitize_admin_escape_text() {
     assert_eq!(escape_text("2 > 1"), "2 &gt; 1");
     assert_eq!(escape_text("a & b < c > d"), "a &amp; b &lt; c &gt; d");
     assert_eq!(escape_text("<>&"), "&lt;&gt;&amp;");
+    assert_eq!(escape_text("é & ü"), "é &amp; ü");
+    assert_eq!(escape_text("漢字 < &"), "漢字 &lt; &amp;");
+    assert_eq!(escape_attr_val("é \"&\" ü"), "é &quot;&amp;&quot; ü");
 }

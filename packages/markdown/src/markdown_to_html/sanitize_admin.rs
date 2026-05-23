@@ -100,7 +100,7 @@ pub fn sanitize_admin_html_with_options(html: &str, opts: &AdminHtmlOptions<'_>)
 
 fn escape_text(s: &str) -> Cow<'_, str> {
     // ⚡ Bolt: Pass u8 to avoid UTF-8 decoding overhead when searching for ASCII chars
-    escape_text_chars(s, |c| match c {
+    escape_text_chars(s, |b| match b {
         b'&' => Some("&amp;"),
         b'<' => Some("&lt;"),
         b'>' => Some("&gt;"),
@@ -110,7 +110,7 @@ fn escape_text(s: &str) -> Cow<'_, str> {
 
 fn escape_attr_val(s: &str) -> Cow<'_, str> {
     // ⚡ Bolt: Pass u8 to avoid UTF-8 decoding overhead when searching for ASCII chars
-    escape_text_chars(s, |c| match c {
+    escape_text_chars(s, |b| match b {
         b'&' => Some("&amp;"),
         b'"' => Some("&quot;"),
         b'<' => Some("&lt;"),

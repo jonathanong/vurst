@@ -6,6 +6,17 @@
 const { readFileSync } = require('node:fs')
 let nativeBinding = null
 const loadErrors = []
+const supportedPlatforms = 'macOS arm64, Linux x64 glibc, and Linux arm64 glibc'
+
+const isPublishedPlatform = () => {
+  if (process.platform === 'darwin') {
+    return process.arch === 'arm64'
+  }
+  if (process.platform === 'linux') {
+    return (process.arch === 'x64' || process.arch === 'arm64') && !isMusl()
+  }
+  return false
+}
 
 const isMusl = () => {
   let musl = false
@@ -34,8 +45,13 @@ const isMuslFromFilesystem = () => {
 const isMuslFromReport = () => {
   let report = null
   if (typeof process.report?.getReport === 'function') {
-    process.report.excludeNetwork = true
-    report = process.report.getReport()
+    const previousExcludeNetwork = process.report.excludeNetwork
+    try {
+      process.report.excludeNetwork = true
+      report = process.report.getReport()
+    } finally {
+      process.report.excludeNetwork = previousExcludeNetwork
+    }
   }
   if (!report) {
     return null
@@ -559,6 +575,20 @@ if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
 }
 
 if (!nativeBinding) {
+  if (!isPublishedPlatform()) {
+    throw new Error(
+      `Unsupported platform for @jongleberry/vurst-markdown: ${process.platform} ${process.arch}. ` +
+        `Published native bindings currently support ${supportedPlatforms}.`,
+      {
+        cause: loadErrors.length > 0
+          ? loadErrors.reduce((err, cur) => {
+              cur.cause = err
+              return cur
+            })
+          : undefined,
+      },
+    )
+  }
   if (loadErrors.length > 0) {
     throw new Error(
       `Cannot find native binding. ` +
