@@ -39,7 +39,14 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
         return false;
     }
 
-    let Some(scheme) = scheme_candidate(url) else {
+    let mut clean_url = String::with_capacity(url.len());
+    for b in url.bytes() {
+        if !b.is_ascii_whitespace() && !b.is_ascii_control() {
+            clean_url.push(b as char);
+        }
+    }
+
+    let Some(scheme) = scheme_candidate(&clean_url) else {
         return true;
     };
     is_allowed_scheme(scheme, allowed_schemes)
