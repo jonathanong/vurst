@@ -1,0 +1,6 @@
+## 2023-10-27 - Optimize HTML string escaping with Cow<'a, str>
+**Learning:** Chained `.replace()` calls for HTML escaping allocate and copy repeatedly on each replacement. A single-pass scan is faster and avoids unnecessary allocation for texts that require no escaping.
+**Action:** Replace multiple `.replace` calls with a manual string scan using `char_indices` that builds an output buffer only when an escape character is encountered, returns `Cow<'_, str>`, and appends borrowed text directly when no replacements are needed.
+## 2024-05-23 - Rust string iteration optimization
+**Learning:** In string parsing functions that process strings character by character in Rust (`strip_html_markup`, `empty_text_candidate_end`), decoding UTF-8 on every step with `.chars().next()` for mostly-ASCII strings is an anti-pattern. Also, processing byte by byte is slow when skipping large chunks. Using `.iter().position()` with `memchr` over the bytes representation to jump directly to target bytes (like `<`) avoids a loop overhead and dramatically increases performance on large HTML payloads.
+**Action:** Always prefer vectorized byte search (`iter().position()` / `memchr`) over sequential character iteration (`chars().next()`) for string parsing algorithms when optimizing Rust N-API packages in this codebase.

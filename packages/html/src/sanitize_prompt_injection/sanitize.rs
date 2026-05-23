@@ -235,22 +235,24 @@ fn strip_html_markup(content: &str) -> String {
     let mut cursor = 0;
     let mut stripped = String::with_capacity(sanitized.len());
 
-    while cursor < bytes.len() {
-        if bytes[cursor] == b'<' {
-            if let Some((next_cursor, replacement)) = strip_html_tag(&sanitized, cursor) {
-                stripped.push_str(replacement);
-                cursor = next_cursor;
-                continue;
-            }
-        }
+    // PERFORMANCE: Use vectorized byte search (memchr) via iter().position()
+    // instead of sequential UTF-8 character decoding. Jumps directly to tags
+    // bypassing O(n) overhead of chars().next() on large plain-text segments.
+    while let Some(open_offset) = bytes[cursor..].iter().position(|&b| b == b'<') {
+        let open_idx = cursor + open_offset;
+        stripped.push_str(&sanitized[cursor..open_idx]);
+        cursor = open_idx;
 
-        let ch = sanitized[cursor..]
-            .chars()
-            .next()
-            .expect("BUG: invalid UTF-8 in sanitized content");
-        stripped.push(ch);
-        cursor += ch.len_utf8();
+        if let Some((next_cursor, replacement)) = strip_html_tag(&sanitized, cursor) {
+            stripped.push_str(replacement);
+            cursor = next_cursor;
+        } else {
+            stripped.push('<');
+            cursor += 1;
+        }
     }
+
+    stripped.push_str(&sanitized[cursor..]);
 
     stripped
 }

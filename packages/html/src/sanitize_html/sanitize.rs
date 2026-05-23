@@ -218,14 +218,25 @@ fn empty_text_candidate_end(html: &str, mut i: usize) -> usize {
             continue;
         }
 
-        let ch = rest
-            .chars()
-            .next()
-            .expect("BUG: loop condition guarantees a non-empty remainder");
-        if !ch.is_whitespace() {
-            break;
+        // PERFORMANCE: Check ASCII bounds before decoding UTF-8.
+        // Decoding `chars().next()` on every loop iteration adds measurable
+        // overhead. This optimization avoids it for standard ASCII spaces.
+        let b = html.as_bytes()[i];
+        if b.is_ascii() {
+            if !b.is_ascii_whitespace() {
+                break;
+            }
+            i += 1;
+        } else {
+            let ch = rest
+                .chars()
+                .next()
+                .expect("BUG: loop condition guarantees a non-empty remainder");
+            if !ch.is_whitespace() {
+                break;
+            }
+            i += ch.len_utf8();
         }
-        i += ch.len_utf8();
     }
 
     i
