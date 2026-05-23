@@ -84,6 +84,16 @@ fn strips_form_feed_in_javascript_href() {
 }
 
 #[test]
+fn strips_c0_controls_in_javascript_href() {
+    // C0 control chars like SOH (U+0001) are ignored by browsers in URLs
+    let html = "<a href=\"jav\x01ascript:alert(1)\">C0</a>";
+    let result = sanitize(html);
+    assert!(result.contains("C0"));
+    assert!(!result.contains("alert"));
+    assert!(!result.contains("javascript"));
+}
+
+#[test]
 fn strips_mixed_case_with_whitespace_in_javascript_href() {
     let html = "<a href=\"Ja\tVaScRiPt:alert(1)\">Mixed</a>";
     let result = sanitize(html);
