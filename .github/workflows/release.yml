@@ -86,6 +86,7 @@ jobs:
           npm --prefix packages/html version "$version" --allow-same-version --no-git-tag-version
           npm --prefix packages/markdown version "$version" --allow-same-version --no-git-tag-version
           npm --prefix packages/ai version "$version" --allow-same-version --no-git-tag-version
+          npm --prefix packages/prompt version "$version" --allow-same-version --no-git-tag-version
           npm --prefix packages/runtime version "$version" --allow-same-version --no-git-tag-version
           node -e "
             const fs = require('node:fs');
@@ -100,7 +101,7 @@ jobs:
           cargo update -w
           git add package.json scripts/check-versions.mjs
           git add packages/ai/Cargo.toml packages/html/Cargo.toml packages/markdown/Cargo.toml Cargo.lock
-          git add packages/ai/package.json packages/html/package.json packages/markdown/package.json packages/runtime/package.json
+          git add packages/ai/package.json packages/html/package.json packages/markdown/package.json packages/prompt/package.json packages/runtime/package.json
           git commit -m "chore(release): v$version"
           git tag -a "v$version" -m "v$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -275,6 +276,7 @@ jobs:
             "@jongleberry/vurst-runtime" \
             "@jongleberry/vurst-html" \
             "@jongleberry/vurst-markdown" \
+            "@jongleberry/vurst-prompt" \
             "@jongleberry/vurst-ai"
           do
             if npm view "$package@$version" version >/dev/null 2>&1; then
@@ -335,6 +337,20 @@ jobs:
           version="${{ needs.prepare.outputs.version }}"
           if npm view "@jongleberry/vurst-markdown@$version" version >/dev/null 2>&1; then
             echo "@jongleberry/vurst-markdown $version is already on npm; skipping"
+          else
+            npm publish --access public --provenance
+          fi
+
+      - name: Publish @jongleberry/vurst-prompt
+        working-directory: packages/prompt
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          if npm view "@jongleberry/vurst-prompt@$version" version >/dev/null 2>&1; then
+            echo "@jongleberry/vurst-prompt $version is already on npm; skipping"
           else
             npm publish --access public --provenance
           fi
