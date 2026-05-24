@@ -10,6 +10,7 @@ publishable packages.
 | [`@jongleberry/vurst-html`](packages/html) | HTML sanitization, extraction, embedding prep, and boilerstrip |
 | [`@jongleberry/vurst-markdown`](packages/markdown) | Markdown chunking and rendering |
 | [`@jongleberry/vurst-ai`](packages/ai) | ONNX-based AI-generated text detection |
+| [`@jongleberry/vurst-prompt`](packages/prompt) | Prompt-injection helpers for strings, RSS content, and external prompt boundaries |
 | [`@jongleberry/vurst-runtime`](packages/runtime) | Pure-TS shutdown drain wrapper for vurst N-API packages |
 
 All Rust packages run off-thread on a bounded tokio blocking pool.
@@ -20,6 +21,7 @@ All Rust packages run off-thread on a bounded tokio blocking pool.
 pnpm add @jongleberry/vurst-html
 pnpm add @jongleberry/vurst-markdown
 pnpm add @jongleberry/vurst-ai
+pnpm add @jongleberry/vurst-prompt
 pnpm add @jongleberry/vurst-runtime
 ```
 
@@ -55,6 +57,22 @@ import {
 | `applyDomRemovalsToHtml(html, removals)` | Apply learned removals. Wraps `boilerstrip::apply_removals`. |
 | `getContentFromHtml(html, opts)` | Extract article content from HTML. Wraps `boilerstrip::convert`. |
 | `sanitizePromptInjection(content, isTitle?)` | Strip prompt-injection patterns from text. |
+
+## `@jongleberry/vurst-prompt`
+
+```js
+import {
+  sanitizePromptInjection,
+  sanitizeRssContent,
+  wrapExternalContent,
+} from '@jongleberry/vurst-prompt'
+```
+
+| Function | Description |
+| --- | --- |
+| `sanitizePromptInjection(content, opts?)` | Strip prompt-injection patterns from a string. |
+| `sanitizeRssContent(html)` | Sanitize RSS HTML, then strip prompt-injection patterns. |
+| `wrapExternalContent(content, opts)` | Wrap external text in an XML-like prompt boundary. |
 
 ## `@jongleberry/vurst-markdown`
 

@@ -1,0 +1,37 @@
+{
+  "name": "@jongleberry/vurst-prompt",
+  "version": "0.0.4",
+  "description": "Prompt-injection helper utilities for vurst.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonathanong/vurst.git"
+  },
+  "keywords": [
+    "prompt-injection",
+    "sanitize",
+    "rss",
+    "llm",
+    "ai"
+  ],
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test __test__/*.test.mjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@jongleberry/vurst-html": "workspace:^"
+  }
+}
