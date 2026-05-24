@@ -222,6 +222,8 @@ fn empty_text_candidate_end(html: &str, mut i: usize) -> usize {
             .chars()
             .next()
             .expect("BUG: loop condition guarantees a non-empty remainder");
+        // Keep Unicode-aware whitespace here (including vertical-tab) so empty-container
+        // detection behavior does not narrow from prior releases.
         if !ch.is_whitespace() {
             break;
         }

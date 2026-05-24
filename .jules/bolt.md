@@ -1,0 +1,6 @@
+## 2023-10-27 - Optimize HTML string escaping with Cow<'a, str>
+**Learning:** Chained `.replace()` calls for HTML escaping allocate and copy repeatedly on each replacement. A single-pass scan is faster and avoids unnecessary allocation for texts that require no escaping.
+**Action:** Replace multiple `.replace` calls with a manual string scan using `char_indices` that builds an output buffer only when an escape character is encountered, returns `Cow<'_, str>`, and appends borrowed text directly when no replacements are needed.
+## 2024-05-22 - Optimize string searching and building
+**Learning:** In tight loops over text, when searching for ASCII-only targets (like '<', '>', '&', '"'), using `char_indices` incurs unnecessary UTF-8 decoding overhead. A byte-slice scan (`position` + offset jumps) can skip ahead to likely matches efficiently while preserving overall O(n) behavior, since ASCII bytes never overlap with multibyte UTF-8 sequences in valid input. Additionally, the `write!` macro introduces measurable overhead compared to direct `push`/`push_str` calls for simple string building.
+**Action:** Use byte-slice scans with `as_bytes()` for ASCII boundary detection before falling back to scalar decoding where needed. Use `push()` and `push_str()` directly on `String` buffers instead of the `write!` macro for better performance.

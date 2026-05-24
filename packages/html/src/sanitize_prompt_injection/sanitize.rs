@@ -235,6 +235,8 @@ fn strip_html_markup(content: &str) -> String {
     let mut cursor = 0;
     let mut stripped = String::with_capacity(sanitized.len());
 
+    // Byte-slice scan: only decode full UTF-8 when the current byte is not a tag
+    // opener, preserving correctness while avoiding extra decoding work.
     while cursor < bytes.len() {
         if bytes[cursor] == b'<' {
             if let Some((next_cursor, replacement)) = strip_html_tag(&sanitized, cursor) {
