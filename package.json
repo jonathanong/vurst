@@ -1,6 +1,6 @@
 {
   "name": "vurst",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.1.3",
   "scripts": {
