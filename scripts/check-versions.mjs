@@ -5,6 +5,7 @@ const npmPackagePaths = [
   "packages/ai/package.json",
   "packages/html/package.json",
   "packages/markdown/package.json",
+  "packages/prompt/package.json",
   "packages/runtime/package.json",
 ];
 
