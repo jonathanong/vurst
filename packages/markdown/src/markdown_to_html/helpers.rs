@@ -34,16 +34,12 @@ fn is_allowed_scheme(scheme: &str, allowed_schemes: &[&str]) -> bool {
 }
 
 fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
-    let url = url.trim();
-    if url.is_empty() || url.starts_with("//") {
+    let clean_url: String = url
+        .chars()
+        .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
+        .collect();
+    if clean_url.is_empty() || clean_url.starts_with("//") {
         return false;
-    }
-
-    let mut clean_url = String::with_capacity(url.len());
-    for b in url.bytes() {
-        if !b.is_ascii_whitespace() && !b.is_ascii_control() {
-            clean_url.push(b as char);
-        }
     }
 
     let Some(scheme) = scheme_candidate(&clean_url) else {

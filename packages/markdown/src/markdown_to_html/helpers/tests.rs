@@ -17,6 +17,8 @@ fn scheme_and_url_helpers_cover_invalid_paths() {
     assert!(!is_safe_link_url("\x0Bjavascript:alert(1)"));
     assert!(!is_safe_link_url("\x01javascript:alert(1)"));
     assert!(!is_safe_link_url("java\x09script:alert(1)"));
+    assert!(!is_safe_link_url("\x01//evil.com"));
+    assert!(!is_safe_link_url("\x00"));
     assert!(!is_safe_link_url("path:with:colons"));
     assert!(is_safe_image_url("https://example.com/image.png"));
     assert!(is_safe_image_url("/relative.png"));
