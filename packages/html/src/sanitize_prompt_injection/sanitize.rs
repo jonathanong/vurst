@@ -237,21 +237,31 @@ fn strip_html_markup(content: &str) -> String {
 
     // Byte-slice scan: only decode full UTF-8 when the current byte is not a tag
     // opener, preserving correctness while avoiding extra decoding work.
+    // Optimization: fast-forward to the next `<` to append large text chunks directly.
     while cursor < bytes.len() {
-        if bytes[cursor] == b'<' {
+        if let Some(offset) = bytes[cursor..].iter().position(|&b| b == b'<') {
+            if offset > 0 {
+                // SAFETY: `sanitized` is valid UTF-8. Slicing at a `<` (ASCII, 1 byte)
+                // is always a valid character boundary.
+                stripped.push_str(unsafe {
+                    std::str::from_utf8_unchecked(&bytes[cursor..cursor + offset])
+                });
+                cursor += offset;
+            }
+
             if let Some((next_cursor, replacement)) = strip_html_tag(&sanitized, cursor) {
                 stripped.push_str(replacement);
                 cursor = next_cursor;
                 continue;
             }
-        }
 
-        let ch = sanitized[cursor..]
-            .chars()
-            .next()
-            .expect("BUG: invalid UTF-8 in sanitized content");
-        stripped.push(ch);
-        cursor += ch.len_utf8();
+            stripped.push('<');
+            cursor += 1;
+        } else {
+            // No more `<` characters, append the rest of the string
+            stripped.push_str(unsafe { std::str::from_utf8_unchecked(&bytes[cursor..]) });
+            break;
+        }
     }
 
     stripped
