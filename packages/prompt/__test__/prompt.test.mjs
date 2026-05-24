@@ -76,6 +76,17 @@ test('wrapExternalContent validates attributes', () => {
   )
 })
 
+test('wrapExternalContent validates content and includeReminder types', () => {
+  assert.throws(
+    () => wrapExternalContent(123, { source: 'rss' }),
+    /content must be a string/,
+  )
+  assert.throws(
+    () => wrapExternalContent('hello', { source: 'rss', includeReminder: 'no' }),
+    /includeReminder must be a boolean/,
+  )
+})
+
 test('wrapExternalContent preserves UTF-8 content exactly', () => {
   const content = '  café こんにちは\n<keep-this attr="yes">'
   const wrapped = wrapExternalContent(content, {

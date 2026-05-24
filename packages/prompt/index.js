@@ -29,11 +29,19 @@ async function sanitizeRssContent(html) {
 }
 
 function wrapExternalContent(content, options) {
+  if (typeof content !== 'string') {
+    throw new TypeError('content must be a string')
+  }
+
   if (options == null || typeof options !== 'object') {
     throw new TypeError('options must be an object')
   }
 
   const { source, contentType, includeReminder = true } = options
+  if (typeof includeReminder !== 'boolean') {
+    throw new TypeError('includeReminder must be a boolean')
+  }
+
   validateAttributeValue('source', source)
 
   let attributes = `source="${source}"`
