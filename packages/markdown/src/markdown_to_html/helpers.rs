@@ -38,7 +38,11 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
         .chars()
         .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
         .collect();
-    if clean_url.is_empty() || clean_url.starts_with("//") {
+    if clean_url.is_empty()
+        || clean_url.starts_with("//")
+        || clean_url.starts_with("/\\")
+        || clean_url.starts_with('\\')
+    {
         return false;
     }
 
