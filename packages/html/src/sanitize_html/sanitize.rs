@@ -211,14 +211,23 @@ fn html_whitespace_entity_len(rest: &str) -> Option<usize> {
 }
 
 fn empty_text_candidate_end(html: &str, mut i: usize) -> usize {
-    while i < html.len() {
-        let rest = &html[i..];
-        if let Some(entity_len) = html_whitespace_entity_len(rest) {
-            i += entity_len;
-            continue;
+    let bytes = html.as_bytes();
+    while i < bytes.len() {
+        if bytes[i] == b'&' {
+            if let Some(entity_len) = html_whitespace_entity_len(&html[i..]) {
+                i += entity_len;
+                continue;
+            }
         }
 
-        let ch = rest
+        // Fast path for ASCII non-whitespace chars to avoid decoding overhead.
+        // `is_ascii_whitespace` differs from Unicode whitespace definitions for
+        // some control characters (e.g., vertical tab 0x0B).
+        if bytes[i].is_ascii() && !bytes[i].is_ascii_whitespace() && bytes[i] != 0x0B {
+            break;
+        }
+
+        let ch = html[i..]
             .chars()
             .next()
             .expect("BUG: loop condition guarantees a non-empty remainder");

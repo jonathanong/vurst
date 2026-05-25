@@ -235,23 +235,28 @@ fn strip_html_markup(content: &str) -> String {
     let mut cursor = 0;
     let mut stripped = String::with_capacity(sanitized.len());
 
-    // Byte-slice scan: only decode full UTF-8 when the current byte is not a tag
-    // opener, preserving correctness while avoiding extra decoding work.
+    // Byte-slice scan: use `memchr` (via `iter().position`) to fast-forward to the
+    // next tag opener. This avoids `.chars().next()` and character-by-character
+    // appending for plain text chunks.
     while cursor < bytes.len() {
-        if bytes[cursor] == b'<' {
-            if let Some((next_cursor, replacement)) = strip_html_tag(&sanitized, cursor) {
+        if let Some(next_lt) = bytes[cursor..].iter().position(|&b| b == b'<') {
+            let lt_pos = cursor + next_lt;
+
+            if lt_pos > cursor {
+                stripped.push_str(&sanitized[cursor..lt_pos]);
+            }
+
+            if let Some((next_cursor, replacement)) = strip_html_tag(&sanitized, lt_pos) {
                 stripped.push_str(replacement);
                 cursor = next_cursor;
-                continue;
+            } else {
+                stripped.push('<');
+                cursor = lt_pos + 1;
             }
+        } else {
+            stripped.push_str(&sanitized[cursor..]);
+            break;
         }
-
-        let ch = sanitized[cursor..]
-            .chars()
-            .next()
-            .expect("BUG: invalid UTF-8 in sanitized content");
-        stripped.push(ch);
-        cursor += ch.len_utf8();
     }
 
     stripped
