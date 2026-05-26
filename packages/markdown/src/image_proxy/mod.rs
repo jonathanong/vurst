@@ -23,7 +23,9 @@ pub fn is_external_http_url(url: &str) -> bool {
 /// Returns true if the URL is relative (no scheme, not protocol-relative).
 pub fn is_relative_url(url: &str) -> bool {
     let url = url.trim();
-    if url.is_empty() || url.starts_with("//") {
+    let is_protocol_relative =
+        url.len() >= 2 && matches!(url.as_bytes()[..2], [b'/' | b'\\', b'/' | b'\\']);
+    if url.is_empty() || is_protocol_relative {
         return false;
     }
     !url.contains(':')

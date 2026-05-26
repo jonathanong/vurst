@@ -1,4 +1,5 @@
 use super::*;
+use crate::markdown_to_html::helpers::{is_safe_image_url, is_safe_link_url};
 use comrak::nodes::AstNode;
 
 fn first_link_node<'a>(node: &'a AstNode<'a>) -> Option<&'a AstNode<'a>> {
@@ -115,6 +116,17 @@ fn extract_markdown_urls_sync_plain_text_has_no_urls() {
             image_urls: vec![],
         }
     );
+}
+
+#[test]
+fn test_is_safe_url_backslash_variants() {
+    assert!(!is_safe_link_url("\\\\evil.com"));
+    assert!(!is_safe_link_url("/\\evil.com"));
+    assert!(!is_safe_link_url("\\/evil.com"));
+
+    assert!(!is_safe_image_url("\\\\evil.com"));
+    assert!(!is_safe_image_url("/\\evil.com"));
+    assert!(!is_safe_image_url("\\/evil.com"));
 }
 
 #[test]
