@@ -235,23 +235,24 @@ fn strip_html_markup(content: &str) -> String {
     let mut cursor = 0;
     let mut stripped = String::with_capacity(sanitized.len());
 
-    // Byte-slice scan: only decode full UTF-8 when the current byte is not a tag
-    // opener, preserving correctness while avoiding extra decoding work.
-    while cursor < bytes.len() {
-        if bytes[cursor] == b'<' {
-            if let Some((next_cursor, replacement)) = strip_html_tag(&sanitized, cursor) {
-                stripped.push_str(replacement);
-                cursor = next_cursor;
-                continue;
-            }
+    // ⚡ Bolt: Use memchr (via `position`) to fast-forward to the next '<' character
+    // instead of scanning byte-by-byte and character-by-character.
+    while let Some(relative_pos) = bytes[cursor..].iter().position(|&b| b == b'<') {
+        let tag_start = cursor + relative_pos;
+        if let Some((next_cursor, replacement)) = strip_html_tag(&sanitized, tag_start) {
+            stripped.push_str(&sanitized[cursor..tag_start]);
+            stripped.push_str(replacement);
+            cursor = next_cursor;
+        } else {
+            // The '<' wasn't a valid tag we strip, so just copy it and move past it
+            let next = tag_start + 1;
+            stripped.push_str(&sanitized[cursor..next]);
+            cursor = next;
         }
+    }
 
-        let ch = sanitized[cursor..]
-            .chars()
-            .next()
-            .expect("BUG: invalid UTF-8 in sanitized content");
-        stripped.push(ch);
-        cursor += ch.len_utf8();
+    if cursor < sanitized.len() {
+        stripped.push_str(&sanitized[cursor..]);
     }
 
     stripped
