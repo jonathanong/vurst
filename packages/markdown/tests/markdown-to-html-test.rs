@@ -235,3 +235,13 @@ fn bang_prefixed_same_site_comment_url_keeps_bang_and_autolinks_url() {
         r#"href="https://example.com/discussion/root-post/comment/019c64e6-f720-7001-a001-000000000010""#,
     ));
 }
+
+#[test]
+fn protocol_relative_bypass_href_removed() {
+    let result =
+        render_markdown_to_html_with_options("[link](\\\\\\attacker.com/path)", &default_opts());
+    assert!(
+        !result.contains("href="),
+        "protocol-relative URL bypass should be rejected"
+    );
+}
