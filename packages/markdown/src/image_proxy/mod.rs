@@ -23,12 +23,19 @@ pub fn is_external_http_url(url: &str) -> bool {
 /// Returns true if the URL is relative (no scheme, not protocol-relative).
 pub fn is_relative_url(url: &str) -> bool {
     let url = url.trim();
-    let is_protocol_relative =
-        url.len() >= 2 && matches!(url.as_bytes()[..2], [b'/' | b'\\', b'/' | b'\\']);
-    if url.is_empty() || is_protocol_relative {
+    let clean_url: String = url
+        .chars()
+        .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
+        .collect();
+    let is_protocol_relative = clean_url.starts_with('\\')
+        || clean_url
+        .as_bytes()
+        .get(0..2)
+        .is_some_and(|bytes| matches!(bytes, [b'/' | b'\\', b'/' | b'\\']));
+    if clean_url.is_empty() || is_protocol_relative {
         return false;
     }
-    !url.contains(':')
+    !clean_url.contains(':')
 }
 
 /// Returns true if the URL is already an image-proxy path with the given prefix.

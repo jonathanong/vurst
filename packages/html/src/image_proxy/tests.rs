@@ -22,6 +22,8 @@ fn test_is_relative_url() {
     assert!(!is_relative_url("\\\\protocol-relative.com/img.jpg"));
     assert!(!is_relative_url("/\\protocol-relative.com/img.jpg"));
     assert!(!is_relative_url("\\/protocol-relative.com/img.jpg"));
+    assert!(!is_relative_url("/\t/protocol-relative.com/img.jpg"));
+    assert!(!is_relative_url("/\n/protocol-relative.com/img.jpg"));
     assert!(!is_relative_url(""));
 }
 

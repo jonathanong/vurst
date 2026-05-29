@@ -123,10 +123,14 @@ fn test_is_safe_url_backslash_variants() {
     assert!(!is_safe_link_url("\\\\evil.com"));
     assert!(!is_safe_link_url("/\\evil.com"));
     assert!(!is_safe_link_url("\\/evil.com"));
+    assert!(!is_safe_link_url("/\t/evil.com"));
+    assert!(!is_safe_link_url("/\n/evil.com"));
 
     assert!(!is_safe_image_url("\\\\evil.com"));
     assert!(!is_safe_image_url("/\\evil.com"));
     assert!(!is_safe_image_url("\\/evil.com"));
+    assert!(!is_safe_image_url("/\t/evil.com"));
+    assert!(!is_safe_image_url("/\n/evil.com"));
 }
 
 #[test]

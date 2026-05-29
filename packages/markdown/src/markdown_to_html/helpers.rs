@@ -38,10 +38,11 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
         .chars()
         .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
         .collect();
-    let is_protocol_relative = clean_url
-        .as_bytes()
-        .get(0..2)
-        .is_some_and(|bytes| matches!(bytes, [b'/' | b'\\', b'/' | b'\\']));
+    let is_protocol_relative = clean_url.starts_with('\\')
+        || clean_url
+            .as_bytes()
+            .get(0..2)
+            .is_some_and(|bytes| matches!(bytes, [b'/' | b'\\', b'/' | b'\\']));
 
     if clean_url.is_empty() || is_protocol_relative {
         return false;
