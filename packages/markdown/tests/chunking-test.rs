@@ -51,13 +51,13 @@ fn test_breadcrumb_building() {
     let h3_chunk = chunks.iter().find(|c| c.header == Some("H3".to_string()));
 
     if let Some(c) = h1_chunk {
-        assert_eq!(c.breadcrumb, "H1");
+        assert_eq!(c.breadcrumb.as_ref().as_str(), "H1");
     }
     if let Some(c) = h2_chunk {
-        assert_eq!(c.breadcrumb, "H1 > H2");
+        assert_eq!(c.breadcrumb.as_ref().as_str(), "H1 > H2");
     }
     if let Some(c) = h3_chunk {
-        assert_eq!(c.breadcrumb, "H1 > H2 > H3");
+        assert_eq!(c.breadcrumb.as_ref().as_str(), "H1 > H2 > H3");
     }
 }
 
