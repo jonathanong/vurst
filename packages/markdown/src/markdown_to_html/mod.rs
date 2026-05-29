@@ -113,7 +113,9 @@ create_formatter!(MarkdownHtmlFormatter<MarkdownHtmlFormatOptions<'a>>, {
                 } else {
                     "noopener"
                 };
-                write!(context, " rel=\"{rel}\" target=\"_blank\"")?;
+                context.write_str(" rel=\"")?;
+                context.write_str(rel)?;
+                context.write_str("\" target=\"_blank\"")?;
             }
             context.write_str(">")?;
         } else {
