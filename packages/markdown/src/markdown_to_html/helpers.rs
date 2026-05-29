@@ -16,14 +16,14 @@ fn scheme_candidate(url: &str) -> Option<&str> {
 fn is_valid_scheme(scheme: &str) -> bool {
     // RFC 3986: scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
     // The first character must be a letter; digits are only valid after position 0.
-    let mut chars = scheme.chars();
-    let Some(first) = chars.next() else {
+    let mut bytes = scheme.bytes();
+    let Some(first) = bytes.next() else {
         return false;
     };
     if !first.is_ascii_alphabetic() {
         return false;
     }
-    chars.all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.')
+    bytes.all(|c| c.is_ascii_alphanumeric() || c == b'+' || c == b'-' || c == b'.')
 }
 
 fn is_allowed_scheme(scheme: &str, allowed_schemes: &[&str]) -> bool {
@@ -34,19 +34,32 @@ fn is_allowed_scheme(scheme: &str, allowed_schemes: &[&str]) -> bool {
 }
 
 fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
-    let clean_url: String = url
-        .chars()
-        .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
-        .collect();
+    let clean_url_owned;
+    let clean_url = if url
+        .bytes()
+        .any(|b| b.is_ascii_whitespace() || b.is_ascii_control())
+    {
+        let mut string = String::with_capacity(url.len());
+        for c in url.chars() {
+            if !c.is_ascii_whitespace() && !c.is_ascii_control() {
+                string.push(c);
+            }
+        }
+        clean_url_owned = string;
+        &clean_url_owned
+    } else {
+        url
+    };
+
     if clean_url.is_empty()
-        || clean_url.starts_with("//")
-        || clean_url.starts_with("/\\")
+        || (clean_url.len() >= 2
+            && matches!(clean_url.as_bytes()[..2], [b'/' | b'\\', b'/' | b'\\']))
         || clean_url.starts_with('\\')
     {
         return false;
     }
 
-    let Some(scheme) = scheme_candidate(&clean_url) else {
+    let Some(scheme) = scheme_candidate(clean_url) else {
         return true;
     };
     is_allowed_scheme(scheme, allowed_schemes)
