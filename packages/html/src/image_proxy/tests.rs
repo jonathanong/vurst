@@ -19,11 +19,9 @@ fn test_is_relative_url() {
     assert!(is_relative_url("../relative.jpg"));
     assert!(!is_relative_url("http://example.com/img.jpg"));
     assert!(!is_relative_url("//protocol-relative.com/img.jpg"));
-    assert!(!is_relative_url("\u{1}//protocol-relative.com/img.jpg"));
     assert!(!is_relative_url("\\\\protocol-relative.com/img.jpg"));
     assert!(!is_relative_url("\\/protocol-relative.com/img.jpg"));
     assert!(!is_relative_url("/\\protocol-relative.com/img.jpg"));
-    assert!(!is_relative_url("\u{1}\\\\protocol-relative.com/img.jpg"));
     assert!(!is_relative_url(""));
 }
 

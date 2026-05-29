@@ -4,6 +4,3 @@
 ## 2024-05-22 - Optimize string searching and building
 **Learning:** In tight loops over text, when searching for ASCII-only targets (like '<', '>', '&', '"'), using `char_indices` incurs unnecessary UTF-8 decoding overhead. A byte-slice scan (`position` + offset jumps) can skip ahead to likely matches efficiently while preserving overall O(n) behavior, since ASCII bytes never overlap with multibyte UTF-8 sequences in valid input. Additionally, the `write!` macro introduces measurable overhead compared to direct `push`/`push_str` calls for simple string building.
 **Action:** Use byte-slice scans with `as_bytes()` for ASCII boundary detection before falling back to scalar decoding where needed. Use `push()` and `push_str()` directly on `String` buffers instead of the `write!` macro for better performance.
-## 2024-05-26 - Optimize HTML tag stripping
-**Learning:** `strip_html_markup` was manually scanning byte-by-byte and character-by-character to find the next HTML tag opening angle bracket (`<`).
-**Action:** Use byte-slice scans with `position` (`memchr`) to fast-forward to the next `<` character before processing tags, which is significantly faster for content with few tags.

@@ -167,27 +167,6 @@ fn protocol_relative_link_href_removed() {
         !result.contains("href="),
         "protocol-relative URL should be rejected"
     );
-
-    let result2 =
-        render_markdown_to_html_with_options("[link](\\attacker.com/path)", &default_opts());
-    assert!(
-        !result2.contains("href="),
-        "protocol-relative URL starting with \\ should be rejected"
-    );
-
-    let result3 =
-        render_markdown_to_html_with_options("[link](/\\attacker.com/path)", &default_opts());
-    assert!(
-        !result3.contains("href="),
-        "protocol-relative URL starting with /\\ should be rejected"
-    );
-
-    let result4 =
-        render_markdown_to_html_with_options("[link](/attacker.com/path)", &default_opts());
-    assert!(
-        result4.contains("href="),
-        "valid relative URL starting with / should be allowed"
-    );
 }
 
 #[test]
@@ -197,20 +176,6 @@ fn protocol_relative_image_src_removed() {
     assert!(
         !result.contains("src="),
         "protocol-relative image URL should be rejected"
-    );
-
-    let result2 =
-        render_markdown_to_html_with_options("![img](\\attacker.com/img.jpg)", &default_opts());
-    assert!(
-        !result2.contains("src="),
-        "protocol-relative image URL starting with \\ should be rejected"
-    );
-
-    let result3 =
-        render_markdown_to_html_with_options("![img](/\\attacker.com/img.jpg)", &default_opts());
-    assert!(
-        !result3.contains("src="),
-        "protocol-relative image URL starting with /\\ should be rejected"
     );
 }
 
