@@ -153,9 +153,7 @@ fn test_nested_headers_h2_reset() {
     let text = "\n# H1\n\nParagraph 1\n\n## H2\n\nParagraph 2\n\n### H3\n\nParagraph 3\n\n## H2-2\n\nParagraph 4\n";
     let chunks = chunk(text, None);
     assert!(!chunks.is_empty());
-    let h2_chunk = chunks.iter().find(|c| {
-        c.breadcrumb.contains("H2-2") || c.text.contains("Paragraph 4")
-    });
+    let h2_chunk = chunks.iter().find(|c| c.breadcrumb.contains("H2-2") || c.text.contains("Paragraph 4"));
     assert!(h2_chunk.is_some());
     assert!(h2_chunk.unwrap().breadcrumb.contains("H1"));
 }
