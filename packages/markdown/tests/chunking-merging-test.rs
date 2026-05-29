@@ -18,7 +18,9 @@ fn test_phase1_returns_early() {
         }),
     );
     assert!(!chunks.is_empty());
-    assert!(chunks.iter().any(|c| c.breadcrumb == "H1"));
+    assert!(chunks
+        .iter()
+        .any(|c| c.breadcrumb.as_ref().as_str() == "H1"));
 }
 
 #[test]
@@ -144,10 +146,12 @@ fn test_content_before_first_header_separate_chunk() {
     let chunks = chunk(text, None);
     assert!(chunks.len() >= 2);
     let preface = &chunks[0];
-    assert_eq!(preface.breadcrumb, "");
+    assert!(preface.breadcrumb.is_empty());
     assert!(preface.header.is_none());
     assert!(preface.text.contains("Intro paragraph"));
-    assert!(chunks.iter().any(|c| c.breadcrumb == "First Header"));
+    assert!(chunks
+        .iter()
+        .any(|c| c.breadcrumb.as_ref().as_str() == "First Header"));
 }
 
 #[test]
