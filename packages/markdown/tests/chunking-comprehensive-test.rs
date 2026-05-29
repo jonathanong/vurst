@@ -120,7 +120,7 @@ fn test_simple_h1_h2_h3() {
     let text = "\n# H1\n\nParagraph 1\n\n## H2\n\nParagraph 2\n\n## H3\n\nParagraph 3\n";
     let chunks = chunk(text, None);
     assert_eq!(chunks.len(), 1);
-    assert_eq!(chunks[0].breadcrumb, "H1");
+    assert_eq!(chunks[0].breadcrumb.as_ref().as_str(), "H1");
     assert!(chunks[0].length > 0);
 }
 
@@ -129,7 +129,7 @@ fn test_with_hashtags() {
     let text = "\n# H1\n\n[#123](https://example.com)\n";
     let chunks = chunk(text, None);
     assert_eq!(chunks.len(), 1);
-    assert_eq!(chunks[0].breadcrumb, "H1");
+    assert_eq!(chunks[0].breadcrumb.as_ref().as_str(), "H1");
     assert_eq!(chunks[0].text, "[#123](https://example.com)");
 }
 
@@ -144,7 +144,7 @@ fn test_no_header_with_title() {
         }),
     );
     assert_eq!(chunks.len(), 1);
-    assert_eq!(chunks[0].breadcrumb, "test title");
+    assert_eq!(chunks[0].breadcrumb.as_ref().as_str(), "test title");
     assert_eq!(chunks[0].header, Some("test title".to_string()));
 }
 
@@ -186,7 +186,10 @@ fn test_multiple_paragraphs_same_header() {
     let text = "\n# H1\n\nFirst paragraph.\n\nSecond paragraph.\n\nThird paragraph.\n";
     let chunks = chunk(text, None);
     assert!(!chunks.is_empty());
-    let h1_chunks: Vec<_> = chunks.iter().filter(|c| c.breadcrumb == "H1").collect();
+    let h1_chunks: Vec<_> = chunks
+        .iter()
+        .filter(|c| c.breadcrumb.as_ref() == "H1")
+        .collect();
     assert!(!h1_chunks.is_empty());
 }
 

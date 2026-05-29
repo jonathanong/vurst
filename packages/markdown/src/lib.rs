@@ -206,8 +206,8 @@ impl From<Chunk> for NapiChunk {
         NapiChunk {
             level: c.level,
             header: c.header,
-            headers: c.headers,
-            breadcrumb: c.breadcrumb,
+            headers: c.headers.to_vec(),
+            breadcrumb: c.breadcrumb.to_string(),
             text: c.text,
             // Safe: input is bounded by SANITIZE_MAX_INPUT_BYTES (10 MiB ≈ 10M chars),
             // which is well below u32::MAX (≈4.3B).
