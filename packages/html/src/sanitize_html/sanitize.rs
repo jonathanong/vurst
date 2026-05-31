@@ -211,11 +211,38 @@ fn html_whitespace_entity_len(rest: &str) -> Option<usize> {
 }
 
 fn empty_text_candidate_end(html: &str, mut i: usize) -> usize {
-    while i < html.len() {
+    let bytes = html.as_bytes();
+    while i < bytes.len() {
+        // Fast-path: chunked ASCII whitespace check. We use iter().position
+        // for SIMD acceleration over long contiguous whitespaces.
+        let rest_bytes = &bytes[i..];
+        let non_ws_idx = rest_bytes
+            .iter()
+            .position(|&b| !(b.is_ascii_whitespace() || b == 0x0B));
+
+        match non_ws_idx {
+            Some(0) => {} // first byte isn't ascii whitespace
+            Some(offset) => {
+                i += offset;
+                continue;
+            }
+            None => {
+                i = bytes.len();
+                break;
+            }
+        }
+
+        let b = bytes[i];
         let rest = &html[i..];
-        if let Some(entity_len) = html_whitespace_entity_len(rest) {
-            i += entity_len;
-            continue;
+        if b == b'&' {
+            if let Some(entity_len) = html_whitespace_entity_len(rest) {
+                i += entity_len;
+                continue;
+            }
+        }
+
+        if b.is_ascii() {
+            break;
         }
 
         let ch = rest
