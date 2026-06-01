@@ -7,3 +7,6 @@
 ## 2024-05-26 - Optimize HTML tag stripping
 **Learning:** `strip_html_markup` was manually scanning byte-by-byte and character-by-character to find the next HTML tag opening angle bracket (`<`).
 **Action:** Use byte-slice scans with `position` (`memchr`) to fast-forward to the next `<` character before processing tags, which is significantly faster for content with few tags.
+## 2024-06-01 - Optimize whitespace checking and HTML entity scanning
+**Learning:** `empty_text_candidate_end` was decoding UTF-8 on every iteration to find whitespace, and evaluating prefix combinations unconditionally.
+**Action:** Implemented an ASCII fast-path that uses `char::is_whitespace()` avoiding `chars().next()` and short circuits evaluating html entity lengths when the current char isn't `&`.

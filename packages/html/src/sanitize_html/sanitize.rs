@@ -211,13 +211,31 @@ fn html_whitespace_entity_len(rest: &str) -> Option<usize> {
 }
 
 fn empty_text_candidate_end(html: &str, mut i: usize) -> usize {
+    let bytes = html.as_bytes();
     while i < html.len() {
-        let rest = &html[i..];
-        if let Some(entity_len) = html_whitespace_entity_len(rest) {
-            i += entity_len;
-            continue;
+        let b = bytes[i];
+
+        if b.is_ascii() {
+            // ⚡ Bolt: Fast-path for ASCII bytes to avoid UTF-8 decoding overhead.
+            // Delegate directly to `char::is_whitespace` to preserve exact behavior.
+            if (b as char).is_whitespace() {
+                i += 1;
+                continue;
+            }
+
+            // ⚡ Bolt: Fast-path to avoid checking entity prefix when it isn't an ampersand
+            if b == b'&' {
+                if let Some(entity_len) = html_whitespace_entity_len(&html[i..]) {
+                    i += entity_len;
+                    continue;
+                }
+            }
+
+            // Not a whitespace and not a whitespace entity, so we are done.
+            break;
         }
 
+        let rest = &html[i..];
         let ch = rest
             .chars()
             .next()
