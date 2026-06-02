@@ -16,14 +16,13 @@ fn scheme_candidate(url: &str) -> Option<&str> {
 fn is_valid_scheme(scheme: &str) -> bool {
     // RFC 3986: scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
     // The first character must be a letter; digits are only valid after position 0.
-    let mut chars = scheme.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-    if !first.is_ascii_alphabetic() {
+    let bytes = scheme.as_bytes();
+    if bytes.is_empty() || !bytes[0].is_ascii_alphabetic() {
         return false;
     }
-    chars.all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.')
+    bytes[1..]
+        .iter()
+        .all(|&b| b.is_ascii_alphanumeric() || b == b'+' || b == b'-' || b == b'.')
 }
 
 fn is_allowed_scheme(scheme: &str, allowed_schemes: &[&str]) -> bool {
@@ -34,13 +33,32 @@ fn is_allowed_scheme(scheme: &str, allowed_schemes: &[&str]) -> bool {
 }
 
 fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
+    // Fast path: if there are no whitespace or control characters, we don't need to allocate
+    let has_bad_chars = url
+        .bytes()
+        .any(|b| b.is_ascii_whitespace() || b.is_ascii_control());
+
+    if !has_bad_chars {
+        if url.is_empty()
+            || url.len() >= 2 && matches!(url.as_bytes()[..2], [b'/' | b'\\', b'/' | b'\\'])
+            || url.starts_with('\\')
+        {
+            return false;
+        }
+
+        let Some(scheme) = scheme_candidate(url) else {
+            return true;
+        };
+        return is_allowed_scheme(scheme, allowed_schemes);
+    }
+
+    // Slow path: allocate and filter
     let clean_url: String = url
         .chars()
         .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
         .collect();
     if clean_url.is_empty()
-        || clean_url.starts_with("//")
-        || clean_url.starts_with("/\\")
+        || clean_url.len() >= 2 && matches!(clean_url.as_bytes()[..2], [b'/' | b'\\', b'/' | b'\\'])
         || clean_url.starts_with('\\')
     {
         return false;
