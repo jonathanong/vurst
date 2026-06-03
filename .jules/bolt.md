@@ -7,3 +7,6 @@
 ## 2024-05-26 - Optimize HTML tag stripping
 **Learning:** `strip_html_markup` was manually scanning byte-by-byte and character-by-character to find the next HTML tag opening angle bracket (`<`).
 **Action:** Use byte-slice scans with `position` (`memchr`) to fast-forward to the next `<` character before processing tags, which is significantly faster for content with few tags.
+## 2024-05-27 - Optimize HTML whitespace entity fast path
+**Learning:** In string parsing functions that scan for characters (like `empty_text_candidate_end` where we look for whitespaces and html entities), sequential `.chars().next()` UTF-8 decoding imposes measurable overhead. An ASCII fast-path check (`b.is_ascii()`) correctly mirrors fallback behavior while bypassing this decoding cost for common text characters.
+**Action:** In loops over strings, check `b.is_ascii()` on the byte slice to quickly handle standard characters (`&`, spaces), and only fallback to `chars().next()` for actual multibyte characters. Since `char::is_whitespace` captures vertical tabs (`0x0B`) unlike `u8::is_ascii_whitespace()`, use `(b as char).is_whitespace()` inside the ASCII block to maintain exact behavioral parity.
