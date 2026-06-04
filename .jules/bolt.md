@@ -10,3 +10,6 @@
 ## 2024-05-14 - Allocation-Free Fast Paths in URL Sanitization
 **Learning:** URL sanitization loops in hot paths (like markdown processing) often perform unnecessary allocations by filtering safe URLs (e.g., stripping whitespace). We discovered that by first scanning the raw bytes for the presence of invalid characters (`b.is_ascii_whitespace()` or `b.is_ascii_control()`), we can avoid expensive UTF-8 parsing and `String` allocations entirely for the vast majority of valid URLs.
 **Action:** When writing filters or sanitizers that remove invalid characters, always introduce a lightweight `.bytes().any(...)` check as a fast path to return a borrowed string or perform logic immediately, reserving allocations and filtering for the slow path.
+## 2026-06-04 - Safely filtering ASCII chars in UTF-8 Strings
+**Learning:** In Rust, filtering a string using `.chars().filter(...).collect()` involves relatively slow UTF-8 decoding and encoding overhead.
+**Action:** When filtering out *only* 7-bit ASCII characters (like `is_ascii_whitespace` or `is_ascii_control`) from a valid UTF-8 string, it is safe and ~3x faster to operate on the bytes directly (`.as_bytes().to_vec()`, then `.retain(...)`) and convert back using `unsafe { String::from_utf8_unchecked(...) }`.
