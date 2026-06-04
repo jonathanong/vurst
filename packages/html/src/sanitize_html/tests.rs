@@ -145,6 +145,27 @@ fn empty_container_preflight_skips_non_empty_fragments() {
     ));
     assert!(!super::sanitize::may_have_empty_container("<div"));
     assert!(!super::sanitize::may_have_empty_container("<div>&#;</div>"));
+    // Trailing ASCII whitespace with no closing tag: all remaining bytes after
+    // the opening tag are whitespace, so iter().position returns None and the
+    // None arm sets i = bytes.len() before breaking.
+    assert!(!super::sanitize::may_have_empty_container("<div>   "));
+    // Same None arm via vertical tab (0x0B): treated as whitespace by the
+    // predicate (b == 0x0B) but not by u8::is_ascii_whitespace.
+    assert!(!super::sanitize::may_have_empty_container("<p>\x0b\x0b"));
+    // None arm reached after consuming a whitespace entity: the spaces after
+    // &nbsp; scan to None since they run to end-of-input with no < present.
+    assert!(!super::sanitize::may_have_empty_container(
+        "<div>  &nbsp;   "
+    ));
+    // Non-ASCII, non-whitespace content (e.g. CJK): the fast-path byte scan
+    // returns Some(0), the byte is not ASCII, and the Unicode decode finds a
+    // non-whitespace char, exercising the `!ch.is_whitespace()` break arm.
+    assert!(!super::sanitize::may_have_empty_container(
+        "<div>\u{4e2d}</div>"
+    ));
+    assert!(!super::sanitize::may_have_empty_container(
+        "<p>\u{00e9}</p>"
+    ));
 }
 
 #[test]
@@ -181,4 +202,16 @@ fn empty_container_preflight_detects_cleanup_candidates() {
         "<article>&#8195;</article>"
     ));
     assert!(super::sanitize::may_have_empty_container("<p>&#x2003;</p>"));
+    // Vertical tab (0x0B) as whitespace: treated by predicate (b == 0x0B) but
+    // NOT by u8::is_ascii_whitespace, so it doesn't trigger the fast None arm.
+    assert!(super::sanitize::may_have_empty_container("<div>\x0b</div>"));
+    // Long ASCII whitespace run: exercises multiple bytes in the fast-path
+    // position scan before finding the closing-tag <.
+    assert!(super::sanitize::may_have_empty_container(
+        "<div>          \n\n\t\t\r\n</div>"
+    ));
+    // Decimal entity &#32; (space): whitespace codepoint via numeric entity.
+    assert!(super::sanitize::may_have_empty_container(
+        "<section>&#32;</section>"
+    ));
 }
