@@ -145,6 +145,17 @@ fn empty_container_preflight_skips_non_empty_fragments() {
     ));
     assert!(!super::sanitize::may_have_empty_container("<div"));
     assert!(!super::sanitize::may_have_empty_container("<div>&#;</div>"));
+    // Non-ASCII non-whitespace content: the leading U+00E9 byte (0xC3) is not
+    // ASCII, so the slow chars().next() path is taken; since é is not whitespace,
+    // the !ch.is_whitespace() branch breaks immediately.
+    assert!(!super::sanitize::may_have_empty_container(
+        "<p>\u{00e9}content</p>"
+    ));
+    // Non-ASCII whitespace followed by non-ASCII non-whitespace: exercises the
+    // slow chars() loop iteration across both the continue and the break arm.
+    assert!(!super::sanitize::may_have_empty_container(
+        "<div>\u{2003}\u{00e9}</div>"
+    ));
 }
 
 #[test]
@@ -181,4 +192,22 @@ fn empty_container_preflight_detects_cleanup_candidates() {
         "<article>&#8195;</article>"
     ));
     assert!(super::sanitize::may_have_empty_container("<p>&#x2003;</p>"));
+    // Vertical tab (0x0B): ASCII byte, but char::is_whitespace treats it as
+    // whitespace while u8::is_ascii_whitespace does not.  The fast ASCII path
+    // uses (b as char).is_whitespace() to preserve this parity.
+    assert!(super::sanitize::may_have_empty_container("<div>\x0b</div>"));
+    // Long ASCII whitespace run exercises multiple iterations of the fast-path.
+    assert!(super::sanitize::may_have_empty_container(
+        "<div>          \n\n\t\t\r\n</div>"
+    ));
+    // Decimal HTML entity for space (U+0020, codepoint 32): confirms the
+    // numeric-reference branch handles whitespace codepoints correctly.
+    assert!(super::sanitize::may_have_empty_container(
+        "<section>&#32;</section>"
+    ));
+    // Mixed non-ASCII whitespace and ASCII whitespace: toggles between the slow
+    // chars() path and the fast ASCII path within a single call.
+    assert!(super::sanitize::may_have_empty_container(
+        "<div>\u{2003} \u{00a0}</div>"
+    ));
 }
