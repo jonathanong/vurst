@@ -154,7 +154,9 @@ fn empty_container_preflight_skips_non_empty_fragments() {
     assert!(!super::sanitize::may_have_empty_container("<p>\x0b\x0b"));
     // None arm reached after consuming a whitespace entity: the spaces after
     // &nbsp; scan to None since they run to end-of-input with no < present.
-    assert!(!super::sanitize::may_have_empty_container("<div>  &nbsp;   "));
+    assert!(!super::sanitize::may_have_empty_container(
+        "<div>  &nbsp;   "
+    ));
 }
 
 #[test]
