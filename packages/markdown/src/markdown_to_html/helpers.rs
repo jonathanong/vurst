@@ -32,6 +32,19 @@ fn is_allowed_scheme(scheme: &str, allowed_schemes: &[&str]) -> bool {
             .any(|allowed| scheme.eq_ignore_ascii_case(allowed))
 }
 
+/// Returns `true` if `bytes` is empty, or starts with a protocol-relative or
+/// backslash-relative prefix (`//`, `/\`, `\/`, `\\`, or a lone `\`).
+/// These are all forms that must be blocked to prevent open-redirect / SSRF.
+fn has_dangerous_prefix(bytes: &[u8]) -> bool {
+    if bytes.is_empty() {
+        return true;
+    }
+    if bytes.len() >= 2 && matches!(bytes[0], b'/' | b'\\') && matches!(bytes[1], b'/' | b'\\') {
+        return true;
+    }
+    bytes[0] == b'\\'
+}
+
 fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
     // Fast path: if there are no whitespace or control characters, we don't need to allocate
     let has_bad_chars = url
@@ -39,10 +52,7 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
         .any(|b| b.is_ascii_whitespace() || b.is_ascii_control());
 
     if !has_bad_chars {
-        if url.is_empty()
-            || url.len() >= 2 && matches!(url.as_bytes()[..2], [b'/' | b'\\', b'/' | b'\\'])
-            || url.starts_with('\\')
-        {
+        if has_dangerous_prefix(url.as_bytes()) {
             return false;
         }
 
@@ -57,10 +67,7 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
         .chars()
         .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
         .collect();
-    if clean_url.is_empty()
-        || clean_url.len() >= 2 && matches!(clean_url.as_bytes()[..2], [b'/' | b'\\', b'/' | b'\\'])
-        || clean_url.starts_with('\\')
-    {
+    if has_dangerous_prefix(clean_url.as_bytes()) {
         return false;
     }
 
