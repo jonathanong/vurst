@@ -7,3 +7,6 @@
 ## 2024-05-26 - Optimize HTML tag stripping
 **Learning:** `strip_html_markup` was manually scanning byte-by-byte and character-by-character to find the next HTML tag opening angle bracket (`<`).
 **Action:** Use byte-slice scans with `position` (`memchr`) to fast-forward to the next `<` character before processing tags, which is significantly faster for content with few tags.
+## 2024-05-14 - Allocation-Free Fast Paths in URL Sanitization
+**Learning:** URL sanitization loops in hot paths (like markdown processing) often perform unnecessary allocations by filtering safe URLs (e.g., stripping whitespace). We discovered that by first scanning the raw bytes for the presence of invalid characters (`b.is_ascii_whitespace()` or `b.is_ascii_control()`), we can avoid expensive UTF-8 parsing and `String` allocations entirely for the vast majority of valid URLs.
+**Action:** When writing filters or sanitizers that remove invalid characters, always introduce a lightweight `.bytes().any(...)` check as a fast path to return a borrowed string or perform logic immediately, reserving allocations and filtering for the slow path.
