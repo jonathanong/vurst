@@ -16,14 +16,13 @@ fn scheme_candidate(url: &str) -> Option<&str> {
 fn is_valid_scheme(scheme: &str) -> bool {
     // RFC 3986: scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
     // The first character must be a letter; digits are only valid after position 0.
-    let mut chars = scheme.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-    if !first.is_ascii_alphabetic() {
+    let bytes = scheme.as_bytes();
+    if bytes.is_empty() || !bytes[0].is_ascii_alphabetic() {
         return false;
     }
-    chars.all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.')
+    bytes[1..]
+        .iter()
+        .all(|&b| b.is_ascii_alphanumeric() || b == b'+' || b == b'-' || b == b'.')
 }
 
 fn is_allowed_scheme(scheme: &str, allowed_schemes: &[&str]) -> bool {
@@ -33,16 +32,42 @@ fn is_allowed_scheme(scheme: &str, allowed_schemes: &[&str]) -> bool {
             .any(|allowed| scheme.eq_ignore_ascii_case(allowed))
 }
 
+/// Returns `true` if `bytes` is empty, or starts with a protocol-relative or
+/// backslash-relative prefix (`//`, `/\`, `\/`, `\\`, or a lone `\`).
+/// These are all forms that must be blocked to prevent open-redirect / SSRF.
+fn has_dangerous_prefix(bytes: &[u8]) -> bool {
+    if bytes.is_empty() {
+        return true;
+    }
+    if bytes.len() >= 2 && matches!(bytes[0], b'/' | b'\\') && matches!(bytes[1], b'/' | b'\\') {
+        return true;
+    }
+    bytes[0] == b'\\'
+}
+
 fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
+    // Fast path: if there are no whitespace or control characters, we don't need to allocate
+    let has_bad_chars = url
+        .bytes()
+        .any(|b| b.is_ascii_whitespace() || b.is_ascii_control());
+
+    if !has_bad_chars {
+        if has_dangerous_prefix(url.as_bytes()) {
+            return false;
+        }
+
+        let Some(scheme) = scheme_candidate(url) else {
+            return true;
+        };
+        return is_allowed_scheme(scheme, allowed_schemes);
+    }
+
+    // Slow path: allocate and filter
     let clean_url: String = url
         .chars()
         .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
         .collect();
-    if clean_url.is_empty()
-        || clean_url.starts_with("//")
-        || clean_url.starts_with("/\\")
-        || clean_url.starts_with('\\')
-    {
+    if has_dangerous_prefix(clean_url.as_bytes()) {
         return false;
     }
 
