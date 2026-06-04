@@ -163,7 +163,9 @@ fn empty_container_preflight_skips_non_empty_fragments() {
     assert!(!super::sanitize::may_have_empty_container(
         "<div>\u{4e2d}</div>"
     ));
-    assert!(!super::sanitize::may_have_empty_container("<p>\u{00e9}</p>"));
+    assert!(!super::sanitize::may_have_empty_container(
+        "<p>\u{00e9}</p>"
+    ));
 }
 
 #[test]
