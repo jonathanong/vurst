@@ -13,3 +13,6 @@
 ## 2025-05-31 - Fast-Path Empty HTML Node Checking
 **Learning:** Checking for empty containers using `.chars().next().expect(...).is_whitespace()` in a tight loop is exceptionally slow (~640ms/100k chars) because it requires UTF-8 character decoding on every step, even when parsing contiguous ASCII spaces (like those found in deeply nested, pretty-printed HTML).
 **Action:** When searching for the end of whitespace sequences, prefer byte-slice operations like `.as_bytes().iter().position(...)` with a fallback for multi-byte Unicode. `iter().position` utilizes highly optimized internal implementations (often SIMD vectorization via `memchr`), providing a 10x+ speedup on large whitespace sequences.
+## 2024-06-05 - Avoid `.bytes().filter().collect()` for string filtering
+**Learning:** While iterating over `.bytes()` rather than `.chars()` avoids UTF-8 decoding overhead, using `.bytes().filter(...).collect()` to build a new `Vec<u8>` is actually *slower* than using `.chars()` in Rust due to iterator and allocation overhead. The fastest way to filter a string byte-by-byte is to allocate a vector first (`url.as_bytes().to_vec()`) and then modify it in-place using `.retain()`.
+**Action:** When optimizing string filtering for ASCII-only characters, always use `.as_bytes().to_vec()` combined with `.retain()` rather than chaining iterators with `.collect()`.
