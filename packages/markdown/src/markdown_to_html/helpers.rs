@@ -63,10 +63,13 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
     }
 
     // Slow path: allocate and filter
-    let clean_url: String = url
-        .chars()
-        .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
-        .collect();
+    // ⚡ Bolt: Optimized string filtering using byte-level `.retain()` to avoid UTF-8 decode/encode overhead
+    let mut bytes = url.as_bytes().to_vec();
+    bytes.retain(|&b| !(b.is_ascii_whitespace() || b.is_ascii_control()));
+    // SAFETY: We only filter out 7-bit ASCII whitespace and control characters.
+    // 7-bit ASCII bytes do not overlap with multi-byte UTF-8 continuation bytes,
+    // so removing them preserves valid UTF-8.
+    let clean_url = unsafe { String::from_utf8_unchecked(bytes) };
     if has_dangerous_prefix(clean_url.as_bytes()) {
         return false;
     }
