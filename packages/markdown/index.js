@@ -34,8 +34,13 @@ const isMuslFromFilesystem = () => {
 const isMuslFromReport = () => {
   let report = null
   if (typeof process.report?.getReport === 'function') {
-    process.report.excludeNetwork = true
-    report = process.report.getReport()
+    const originalExcludeNetwork = process.report.excludeNetwork
+    try {
+      process.report.excludeNetwork = true
+      report = process.report.getReport()
+    } finally {
+      process.report.excludeNetwork = originalExcludeNetwork
+    }
   }
   if (!report) {
     return null
