@@ -165,6 +165,58 @@ fn test_strips_reference_style_link_definitions_no_title() {
 }
 
 #[test]
+fn test_whitespace_only() {
+    let html = "   \n\t  ";
+    assert_eq!(html_to_embedding_text(html), "");
+}
+
+#[test]
+fn test_only_tags() {
+    let html = "<div><span><br></span></div>";
+    assert_eq!(html_to_embedding_text(html), "");
+}
+
+#[test]
+fn test_invalid_html() {
+    let html = "<div unclosed tag << > text";
+    let result = html_to_embedding_text(html);
+    // boilerstrip tries its best to parse it
+    assert!(
+        result.contains("text"),
+        "text should be recovered from invalid html"
+    );
+}
+
+#[test]
+fn test_deeply_nested_html() {
+    let mut html = String::new();
+    let depth = 100; // boilerstrip/html5ever seems to have a lower depth limit
+    for _ in 0..depth {
+        html.push_str("<div>");
+    }
+    html.push_str("deep content");
+    for _ in 0..depth {
+        html.push_str("</div>");
+    }
+    let result = html_to_embedding_text(&html);
+    assert!(result.contains("deep content"));
+}
+
+#[test]
+fn test_huge_input() {
+    let snippet = "<p>Some text with <a href=\"https://example.com\">a link</a> and <img src=\"img.jpg\" alt=\"an image\">.</p>\n";
+    let html = snippet.repeat(10000); // Create a string ~1MB in size
+
+    let result = html_to_embedding_text(&html);
+
+    // Check that we successfully processed the huge input and output scaled accordingly
+    assert!(result.len() > 10000);
+    assert!(!result.contains("href"));
+    assert!(!result.contains("img.jpg"));
+    assert!(result.contains("Some text with"));
+}
+
+#[test]
 fn test_strips_reference_style_link_definitions_with_brackets() {
     let html = "<p>Here is some text.</p>\n<p>[ref]: &lt;https://example.com&gt;</p>";
     let result = html_to_embedding_text(html);
