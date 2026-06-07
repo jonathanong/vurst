@@ -174,11 +174,15 @@ fn strip_zero_width_and_boundaries(content: &str) -> String {
     // a space so "ignore\u{200B}previous" becomes "ignore previous" rather than
     // "ignoreprevious", allowing INJECTION_RE's whitespace separator to match.
     let mut sanitized = ZERO_WIDTH_RE.replace_all(content, " ");
-    if sanitized.contains(HTML_BOUNDARY) {
-        sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
-    }
-    if sanitized.contains(HTML_ROLE_BOUNDARY) {
-        sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
+    // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
+    // for the common case where no private-use sentinel bytes are present.
+    if sanitized.as_bytes().contains(&0xEE) {
+        if sanitized.contains(HTML_BOUNDARY) {
+            sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
+        }
+        if sanitized.contains(HTML_ROLE_BOUNDARY) {
+            sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
+        }
     }
     sanitized.into_owned()
 }
@@ -266,12 +270,15 @@ fn strip_html_markup(content: &str) -> String {
 fn remove_role_prefixes(content: &str) -> String {
     // Remove role prefixes at line starts or after structural HTML boundaries
     let mut sanitized = ROLE_PREFIX_RE.replace_all(content, "$1");
-    // ⚡ Bolt: Only call replace() if the boundary character is present, as replace() allocates.
-    if sanitized.contains(HTML_BOUNDARY) {
-        sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
-    }
-    if sanitized.contains(HTML_ROLE_BOUNDARY) {
-        sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
+    // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
+    // for the common case where no private-use sentinel bytes are present.
+    if sanitized.as_bytes().contains(&0xEE) {
+        if sanitized.contains(HTML_BOUNDARY) {
+            sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
+        }
+        if sanitized.contains(HTML_ROLE_BOUNDARY) {
+            sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
+        }
     }
     sanitized.into_owned()
 }
