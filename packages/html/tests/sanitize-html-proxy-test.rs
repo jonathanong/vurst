@@ -36,7 +36,7 @@ fn proxy_on_with_signing_key_adds_sig() {
         html,
         &SanitizeRssHtmlOptions {
             proxy_images: true,
-            image_proxy_signing_keys: vec![key],
+            image_proxy_signing_keys: std::sync::Arc::from(vec![key]),
             ..SanitizeRssHtmlOptions::default()
         },
     );

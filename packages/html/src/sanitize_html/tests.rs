@@ -9,7 +9,7 @@ fn sanitize_with_proxy(html: &str, keys: Vec<String>) -> SanitizeRssHtmlResult {
         html,
         &SanitizeRssHtmlOptions {
             proxy_images: true,
-            image_proxy_signing_keys: keys,
+            image_proxy_signing_keys: std::sync::Arc::from(keys),
             ..SanitizeRssHtmlOptions::default()
         },
     )

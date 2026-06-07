@@ -44,17 +44,17 @@ pub struct SanitizeRssHtmlOptions {
     /// image-proxy prefix.
     pub proxy_images: bool,
     /// URL path prefix prepended to proxied image URLs (e.g. `/proxy/`).
-    pub image_proxy_url_prefix: String,
+    pub image_proxy_url_prefix: Arc<str>,
     /// Hex-encoded HMAC-SHA256 signing keys (newest first). Empty = dev mode (no sig).
-    pub image_proxy_signing_keys: Vec<String>,
+    pub image_proxy_signing_keys: Arc<[String]>,
 }
 
 impl Default for SanitizeRssHtmlOptions {
     fn default() -> Self {
         Self {
             proxy_images: false,
-            image_proxy_url_prefix: DEFAULT_IMAGE_PROXY_URL_PREFIX.to_string(),
-            image_proxy_signing_keys: Vec::new(),
+            image_proxy_url_prefix: Arc::from(DEFAULT_IMAGE_PROXY_URL_PREFIX),
+            image_proxy_signing_keys: Arc::new([]),
         }
     }
 }
@@ -113,8 +113,8 @@ pub fn sanitize_rss_html_sync(html: &str, opts: &SanitizeRssHtmlOptions) -> Sani
 
 fn sanitize_with_ammonia(html: &str, opts: &SanitizeRssHtmlOptions) -> (String, Option<String>) {
     let proxy_images = opts.proxy_images;
-    let signing_keys = opts.image_proxy_signing_keys.clone();
-    let url_prefix = opts.image_proxy_url_prefix.clone();
+    let signing_keys = Arc::clone(&opts.image_proxy_signing_keys);
+    let url_prefix = Arc::clone(&opts.image_proxy_url_prefix);
     let first_image_src = Arc::new(Mutex::new(None::<String>));
     let first_image_src_filter = Arc::clone(&first_image_src);
     let mut builder = Builder::default();
