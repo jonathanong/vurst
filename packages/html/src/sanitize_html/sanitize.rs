@@ -165,8 +165,12 @@ fn has_dangerous_url_scheme(url: &str) -> bool {
     // ASCII case-insensitive scheme checks before rewritten attrs are inspected.
     const DANGEROUS_URL_SCHEMES: &[&[u8]] = &[b"javascript:", b"data:", b"vbscript:"];
 
+    // Ammonia's attribute_filter runs on raw, un-unescaped attribute values.
+    // We must decode HTML entities to prevent bypasses like `javascript&#58;alert(1)`.
+    let decoded_url = html_escape::decode_html_entities(url);
+
     for &scheme in DANGEROUS_URL_SCHEMES {
-        let mut bytes = url
+        let mut bytes = decoded_url
             .bytes()
             .filter(|b| !b.is_ascii_whitespace() && !b.is_ascii_control());
         let mut is_match = true;
