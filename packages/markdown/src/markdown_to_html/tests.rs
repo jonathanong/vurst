@@ -15,7 +15,7 @@ fn rendered_image_src_only_proxies_when_enabled_and_external() {
     let opts = MarkdownHtmlFormatOptions {
         nofollow_links: true,
         proxy_images: true,
-        image_proxy_url_prefix: crate::image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX,
+        image_proxy_url_prefix: vurst_shared::image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX,
         image_proxy_signing_keys: &[],
     };
 

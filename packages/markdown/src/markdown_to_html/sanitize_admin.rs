@@ -1,11 +1,11 @@
 use super::helpers::{is_safe_image_url, is_safe_link_url};
-use crate::image_proxy::{
-    is_external_http_url, rewrite_image_to_proxy, should_proxy_image,
-    DEFAULT_IMAGE_PROXY_URL_PREFIX,
-};
 use ego_tree::NodeRef;
 use scraper::{node::Node, Html};
 use std::borrow::Cow;
+use vurst_shared::image_proxy::{
+    is_external_http_url, rewrite_image_to_proxy, should_proxy_image,
+    DEFAULT_IMAGE_PROXY_URL_PREFIX,
+};
 
 /// Tags allowed in admin HTML content (permissive allowlist).
 const ALLOWED_ADMIN_TAGS: &[&str] = &[

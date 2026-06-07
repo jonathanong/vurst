@@ -2585,20 +2585,17 @@ dependencies = [
  "ammonia",
  "anyhow",
  "boilerstrip",
- "data-encoding",
  "ego-tree",
  "entities",
- "hex",
- "hmac",
  "napi",
  "napi-build",
  "napi-derive",
  "regex",
  "scraper",
  "serde_json",
- "sha2",
  "tokio",
  "vurst-runtime-rs",
+ "vurst-shared",
 ]
 
 [[package]]
@@ -2609,16 +2606,14 @@ dependencies = [
  "comrak",
  "data-encoding",
  "ego-tree",
- "hex",
- "hmac",
  "napi",
  "napi-build",
  "napi-derive",
  "scraper",
  "serde_json",
- "sha2",
  "tokio",
  "vurst-runtime-rs",
+ "vurst-shared",
 ]
 
 [[package]]
@@ -2627,6 +2622,16 @@ version = "0.1.0"
 dependencies = [
  "napi",
  "tokio",
+]
+
+[[package]]
+name = "vurst-shared"
+version = "0.1.0"
+dependencies = [
+ "data-encoding",
+ "hex",
+ "hmac",
+ "sha2",
 ]
 
 [[package]]

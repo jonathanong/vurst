@@ -24,7 +24,10 @@ use napi_derive::napi;
 use vurst_runtime_rs as runtime;
 
 pub mod embedding_content;
-pub mod image_proxy;
+pub mod image_proxy {
+    pub use vurst_shared::image_proxy::*;
+}
+
 pub mod sanitize_html;
 pub mod sanitize_prompt_injection;
 
