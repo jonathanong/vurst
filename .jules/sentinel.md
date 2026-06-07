@@ -1,8 +1,5 @@
-## 2024-05-25 - Prevent SSRF/Open Redirects via Protocol-Relative Backslash Bypasses
-**Vulnerability:** URL safety checks (like `is_relative_url`) intended to reject protocol-relative URLs (`//example.com`) only checked for the standard forward slash pattern. This allowed an attacker to bypass the check by using backslash variations (`\\`, `/\`, or `\/`), which parsers or browsers normalize to `//` and treat as protocol-relative URLs.
-**Learning:** Browsers and URL parsers often normalize backslashes to forward slashes. Filtering out `//` is insufficient as an attacker can provide `\\attacker.com` to achieve an open redirect or SSRF, which the browser executes as `//attacker.com`. A comprehensive check must account for all combinations of forward and backward slashes at the start of a URL.
-**Prevention:** When checking for protocol-relative URLs without incurring full string decoding overhead, use a byte slice pattern match on the first two bytes to check for all slash variations: `matches!(url.as_bytes(), [b'/' | b'\\', b'/' | b'\\', ..])`.
-## 2025-02-28 - [SSRF Bypass in Image Proxy Validation]
-**Vulnerability:** The `is_relative_url` function checks for protocol-relative URLs (`//`, `\\`, etc.) using a two-character pattern match, but misses URLs starting with a single backslash like `\attacker.com`. Such URLs are classified as relative URLs, which then bypasses checks and might lead to SSRF or open redirect vulnerabilities when the browser normalizes `\` to `/`.
-**Learning:** Checking for double slashes/backslashes is insufficient because parsers/browsers normalize single backslashes in certain contexts (like href/src) into absolute URLs on the same protocol, which allows bypass of protocol-relative defenses. A single backslash at the start of a URL should also be treated as potentially dangerous, consistent with how `has_dangerous_prefix` behaves in `packages/markdown/src/markdown_to_html/helpers.rs`.
-**Prevention:** In addition to checking for `[b'/' | b'\\', b'/' | b'\\', ..]`, always check if the URL starts with `b'\\'` to prevent normalization bypasses.
+## 2024-12-07 - Fix Stored XSS via HTML Entities in URL Validation
+
+**Vulnerability:** The `is_safe_url` function was bypassing malicious schemes like `javascript:` if they were obfuscated with HTML entities (e.g., `javascript&#58;alert(1)`).
+**Learning:** Browsers decode HTML entities when parsing `href` or `src` attributes. Simple string match checks on the raw markdown URL can easily be bypassed if the URL is not decoded first.
+**Prevention:** Always decode HTML entities in URLs before validating their schemes to ensure the security check analyzes the exact same string the browser will eventually execute.

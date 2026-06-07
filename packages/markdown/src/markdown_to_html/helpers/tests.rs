@@ -14,6 +14,9 @@ fn scheme_and_url_helpers_cover_invalid_paths() {
     assert!(!is_safe_link_url("bad space:"));
     assert!(!is_safe_link_url("1bad:"));
     assert!(!is_safe_link_url("javascript:alert(1)"));
+    assert!(!is_safe_link_url("javascript&#58;alert(1)"));
+    assert!(!is_safe_link_url("javascript&#0000058;alert(1)"));
+    assert!(!is_safe_link_url("javascript&colon;alert(1)"));
     assert!(!is_safe_link_url("\x0Bjavascript:alert(1)"));
     assert!(!is_safe_link_url("\x01javascript:alert(1)"));
     assert!(!is_safe_link_url("java\x09script:alert(1)"));

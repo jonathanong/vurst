@@ -46,17 +46,19 @@ fn has_dangerous_prefix(bytes: &[u8]) -> bool {
 }
 
 fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
+    let decoded_url = html_escape::decode_html_entities(url);
+
     // Fast path: if there are no whitespace or control characters, we don't need to allocate
-    let has_bad_chars = url
+    let has_bad_chars = decoded_url
         .bytes()
         .any(|b| b.is_ascii_whitespace() || b.is_ascii_control());
 
     if !has_bad_chars {
-        if has_dangerous_prefix(url.as_bytes()) {
+        if has_dangerous_prefix(decoded_url.as_bytes()) {
             return false;
         }
 
-        let Some(scheme) = scheme_candidate(url) else {
+        let Some(scheme) = scheme_candidate(&decoded_url) else {
             return true;
         };
         return is_allowed_scheme(scheme, allowed_schemes);
@@ -66,9 +68,10 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
     // ⚡ Bolt: Optimized string filtering by avoiding UTF-8 decoding overhead.
     // Since we only remove 7-bit ASCII characters (whitespace/control), we can safely
     // filter bytes directly and reconstruct the String unchecked. (~15-20% faster)
-    let mut clean_bytes = Vec::with_capacity(url.len());
+    let mut clean_bytes = Vec::with_capacity(decoded_url.len());
     clean_bytes.extend(
-        url.bytes()
+        decoded_url
+            .bytes()
             .filter(|&b| !b.is_ascii_whitespace() && !b.is_ascii_control()),
     );
     debug_assert!(std::str::from_utf8(&clean_bytes).is_ok());
