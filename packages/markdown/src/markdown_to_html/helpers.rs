@@ -46,11 +46,9 @@ fn has_dangerous_prefix(bytes: &[u8]) -> bool {
 }
 
 fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
-    // Decode HTML entities first
-    let url_decoded = match html_escape::decode_html_entities(url) {
-        std::borrow::Cow::Borrowed(_) => std::borrow::Cow::Borrowed(url),
-        std::borrow::Cow::Owned(s) => std::borrow::Cow::Owned(s),
-    };
+    // Decode HTML entities first, including semicolonless numeric references
+    // accepted by HTML attribute parsing.
+    let url_decoded = decode_url_html_entities(url);
 
     let url_to_check = url_decoded.as_ref();
 
@@ -91,6 +89,64 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
         return true;
     };
     is_allowed_scheme(scheme, allowed_schemes)
+}
+
+fn decode_url_html_entities(url: &str) -> std::borrow::Cow<'_, str> {
+    let decoded = html_escape::decode_html_entities(url);
+    let decoded_ref = decoded.as_ref();
+    if !decoded_ref.contains("&#") {
+        return decoded;
+    }
+
+    let mut output = String::with_capacity(decoded_ref.len());
+    let mut remaining = decoded_ref;
+    let mut changed = false;
+
+    while let Some(idx) = remaining.find("&#") {
+        output.push_str(&remaining[..idx]);
+        let entity = &remaining[idx..];
+        if let Some((ch, consumed)) = decode_numeric_char_ref(entity) {
+            output.push(ch);
+            remaining = &entity[consumed..];
+            changed = true;
+        } else {
+            output.push_str("&#");
+            remaining = &entity[2..];
+        }
+    }
+
+    if !changed {
+        return decoded;
+    }
+
+    output.push_str(remaining);
+    std::borrow::Cow::Owned(output)
+}
+
+fn decode_numeric_char_ref(input: &str) -> Option<(char, usize)> {
+    let digits = input.strip_prefix("&#")?;
+    let (digits, radix, prefix_len) = digits
+        .strip_prefix(['x', 'X'])
+        .map_or((digits, 10, 2), |hex_digits| (hex_digits, 16, 3));
+
+    let digit_len = digits
+        .bytes()
+        .take_while(|b| {
+            if radix == 16 {
+                b.is_ascii_hexdigit()
+            } else {
+                b.is_ascii_digit()
+            }
+        })
+        .count();
+    if digit_len == 0 {
+        return None;
+    }
+
+    let codepoint = u32::from_str_radix(&digits[..digit_len], radix).ok()?;
+    let ch = char::from_u32(codepoint)?;
+    let semicolon_len = usize::from(digits[digit_len..].starts_with(';'));
+    Some((ch, prefix_len + digit_len + semicolon_len))
 }
 
 pub fn is_safe_link_url(url: &str) -> bool {

@@ -65,6 +65,15 @@ fn strips_embedded_tab_in_javascript_href() {
 }
 
 #[test]
+fn strips_semicolonless_decimal_entity_in_javascript_href() {
+    let html = r#"<a href="javascript&#58alert(1)">Link</a>"#;
+    let result = sanitize(html);
+    assert!(result.contains("Link"));
+    assert!(!result.contains("javascript"));
+    assert!(!result.contains("alert"));
+}
+
+#[test]
 fn strips_scattered_whitespace_in_javascript_href() {
     // Mix of TAB, LF, CR — covers all three WHATWG-stripped chars in one test
     let html = "<a href=\"j\ta\nv\ra\tscript:alert(1)\">Link</a>";
