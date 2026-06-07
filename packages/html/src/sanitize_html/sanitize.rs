@@ -54,7 +54,7 @@ impl Default for SanitizeRssHtmlOptions {
         Self {
             proxy_images: false,
             image_proxy_url_prefix: Arc::from(DEFAULT_IMAGE_PROXY_URL_PREFIX),
-            image_proxy_signing_keys: Arc::new([]),
+            image_proxy_signing_keys: Arc::default(),
         }
     }
 }

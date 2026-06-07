@@ -74,9 +74,9 @@ impl NapiSanitizeRssHtmlOptions {
                 || std::sync::Arc::from(DEFAULT_IMAGE_PROXY_URL_PREFIX),
                 std::sync::Arc::from,
             ),
-            image_proxy_signing_keys: std::sync::Arc::from(
-                self.image_proxy_signing_keys.unwrap_or_default(),
-            ),
+            image_proxy_signing_keys: self
+                .image_proxy_signing_keys
+                .map_or_else(std::sync::Arc::default, std::sync::Arc::from),
         }
     }
 }
