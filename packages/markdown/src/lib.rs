@@ -23,7 +23,6 @@ use napi_derive::napi;
 
 mod runtime;
 
-pub mod image_proxy;
 pub mod markdown_to_html;
 
 use breadchunks::chunk as breadchunks_chunk;
@@ -58,7 +57,7 @@ pub fn chunk(text: &str, options: Option<ChunkOptions>) -> Vec<Chunk> {
     chunks
 }
 
-use image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX;
+use vurst_runtime_rs::image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX;
 
 /// Maximum input size for all functions (10 MiB). Batch functions check the
 /// total bytes across all inputs. This bounds blocking-pool exposure to large

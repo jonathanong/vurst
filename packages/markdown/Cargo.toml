@@ -12,6 +12,7 @@ workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+vurst-runtime-rs = { path = "../runtime" }
 breadchunks = "=0.2.1"
 comrak = { version = "0.52", default-features = false }
 data-encoding = "2"

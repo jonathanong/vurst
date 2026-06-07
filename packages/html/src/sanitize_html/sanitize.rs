@@ -1,10 +1,10 @@
-use crate::image_proxy::{
-    rewrite_image_to_proxy, should_proxy_image, DEFAULT_IMAGE_PROXY_URL_PREFIX,
-};
 use crate::serialize_fragment_body;
 use ammonia::{Builder, UrlRelative};
 use std::borrow::Cow;
 use std::sync::{Arc, Mutex};
+use vurst_runtime_rs::image_proxy::{
+    rewrite_image_to_proxy, should_proxy_image, DEFAULT_IMAGE_PROXY_URL_PREFIX,
+};
 
 use scraper::Html;
 

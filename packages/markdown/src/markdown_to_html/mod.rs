@@ -7,12 +7,12 @@ use comrak::{create_formatter, parse_document, Arena, Options};
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
-use crate::image_proxy::{
+use helpers::{collect_urls, walk_and_sanitize_urls};
+use sanitize_admin::{sanitize_admin_html_with_options, AdminHtmlOptions};
+use vurst_runtime_rs::image_proxy::{
     is_external_http_url, rewrite_image_to_proxy, should_proxy_image,
     DEFAULT_IMAGE_PROXY_URL_PREFIX,
 };
-use helpers::{collect_urls, walk_and_sanitize_urls};
-use sanitize_admin::{sanitize_admin_html_with_options, AdminHtmlOptions};
 
 #[derive(Debug, PartialEq)]
 pub struct MarkdownUrlsResult {

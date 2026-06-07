@@ -24,12 +24,12 @@ use napi_derive::napi;
 mod runtime;
 
 pub mod embedding_content;
-pub mod image_proxy;
+
 pub mod sanitize_html;
 pub mod sanitize_prompt_injection;
 
 pub use embedding_content::html_to_embedding_text;
-pub use image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX;
+
 pub use sanitize_html::{sanitize_rss_html_sync, SanitizeRssHtmlOptions, SanitizeRssHtmlResult};
 pub use sanitize_prompt_injection::sanitize_prompt_injection_sync;
 
@@ -70,9 +70,9 @@ impl NapiSanitizeRssHtmlOptions {
     fn into_sanitize_options(self) -> SanitizeRssHtmlOptions {
         SanitizeRssHtmlOptions {
             proxy_images: self.proxy_images.unwrap_or(false),
-            image_proxy_url_prefix: self
-                .image_proxy_url_prefix
-                .unwrap_or_else(|| DEFAULT_IMAGE_PROXY_URL_PREFIX.to_string()),
+            image_proxy_url_prefix: self.image_proxy_url_prefix.unwrap_or_else(|| {
+                vurst_runtime_rs::image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX.to_string()
+            }),
             image_proxy_signing_keys: self.image_proxy_signing_keys.unwrap_or_default(),
         }
     }
