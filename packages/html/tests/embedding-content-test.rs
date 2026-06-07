@@ -210,8 +210,9 @@ fn test_huge_input() {
     let result = html_to_embedding_text(&html);
 
     // Check that we successfully processed the huge input and output scaled accordingly
-    assert!(result.len() > 10000);
-    assert!(!result.contains("href"));
+    assert!(result.len() > 100_000);
+    assert_eq!(result.matches("Some text with").count(), 10_000);
+    assert!(!result.contains("example.com"));
     assert!(!result.contains("img.jpg"));
     assert!(result.contains("Some text with"));
 }
