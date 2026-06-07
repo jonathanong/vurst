@@ -1,5 +1,6 @@
 use super::entities::decode_html_entities;
 use regex::Regex;
+use std::borrow::Cow;
 use std::sync::LazyLock;
 
 const HTML_BOUNDARY: char = '\u{E000}';
@@ -174,10 +175,10 @@ fn strip_zero_width_and_boundaries(content: &str) -> String {
     // "ignoreprevious", allowing INJECTION_RE's whitespace separator to match.
     let mut sanitized = ZERO_WIDTH_RE.replace_all(content, " ");
     if sanitized.contains(HTML_BOUNDARY) {
-        sanitized = sanitized.replace(HTML_BOUNDARY, " ").into();
+        sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
     }
     if sanitized.contains(HTML_ROLE_BOUNDARY) {
-        sanitized = sanitized.replace(HTML_ROLE_BOUNDARY, " ").into();
+        sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
     }
     sanitized.into_owned()
 }
@@ -264,10 +265,15 @@ fn strip_html_markup(content: &str) -> String {
 
 fn remove_role_prefixes(content: &str) -> String {
     // Remove role prefixes at line starts or after structural HTML boundaries
-    let mut sanitized = ROLE_PREFIX_RE.replace_all(content, "$1").into_owned();
-    sanitized = sanitized.replace(HTML_BOUNDARY, " ");
-    sanitized = sanitized.replace(HTML_ROLE_BOUNDARY, " ");
-    sanitized
+    let mut sanitized = ROLE_PREFIX_RE.replace_all(content, "$1");
+    // ⚡ Bolt: Only call replace() if the boundary character is present, as replace() allocates.
+    if sanitized.contains(HTML_BOUNDARY) {
+        sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
+    }
+    if sanitized.contains(HTML_ROLE_BOUNDARY) {
+        sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
+    }
+    sanitized.into_owned()
 }
 
 fn normalize_whitespace(content: &str, is_title: bool) -> String {
