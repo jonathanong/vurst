@@ -1,4 +1,5 @@
 use super::*;
+use crate::markdown_to_html::helpers::is_safe_link_url;
 use comrak::nodes::AstNode;
 
 fn first_link_node<'a>(node: &'a AstNode<'a>) -> Option<&'a AstNode<'a>> {
@@ -132,4 +133,44 @@ fn should_not_render_nested_link_when_parent_is_link() {
     parent_link.append(child_link);
 
     assert!(!should_render_nested_link(child_link, &options));
+}
+
+#[test]
+fn test_is_safe_link_url() {
+    // Valid schemes
+    assert!(is_safe_link_url("http://example.com"));
+    assert!(is_safe_link_url("https://example.com"));
+    assert!(is_safe_link_url("mailto:test@example.com"));
+    assert!(is_safe_link_url("tel:+1234567890"));
+    assert!(is_safe_link_url("HTTP://EXAMPLE.COM"));
+
+    // Empty URL
+    assert!(!is_safe_link_url(""));
+
+    // Relative paths without schemes
+    assert!(is_safe_link_url("/path/to/resource"));
+    assert!(is_safe_link_url("?query=1"));
+    assert!(is_safe_link_url("#fragment"));
+    assert!(is_safe_link_url("file.txt"));
+
+    // Dangerous prefixes
+    assert!(!is_safe_link_url("//example.com"));
+    assert!(!is_safe_link_url("/\\example.com"));
+    assert!(!is_safe_link_url("\\/example.com"));
+    assert!(!is_safe_link_url("\\\\example.com"));
+    assert!(!is_safe_link_url("\\example.com"));
+
+    // Disallowed protocols
+    assert!(!is_safe_link_url("javascript:alert(1)"));
+    assert!(!is_safe_link_url("data:text/html,<html>"));
+    assert!(!is_safe_link_url("file:///etc/passwd"));
+    assert!(!is_safe_link_url("vbscript:msgbox(1)"));
+
+    // Obfuscation attempts
+    assert!(!is_safe_link_url("java\nscript:alert(1)"));
+    assert!(!is_safe_link_url("java\tscript:alert(1)"));
+    assert!(!is_safe_link_url("java\rscript:alert(1)"));
+    assert!(!is_safe_link_url("java\x0Bscript:alert(1)"));
+    assert!(!is_safe_link_url(" javascript:alert(1)"));
+    assert!(!is_safe_link_url("\tjavascript:alert(1)"));
 }
