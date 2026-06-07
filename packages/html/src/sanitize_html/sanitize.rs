@@ -247,34 +247,6 @@ fn decode_numeric_char_ref(input: &str) -> Option<(char, usize)> {
     Some((ch, prefix_len + digit_len + semicolon_len))
 }
 
-#[cfg(test)]
-mod entity_decode_tests {
-    use super::*;
-
-    #[test]
-    fn decode_url_html_entities_covers_borrowed_invalid_and_multiple_refs() {
-        assert_eq!(
-            decode_url_html_entities("https://example.com").as_ref(),
-            "https://example.com"
-        );
-        assert_eq!(decode_url_html_entities("a&#oops").as_ref(), "a&#oops");
-        assert_eq!(
-            decode_url_html_entities("java&#115cript&#58alert(1)").as_ref(),
-            "javascript:alert(1)"
-        );
-    }
-
-    #[test]
-    fn decode_numeric_char_ref_covers_decimal_hex_and_invalid_refs() {
-        assert_eq!(decode_numeric_char_ref("&#58alert"), Some((':', 4)));
-        assert_eq!(decode_numeric_char_ref("&#58;alert"), Some((':', 5)));
-        assert_eq!(decode_numeric_char_ref("&#x3cscript"), Some(('<', 5)));
-        assert_eq!(decode_numeric_char_ref("plain"), None);
-        assert_eq!(decode_numeric_char_ref("&#x;"), None);
-        assert_eq!(decode_numeric_char_ref("&#99999999;"), None);
-    }
-}
-
 fn remove_empty_containers_from_html(html: &str) -> String {
     let mut fragment = Html::parse_fragment(html);
     remove_empty_containers(&mut fragment);
@@ -450,5 +422,33 @@ fn remove_empty_containers(fragment: &mut Html) {
                 .expect("BUG: node id collected from the same tree should exist");
             node.detach();
         }
+    }
+}
+
+#[cfg(test)]
+mod entity_decode_tests {
+    use super::*;
+
+    #[test]
+    fn decode_url_html_entities_covers_borrowed_invalid_and_multiple_refs() {
+        assert_eq!(
+            decode_url_html_entities("https://example.com").as_ref(),
+            "https://example.com"
+        );
+        assert_eq!(decode_url_html_entities("a&#oops").as_ref(), "a&#oops");
+        assert_eq!(
+            decode_url_html_entities("java&#115cript&#58alert(1)").as_ref(),
+            "javascript:alert(1)"
+        );
+    }
+
+    #[test]
+    fn decode_numeric_char_ref_covers_decimal_hex_and_invalid_refs() {
+        assert_eq!(decode_numeric_char_ref("&#58alert"), Some((':', 4)));
+        assert_eq!(decode_numeric_char_ref("&#58;alert"), Some((':', 5)));
+        assert_eq!(decode_numeric_char_ref("&#x3cscript"), Some(('<', 5)));
+        assert_eq!(decode_numeric_char_ref("plain"), None);
+        assert_eq!(decode_numeric_char_ref("&#x;"), None);
+        assert_eq!(decode_numeric_char_ref("&#99999999;"), None);
     }
 }
