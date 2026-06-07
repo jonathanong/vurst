@@ -157,36 +157,34 @@ fn sanitize_with_ammonia(html: &str, opts: &SanitizeRssHtmlOptions) -> (String, 
     (sanitized, first_image_src)
 }
 
-fn has_dangerous_url_scheme(url: &str) -> bool {
+pub(super) fn has_dangerous_url_scheme(url: &str) -> bool {
     // Browsers strip ASCII TAB/LF/CR and C0 control characters from URL schemes
     // during parsing (WHATWG URL Standard), and form feed has historically been
     // a defensive test case for this sanitizer. Ammonia covers the standard cases;
     // this preserves strict ASCII-whitespace and ASCII-control normalization and
     // ASCII case-insensitive scheme checks before rewritten attrs are inspected.
-    const DANGEROUS_URL_SCHEMES: &[&[u8]] = &[b"javascript:", b"data:", b"vbscript:"];
-
     // Decode HTML entities first to prevent bypasses like javascript&#58; and
     // semicolonless numeric references such as javascript&#58alert(1).
     let url_decoded = decode_url_html_entities(url);
-    let url_to_check = url_decoded.as_ref();
+    let mut bytes = url_decoded
+        .as_ref()
+        .bytes()
+        .filter(|b| !b.is_ascii_whitespace() && !b.is_ascii_control());
 
-    for &scheme in DANGEROUS_URL_SCHEMES {
-        let mut bytes = url_to_check
-            .bytes()
-            .filter(|b| !b.is_ascii_whitespace() && !b.is_ascii_control());
-        let mut is_match = true;
-        for &sb in scheme {
-            if bytes.next().map(|b| b.to_ascii_lowercase()) != Some(sb) {
-                is_match = false;
-                break;
-            }
-        }
-        if is_match {
-            return true;
+    let expected: &[u8] = match bytes.next() {
+        Some(b'j' | b'J') => b"avascript:",
+        Some(b'd' | b'D') => b"ata:",
+        Some(b'v' | b'V') => b"bscript:",
+        _ => return false,
+    };
+
+    for &e in expected {
+        if bytes.next().map(|b| b.to_ascii_lowercase()) != Some(e) {
+            return false;
         }
     }
 
-    false
+    true
 }
 
 fn decode_url_html_entities(url: &str) -> Cow<'_, str> {

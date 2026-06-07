@@ -9,7 +9,7 @@ fn covers_sanitizer_edge_paths() {
         ""
     );
     let sanitized = sanitize_rss_html_sync(
-        "<img src=\"/relative.png\"><a href=\"/safe\">safe</a><p style=\"x\">Text</p>",
+        "<img src=\"/relative.png\"><a href=\"/safe\">safe</a><a href=\"data:text/html,evil\">data</a><a href=\"vbscript:MsgBox(1)\">vb</a><p style=\"x\">Text</p>",
         &SanitizeRssHtmlOptions {
             proxy_images: true,
             ..SanitizeRssHtmlOptions::default()
@@ -17,6 +17,8 @@ fn covers_sanitizer_edge_paths() {
     );
     assert!(sanitized.html.contains("/relative.png"));
     assert!(sanitized.html.contains("nofollow noopener"));
+    assert!(!sanitized.html.contains("data:text/html"));
+    assert!(!sanitized.html.contains("vbscript"));
 
     assert_eq!(
         sanitize_prompt_injection_sync(

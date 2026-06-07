@@ -33,3 +33,7 @@
 ## 2024-06-07 - Defer into_owned() to Avoid Unnecessary String Allocations
 **Learning:** In Rust, chained string replacements after `regex::replace_all` should not eagerly call `.into_owned()`. `str::replace` always allocates a new `String` even if the pattern isn't found.
 **Action:** Keep strings as `Cow<str>` and use `.contains()` before calling `.replace()` for boundary characters or rare patterns to avoid costly, unnecessary allocations in hot paths. Delay `.into_owned()` until all replacements are final.
+
+## 2024-05-18 - Early Exit Matching for Dangerous URL Schemes
+**Learning:** Checking URL schemes iteratively using an array of strings creates excessive looping overhead for the "happy path" (safe URLs), especially when iterators need to be created and advanced multiple times.
+**Action:** When filtering or matching strings against a small, known set of prefixes, match on the first byte immediately to provide an `O(1)` fast-path reject for the vast majority of non-matching strings.

@@ -111,6 +111,19 @@ fn test_dangerous_elements_removed() {
 }
 
 #[test]
+fn detects_dangerous_url_scheme_fast_paths() {
+    assert!(super::sanitize::has_dangerous_url_scheme(
+        "da\tta:text/html"
+    ));
+    assert!(super::sanitize::has_dangerous_url_scheme(
+        "vb\tscript:MsgBox(1)"
+    ));
+    assert!(!super::sanitize::has_dangerous_url_scheme(
+        "java-safe:alert(1)"
+    ));
+}
+
+#[test]
 fn test_lazy_loading_added() {
     let html = r#"<img src="https://example.com/photo.jpg">"#;
     let result = sanitize(html);
