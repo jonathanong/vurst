@@ -24,14 +24,14 @@ use napi_derive::napi;
 use vurst_runtime_rs as runtime;
 
 pub mod embedding_content;
-pub mod image_proxy;
+
 pub mod sanitize_html;
 pub mod sanitize_prompt_injection;
 
 pub use embedding_content::html_to_embedding_text;
-pub use image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX;
 pub use sanitize_html::{sanitize_rss_html_sync, SanitizeRssHtmlOptions, SanitizeRssHtmlResult};
 pub use sanitize_prompt_injection::sanitize_prompt_injection_sync;
+pub use vurst_shared::image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX;
 
 use boilerstrip::{apply_removals, convert, learn, ConvertOptions, LearnOptions, Removals};
 

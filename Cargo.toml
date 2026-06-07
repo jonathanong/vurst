@@ -1,5 +1,11 @@
 [workspace]
-members = ["packages/ai", "packages/html", "packages/markdown", "packages/runtime"]
+members = [
+    "packages/ai",
+    "packages/html",
+    "packages/markdown",
+    "packages/runtime",
+    "packages/shared_rust",
+]
 resolver = "2"
 
 [workspace.lints.rust]

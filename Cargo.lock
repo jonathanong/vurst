@@ -2599,6 +2599,7 @@ dependencies = [
  "sha2",
  "tokio",
  "vurst-runtime-rs",
+ "vurst-shared",
 ]
 
 [[package]]
@@ -2619,6 +2620,7 @@ dependencies = [
  "sha2",
  "tokio",
  "vurst-runtime-rs",
+ "vurst-shared",
 ]
 
 [[package]]
@@ -2627,6 +2629,16 @@ version = "0.1.0"
 dependencies = [
  "napi",
  "tokio",
+]
+
+[[package]]
+name = "vurst-shared"
+version = "0.1.0"
+dependencies = [
+ "data-encoding",
+ "hex",
+ "hmac",
+ "sha2",
 ]
 
 [[package]]
