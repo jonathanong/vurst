@@ -70,12 +70,10 @@ impl NapiSanitizeRssHtmlOptions {
     fn into_sanitize_options(self) -> SanitizeRssHtmlOptions {
         SanitizeRssHtmlOptions {
             proxy_images: self.proxy_images.unwrap_or(false),
-            image_proxy_url_prefix: self
-                .image_proxy_url_prefix
-                .map_or_else(
-                    || std::sync::Arc::from(DEFAULT_IMAGE_PROXY_URL_PREFIX),
-                    std::sync::Arc::from,
-                ),
+            image_proxy_url_prefix: self.image_proxy_url_prefix.map_or_else(
+                || std::sync::Arc::from(DEFAULT_IMAGE_PROXY_URL_PREFIX),
+                std::sync::Arc::from,
+            ),
             image_proxy_signing_keys: std::sync::Arc::from(
                 self.image_proxy_signing_keys.unwrap_or_default(),
             ),
