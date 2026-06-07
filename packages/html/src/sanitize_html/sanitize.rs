@@ -157,7 +157,7 @@ fn sanitize_with_ammonia(html: &str, opts: &SanitizeRssHtmlOptions) -> (String, 
     (sanitized, first_image_src)
 }
 
-fn has_dangerous_url_scheme(url: &str) -> bool {
+pub(super) fn has_dangerous_url_scheme(url: &str) -> bool {
     // Browsers strip ASCII TAB/LF/CR and C0 control characters from URL schemes
     // during parsing (WHATWG URL Standard), and form feed has historically been
     // a defensive test case for this sanitizer. Ammonia covers the standard cases;
