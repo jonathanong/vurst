@@ -42,3 +42,46 @@ fn fast_path_security_and_slow_path_no_scheme() {
     // Slow path: control char stripped, leaving a backslash-prefixed URL
     assert!(!is_safe_link_url("\x09\\evil.com"));
 }
+
+#[test]
+fn test_is_safe_image_url_exhaustive() {
+    // Allowed schemes
+    assert!(is_safe_image_url("http://example.com/image.png"));
+    assert!(is_safe_image_url("https://example.com/image.png"));
+
+    // Disallowed schemes (especially link-only schemes)
+    assert!(!is_safe_image_url("mailto:test@example.com"));
+    assert!(!is_safe_image_url("tel:+123456789"));
+    assert!(!is_safe_image_url("javascript:alert(1)"));
+    assert!(!is_safe_image_url("data:image/png;base64,iVBORw0KGgo"));
+    assert!(!is_safe_image_url("ftp://example.com/image.png"));
+    assert!(!is_safe_image_url("file:///etc/passwd"));
+    assert!(!is_safe_image_url("vbscript:msgbox(\"x\")"));
+
+    // Valid relative URLs
+    assert!(is_safe_image_url("/path.png"));
+    assert!(is_safe_image_url("./path.png"));
+    assert!(is_safe_image_url("../path.png"));
+    assert!(is_safe_image_url("image.png"));
+    assert!(is_safe_image_url("image.png?query=1"));
+    assert!(is_safe_image_url("image.png#fragment"));
+    assert!(is_safe_image_url("/login?url=http://example.com"));
+    assert!(is_safe_image_url("?url=http://example.com"));
+
+    // Malicious protocol-relative URLs
+    assert!(!is_safe_image_url("//evil.com/image.png"));
+    assert!(!is_safe_image_url("/\\evil.com/image.png"));
+    assert!(!is_safe_image_url("\\/evil.com/image.png"));
+    assert!(!is_safe_image_url("\\\\evil.com/image.png"));
+    assert!(!is_safe_image_url("\\evil.com/image.png"));
+
+    // Malicious URLs obfuscated with whitespace/control characters (slow path)
+    assert!(!is_safe_image_url("java\x09script:alert(1)"));
+    assert!(!is_safe_image_url("\x0Bjavascript:alert(1)"));
+    assert!(!is_safe_image_url("\x01javascript:alert(1)"));
+    assert!(!is_safe_image_url("\x09//evil.com"));
+    assert!(!is_safe_image_url("\x09\\evil.com"));
+
+    // Empty URL
+    assert!(!is_safe_image_url(""));
+}
