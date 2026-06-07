@@ -48,6 +48,8 @@ fn test_is_safe_image_url_exhaustive() {
     // Allowed schemes
     assert!(is_safe_image_url("http://example.com/image.png"));
     assert!(is_safe_image_url("https://example.com/image.png"));
+    assert!(is_safe_image_url("HTTPS://example.com/image.png"));
+    assert!(is_safe_image_url("https://example.com:8080/image.png"));
 
     // Disallowed schemes (especially link-only schemes)
     assert!(!is_safe_image_url("mailto:test@example.com"));
@@ -57,6 +59,7 @@ fn test_is_safe_image_url_exhaustive() {
     assert!(!is_safe_image_url("ftp://example.com/image.png"));
     assert!(!is_safe_image_url("file:///etc/passwd"));
     assert!(!is_safe_image_url("vbscript:msgbox(\"x\")"));
+    assert!(!is_safe_image_url("1http://example.com/image.png"));
 
     // Valid relative URLs
     assert!(is_safe_image_url("/path.png"));
@@ -67,6 +70,7 @@ fn test_is_safe_image_url_exhaustive() {
     assert!(is_safe_image_url("image.png#fragment"));
     assert!(is_safe_image_url("/login?url=http://example.com"));
     assert!(is_safe_image_url("?url=http://example.com"));
+    assert!(is_safe_image_url("./path:to:image.png"));
 
     // Malicious protocol-relative URLs
     assert!(!is_safe_image_url("//evil.com/image.png"));
