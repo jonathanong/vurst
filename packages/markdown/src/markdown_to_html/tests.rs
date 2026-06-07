@@ -1,5 +1,5 @@
 use super::*;
-use crate::markdown_to_html::helpers::is_safe_link_url;
+use crate::markdown_to_html::helpers::*;
 use comrak::nodes::AstNode;
 
 fn first_link_node<'a>(node: &'a AstNode<'a>) -> Option<&'a AstNode<'a>> {
@@ -173,4 +173,22 @@ fn test_is_safe_link_url() {
     assert!(!is_safe_link_url("java\x0Bscript:alert(1)"));
     assert!(!is_safe_link_url(" javascript:alert(1)"));
     assert!(!is_safe_link_url("\tjavascript:alert(1)"));
+}
+
+#[test]
+fn test_is_safe_image_url() {
+    // Valid schemes for images
+    assert!(is_safe_image_url("http://example.com/image.png"));
+    assert!(is_safe_image_url("https://example.com/image.png"));
+
+    // Disallowed schemes for images
+    assert!(!is_safe_image_url("mailto:test@example.com"));
+    assert!(!is_safe_image_url("tel:+1234567890"));
+    assert!(!is_safe_image_url("javascript:alert(1)"));
+
+    // Relative paths are allowed
+    assert!(is_safe_image_url("/path/to/image.png"));
+
+    // Dangerous prefixes are blocked
+    assert!(!is_safe_image_url("//example.com/image.png"));
 }
