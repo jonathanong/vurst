@@ -88,6 +88,13 @@ fn test_rewrite_image_to_proxy_empty_url() {
 }
 
 #[test]
+fn test_rewrite_image_to_proxy_whitespace_only_url() {
+    let key = "deadbeef".repeat(8);
+    let result = rewrite_image_to_proxy("   ", PREFIX, &[key]);
+    assert_eq!(result, "   ");
+}
+
+#[test]
 fn test_rewrite_image_to_proxy_empty_prefix() {
     let key = "deadbeef".repeat(8);
     let result = rewrite_image_to_proxy("https://example.com/img.jpg", "", &[key]);

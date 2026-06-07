@@ -81,6 +81,27 @@ fn test_rewrite_with_custom_prefix() {
 }
 
 #[test]
+fn test_rewrite_image_to_proxy_empty_url() {
+    let key = "deadbeef".repeat(8);
+    let result = rewrite_image_to_proxy("", PREFIX, &[key]);
+    assert_eq!(result, "");
+}
+
+#[test]
+fn test_rewrite_image_to_proxy_whitespace_only_url() {
+    let key = "deadbeef".repeat(8);
+    let result = rewrite_image_to_proxy("   ", PREFIX, &[key]);
+    assert_eq!(result, "   ");
+}
+
+#[test]
+fn test_rewrite_image_to_proxy_empty_prefix() {
+    let key = "deadbeef".repeat(8);
+    let result = rewrite_image_to_proxy("https://example.com/img.jpg", "", &[key]);
+    assert_eq!(result, "https://example.com/img.jpg");
+}
+
+#[test]
 fn test_rewrite_invalid_hex_key_falls_back_unsigned() {
     // Verifies the defensive fallback: an invalid hex key is silently skipped and
     // the unsigned path is returned instead of crashing.
