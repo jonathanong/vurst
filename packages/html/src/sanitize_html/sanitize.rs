@@ -165,8 +165,13 @@ fn has_dangerous_url_scheme(url: &str) -> bool {
     // ASCII case-insensitive scheme checks before rewritten attrs are inspected.
     const DANGEROUS_URL_SCHEMES: &[&[u8]] = &[b"javascript:", b"data:", b"vbscript:"];
 
+    // Decode HTML entities first to prevent bypasses like javascript&#58; and
+    // semicolonless numeric references such as javascript&#58alert(1).
+    let url_decoded = decode_url_html_entities(url);
+    let url_to_check = url_decoded.as_ref();
+
     for &scheme in DANGEROUS_URL_SCHEMES {
-        let mut bytes = url
+        let mut bytes = url_to_check
             .bytes()
             .filter(|b| !b.is_ascii_whitespace() && !b.is_ascii_control());
         let mut is_match = true;
@@ -182,6 +187,64 @@ fn has_dangerous_url_scheme(url: &str) -> bool {
     }
 
     false
+}
+
+fn decode_url_html_entities(url: &str) -> Cow<'_, str> {
+    let decoded = html_escape::decode_html_entities(url);
+    let decoded_ref = decoded.as_ref();
+    if !decoded_ref.contains("&#") {
+        return decoded;
+    }
+
+    let mut output = String::with_capacity(decoded_ref.len());
+    let mut remaining = decoded_ref;
+    let mut changed = false;
+
+    while let Some(idx) = remaining.find("&#") {
+        output.push_str(&remaining[..idx]);
+        let entity = &remaining[idx..];
+        if let Some((ch, consumed)) = decode_numeric_char_ref(entity) {
+            output.push(ch);
+            remaining = &entity[consumed..];
+            changed = true;
+        } else {
+            output.push_str("&#");
+            remaining = &entity[2..];
+        }
+    }
+
+    if !changed {
+        return decoded;
+    }
+
+    output.push_str(remaining);
+    Cow::Owned(output)
+}
+
+fn decode_numeric_char_ref(input: &str) -> Option<(char, usize)> {
+    let digits = input.strip_prefix("&#")?;
+    let (digits, radix, prefix_len) = digits
+        .strip_prefix(['x', 'X'])
+        .map_or((digits, 10, 2), |hex_digits| (hex_digits, 16, 3));
+
+    let digit_len = digits
+        .bytes()
+        .take_while(|b| {
+            if radix == 16 {
+                b.is_ascii_hexdigit()
+            } else {
+                b.is_ascii_digit()
+            }
+        })
+        .count();
+    if digit_len == 0 {
+        return None;
+    }
+
+    let codepoint = u32::from_str_radix(&digits[..digit_len], radix).ok()?;
+    let ch = char::from_u32(codepoint)?;
+    let semicolon_len = usize::from(digits[digit_len..].starts_with(';'));
+    Some((ch, prefix_len + digit_len + semicolon_len))
 }
 
 fn remove_empty_containers_from_html(html: &str) -> String {
@@ -359,5 +422,33 @@ fn remove_empty_containers(fragment: &mut Html) {
                 .expect("BUG: node id collected from the same tree should exist");
             node.detach();
         }
+    }
+}
+
+#[cfg(test)]
+mod entity_decode_tests {
+    use super::*;
+
+    #[test]
+    fn decode_url_html_entities_covers_borrowed_invalid_and_multiple_refs() {
+        assert_eq!(
+            decode_url_html_entities("https://example.com").as_ref(),
+            "https://example.com"
+        );
+        assert_eq!(decode_url_html_entities("a&#oops").as_ref(), "a&#oops");
+        assert_eq!(
+            decode_url_html_entities("java&#115cript&#58alert(1)").as_ref(),
+            "javascript:alert(1)"
+        );
+    }
+
+    #[test]
+    fn decode_numeric_char_ref_covers_decimal_hex_and_invalid_refs() {
+        assert_eq!(decode_numeric_char_ref("&#58alert"), Some((':', 4)));
+        assert_eq!(decode_numeric_char_ref("&#58;alert"), Some((':', 5)));
+        assert_eq!(decode_numeric_char_ref("&#x3cscript"), Some(('<', 5)));
+        assert_eq!(decode_numeric_char_ref("plain"), None);
+        assert_eq!(decode_numeric_char_ref("&#x;"), None);
+        assert_eq!(decode_numeric_char_ref("&#99999999;"), None);
     }
 }

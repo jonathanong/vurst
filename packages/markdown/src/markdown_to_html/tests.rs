@@ -119,6 +119,11 @@ fn extract_markdown_urls_sync_plain_text_has_no_urls() {
 }
 
 #[test]
+fn rejects_semicolonless_decimal_entity_in_javascript_link() {
+    assert!(!is_safe_link_url("javascript&#58alert(1)"));
+}
+
+#[test]
 fn should_not_render_nested_link_when_parent_is_link() {
     let mut options = Options::default();
     options.parse.relaxed_autolinks = true;

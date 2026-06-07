@@ -6,17 +6,6 @@
 const { readFileSync } = require('node:fs')
 let nativeBinding = null
 const loadErrors = []
-const supportedPlatforms = 'macOS arm64, Linux x64 glibc, and Linux arm64 glibc'
-
-const isPublishedPlatform = () => {
-  if (process.platform === 'darwin') {
-    return process.arch === 'arm64'
-  }
-  if (process.platform === 'linux') {
-    return (process.arch === 'x64' || process.arch === 'arm64') && !isMusl()
-  }
-  return false
-}
 
 const isMusl = () => {
   let musl = false
@@ -45,12 +34,12 @@ const isMuslFromFilesystem = () => {
 const isMuslFromReport = () => {
   let report = null
   if (typeof process.report?.getReport === 'function') {
-    const previousExcludeNetwork = process.report.excludeNetwork
+    const originalExcludeNetwork = process.report.excludeNetwork
     try {
       process.report.excludeNetwork = true
       report = process.report.getReport()
     } finally {
-      process.report.excludeNetwork = previousExcludeNetwork
+      process.report.excludeNetwork = originalExcludeNetwork
     }
   }
   if (!report) {
@@ -93,8 +82,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-android-arm64')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-android-arm64/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -109,8 +98,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-android-arm-eabi')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-android-arm-eabi/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -130,8 +119,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-win32-x64-gnu')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-win32-x64-gnu/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -146,8 +135,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-win32-x64-msvc')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-win32-x64-msvc/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -163,8 +152,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-win32-ia32-msvc')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-win32-ia32-msvc/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -179,8 +168,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-win32-arm64-msvc')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-win32-arm64-msvc/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -198,8 +187,8 @@ function requireNative() {
     try {
       const binding = require('@jongleberry/vurst-markdown-darwin-universal')
       const bindingPackageVersion = require('@jongleberry/vurst-markdown-darwin-universal/package.json').version
-      if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-        throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+      if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+        throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
       }
       return binding
     } catch (e) {
@@ -214,8 +203,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-darwin-x64')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-darwin-x64/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -230,8 +219,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-darwin-arm64')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-darwin-arm64/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -250,8 +239,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-freebsd-x64')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-freebsd-x64/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -266,8 +255,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-freebsd-arm64')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-freebsd-arm64/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -287,8 +276,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-x64-musl')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-x64-musl/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -303,8 +292,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-x64-gnu')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-x64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -321,8 +310,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-arm64-musl')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-arm64-musl/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -337,8 +326,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-arm64-gnu')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-arm64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -355,8 +344,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-arm-musleabihf')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-arm-musleabihf/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -371,8 +360,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-arm-gnueabihf')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-arm-gnueabihf/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -389,8 +378,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-loong64-musl')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-loong64-musl/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -405,8 +394,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-loong64-gnu')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-loong64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -423,8 +412,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-riscv64-musl')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-riscv64-musl/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -439,8 +428,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-markdown-linux-riscv64-gnu')
           const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-riscv64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -456,8 +445,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-linux-ppc64-gnu')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-ppc64-gnu/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -472,8 +461,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-linux-s390x-gnu')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-linux-s390x-gnu/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -492,8 +481,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-openharmony-arm64')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-openharmony-arm64/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -508,8 +497,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-openharmony-x64')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-openharmony-x64/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -524,8 +513,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-markdown-openharmony-arm')
         const bindingPackageVersion = require('@jongleberry/vurst-markdown-openharmony-arm/package.json').version
-        if (bindingPackageVersion !== '0.0.4' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.0.4 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -575,20 +564,6 @@ if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
 }
 
 if (!nativeBinding) {
-  if (!isPublishedPlatform()) {
-    throw new Error(
-      `Unsupported platform for @jongleberry/vurst-markdown: ${process.platform} ${process.arch}. ` +
-        `Published native bindings currently support ${supportedPlatforms}.`,
-      {
-        cause: loadErrors.length > 0
-          ? loadErrors.reduce((err, cur) => {
-              cur.cause = err
-              return cur
-            })
-          : undefined,
-      },
-    )
-  }
   if (loadErrors.length > 0) {
     throw new Error(
       `Cannot find native binding. ` +
