@@ -79,3 +79,49 @@ fn test_rewrite_with_custom_prefix() {
     let result = rewrite_image_to_proxy("https://example.com/img.jpg", "/i/", &[]);
     assert!(result.starts_with("/i/"));
 }
+
+#[test]
+fn test_rewrite_image_to_proxy_empty_url() {
+    let key = "deadbeef".repeat(8);
+    let result = rewrite_image_to_proxy("", PREFIX, &[key]);
+    assert_eq!(result, "");
+}
+
+#[test]
+fn test_rewrite_image_to_proxy_whitespace_only_url() {
+    let key = "deadbeef".repeat(8);
+    let result = rewrite_image_to_proxy("   ", PREFIX, &[key]);
+    assert_eq!(result, "   ");
+}
+
+#[test]
+fn test_rewrite_image_to_proxy_empty_prefix() {
+    let key = "deadbeef".repeat(8);
+    let result = rewrite_image_to_proxy("https://example.com/img.jpg", "", &[key]);
+    assert_eq!(result, "https://example.com/img.jpg");
+}
+
+#[test]
+fn test_rewrite_image_to_proxy_invalid_key_fallback() {
+    let invalid_key = "not_hex_chars".to_string();
+    let result = rewrite_image_to_proxy("https://example.com/img.jpg", PREFIX, &[invalid_key]);
+    assert!(result.starts_with(PREFIX));
+    assert!(!result.contains("?sig="));
+}
+
+#[test]
+fn test_rewrite_image_to_proxy_multiple_keys_skips_invalid() {
+    let invalid_key = "not_hex".to_string();
+    let valid_key = "deadbeef".repeat(8);
+    let result = rewrite_image_to_proxy(
+        "https://example.com/img.jpg",
+        PREFIX,
+        &[invalid_key, valid_key.clone()],
+    );
+    assert!(result.starts_with(PREFIX));
+    assert!(result.contains("?sig="));
+
+    let single_key_result =
+        rewrite_image_to_proxy("https://example.com/img.jpg", PREFIX, &[valid_key]);
+    assert_eq!(result, single_key_result);
+}

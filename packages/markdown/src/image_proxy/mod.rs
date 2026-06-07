@@ -56,6 +56,9 @@ pub fn should_proxy_image(url: &str, prefix: &str) -> bool {
 /// Panics only if HMAC-SHA256 rejects a decoded key, which the HMAC
 /// implementation documents as impossible for this algorithm.
 pub fn rewrite_image_to_proxy(url: &str, prefix: &str, signing_keys: &[String]) -> String {
+    if url.trim().is_empty() || prefix.is_empty() {
+        return url.to_string();
+    }
     let trimmed = url.trim();
     let encoded = BASE64URL_NOPAD.encode(trimmed.as_bytes());
     let path = format!("{prefix}{encoded}");
