@@ -16,6 +16,7 @@ vurst-runtime-rs = { path = "../runtime" }
 breadchunks = "=0.2.1"
 comrak = { version = "0.52", default-features = false }
 ego-tree = "0.11"
+html-escape = "0.2.13"
 napi = { version = "3", features = ["serde-json", "tokio_rt"] }
 napi-derive = "3"
 scraper = "0.27"

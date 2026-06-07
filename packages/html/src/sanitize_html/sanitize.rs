@@ -165,8 +165,15 @@ fn has_dangerous_url_scheme(url: &str) -> bool {
     // ASCII case-insensitive scheme checks before rewritten attrs are inspected.
     const DANGEROUS_URL_SCHEMES: &[&[u8]] = &[b"javascript:", b"data:", b"vbscript:"];
 
+    // Decode HTML entities first to prevent bypasses like javascript&#58;
+    let url_decoded = match html_escape::decode_html_entities(url) {
+        std::borrow::Cow::Borrowed(_) => std::borrow::Cow::Borrowed(url),
+        std::borrow::Cow::Owned(s) => std::borrow::Cow::Owned(s),
+    };
+    let url_to_check = url_decoded.as_ref();
+
     for &scheme in DANGEROUS_URL_SCHEMES {
-        let mut bytes = url
+        let mut bytes = url_to_check
             .bytes()
             .filter(|b| !b.is_ascii_whitespace() && !b.is_ascii_control());
         let mut is_match = true;
