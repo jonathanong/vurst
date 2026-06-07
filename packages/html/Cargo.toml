@@ -12,6 +12,7 @@ workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+vurst-runtime-rs = { path = "../runtime" }
 ammonia = "4.1.2"
 anyhow = "1"
 boilerstrip = "0.4"

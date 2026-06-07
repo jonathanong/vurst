@@ -12,6 +12,7 @@ workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+vurst-runtime-rs = { path = "../runtime" }
 anyhow = "1"
 is-it-slop = { version = "=0.5.0", default-features = false }
 napi = { version = "3", features = ["serde-json", "tokio_rt"] }

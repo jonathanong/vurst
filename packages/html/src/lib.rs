@@ -21,7 +21,7 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
-mod runtime;
+use vurst_runtime_rs as runtime;
 
 pub mod embedding_content;
 pub mod image_proxy;

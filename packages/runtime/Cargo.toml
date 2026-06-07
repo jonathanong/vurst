@@ -1,0 +1,16 @@
+[package]
+name = "vurst-runtime-rs"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+napi = { version = "3", features = ["serde-json", "tokio_rt"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
