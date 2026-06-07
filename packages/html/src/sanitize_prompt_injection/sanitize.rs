@@ -172,10 +172,14 @@ fn strip_zero_width_and_boundaries(content: &str) -> String {
     // Strip Unicode format/zero-width characters (Cf category) — replacing with
     // a space so "ignore\u{200B}previous" becomes "ignore previous" rather than
     // "ignoreprevious", allowing INJECTION_RE's whitespace separator to match.
-    let mut sanitized = ZERO_WIDTH_RE.replace_all(content, " ").into_owned();
-    sanitized = sanitized.replace(HTML_BOUNDARY, " ");
-    sanitized = sanitized.replace(HTML_ROLE_BOUNDARY, " ");
-    sanitized
+    let mut sanitized = ZERO_WIDTH_RE.replace_all(content, " ");
+    if sanitized.contains(HTML_BOUNDARY) {
+        sanitized = sanitized.replace(HTML_BOUNDARY, " ").into();
+    }
+    if sanitized.contains(HTML_ROLE_BOUNDARY) {
+        sanitized = sanitized.replace(HTML_ROLE_BOUNDARY, " ").into();
+    }
+    sanitized.into_owned()
 }
 
 fn remove_injection_patterns(content: &str) -> String {
