@@ -174,10 +174,10 @@ fn strip_zero_width_and_boundaries(content: &str) -> String {
     // "ignoreprevious", allowing INJECTION_RE's whitespace separator to match.
     let mut sanitized = ZERO_WIDTH_RE.replace_all(content, " ");
     if sanitized.contains(HTML_BOUNDARY) {
-        sanitized = std::borrow::Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
+        sanitized = sanitized.replace(HTML_BOUNDARY, " ").into();
     }
     if sanitized.contains(HTML_ROLE_BOUNDARY) {
-        sanitized = std::borrow::Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
+        sanitized = sanitized.replace(HTML_ROLE_BOUNDARY, " ").into();
     }
     sanitized.into_owned()
 }
