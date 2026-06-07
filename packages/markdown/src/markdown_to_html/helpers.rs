@@ -66,8 +66,12 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
     // ⚡ Bolt: Optimized string filtering by avoiding UTF-8 decoding overhead.
     // Since we only remove 7-bit ASCII characters (whitespace/control), we can safely
     // filter bytes directly and reconstruct the String unchecked. (~15-20% faster)
-    let mut clean_bytes = url.as_bytes().to_vec();
-    clean_bytes.retain(|b| !b.is_ascii_whitespace() && !b.is_ascii_control());
+    let mut clean_bytes = Vec::with_capacity(url.len());
+    clean_bytes.extend(
+        url.bytes()
+            .filter(|&b| !b.is_ascii_whitespace() && !b.is_ascii_control()),
+    );
+    debug_assert!(std::str::from_utf8(&clean_bytes).is_ok());
     let clean_url = unsafe { String::from_utf8_unchecked(clean_bytes) };
 
     if has_dangerous_prefix(clean_url.as_bytes()) {
