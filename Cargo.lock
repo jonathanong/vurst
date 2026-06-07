@@ -2575,6 +2575,7 @@ dependencies = [
  "ort",
  "serde_json",
  "tokio",
+ "vurst-runtime-rs",
 ]
 
 [[package]]
@@ -2597,6 +2598,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tokio",
+ "vurst-runtime-rs",
 ]
 
 [[package]]
@@ -2615,6 +2617,15 @@ dependencies = [
  "scraper",
  "serde_json",
  "sha2",
+ "tokio",
+ "vurst-runtime-rs",
+]
+
+[[package]]
+name = "vurst-runtime-rs"
+version = "0.1.0"
+dependencies = [
+ "napi",
  "tokio",
 ]
 
