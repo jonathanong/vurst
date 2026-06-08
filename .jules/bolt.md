@@ -37,3 +37,6 @@
 ## 2024-05-18 - Early Exit Matching for Dangerous URL Schemes
 **Learning:** Checking URL schemes iteratively using an array of strings creates excessive looping overhead for the "happy path" (safe URLs), especially when iterators need to be created and advanced multiple times.
 **Action:** When filtering or matching strings against a small, known set of prefixes, match on the first byte immediately to provide an `O(1)` fast-path reject for the vast majority of non-matching strings.
+## $(date +%Y-%m-%d) - Safe Zero-Allocation String Prefix Matching
+**Learning:** In Rust, replacing heap-allocating `.to_ascii_lowercase()` with string slicing (`url[..7].eq_ignore_ascii_case("http://")`) introduces a critical DoS vulnerability because slicing panics on invalid UTF-8 multi-byte character boundaries.
+**Action:** When performing zero-allocation string checks on arbitrary user input against ASCII constants, always use byte slices (`url.as_bytes()[..7].eq_ignore_ascii_case(b"http://")`) to safely avoid panics.

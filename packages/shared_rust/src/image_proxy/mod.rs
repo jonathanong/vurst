@@ -16,8 +16,14 @@ pub const DEFAULT_IMAGE_PROXY_URL_PREFIX: &str = "/proxy/";
 
 /// Returns true if the URL scheme is http or https.
 pub fn is_external_http_url(url: &str) -> bool {
-    let lower = url.trim().to_ascii_lowercase();
-    lower.starts_with("http://") || lower.starts_with("https://")
+    // ⚡ Bolt: Eliminate heap allocation. We check the prefix directly using eq_ignore_ascii_case
+    // on byte slices instead of calling to_ascii_lowercase() which allocates a new String.
+    // Operating on bytes prevents panics from invalid multibyte character boundaries.
+    let trimmed_bytes = url.trim().as_bytes();
+    if trimmed_bytes.len() >= 7 && trimmed_bytes[..7].eq_ignore_ascii_case(b"http://") {
+        return true;
+    }
+    trimmed_bytes.len() >= 8 && trimmed_bytes[..8].eq_ignore_ascii_case(b"https://")
 }
 
 /// Returns true if the URL is relative (no scheme, not protocol-relative).
