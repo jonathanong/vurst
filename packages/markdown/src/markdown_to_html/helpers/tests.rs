@@ -112,3 +112,28 @@ fn decode_numeric_char_ref_covers_decimal_hex_and_invalid_refs() {
     assert_eq!(decode_numeric_char_ref("&#x;"), None);
     assert_eq!(decode_numeric_char_ref("&#99999999;"), None);
 }
+
+#[test]
+fn extract_bare_domains_skips_email_at_prefix() {
+    // The '@' guard inside extract_bare_domains is unreachable via
+    // extract_markdown_urls_sync because comrak GFM-autolinks emails into
+    // Link nodes before the text walk.  Test it directly.
+    let mut links = Vec::new();
+    extract_bare_domains("user@example.com", &mut links);
+    assert!(
+        links.is_empty(),
+        "email address should not produce a bare-domain entry: {links:?}"
+    );
+}
+
+#[test]
+fn extract_bare_domains_skips_bare_psl_suffix() {
+    // "co.uk" is itself a public suffix (no registrable domain label before
+    // it), so psl::domain() returns None — exercises that else-continue branch.
+    let mut links = Vec::new();
+    extract_bare_domains("visit co.uk today", &mut links);
+    assert!(
+        links.is_empty(),
+        "bare PSL suffix should not produce a link: {links:?}"
+    );
+}

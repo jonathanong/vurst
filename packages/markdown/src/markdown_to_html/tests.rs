@@ -210,6 +210,34 @@ fn bare_domain_not_duplicated_when_markdown_link_already_present() {
 }
 
 #[test]
+fn bare_domain_not_extracted_when_psl_returns_none() {
+    // Tokens that match the regex but have no registered TLD in the PSL.
+    let result = extract_markdown_urls_sync("see foo.notregistered for more");
+    assert!(
+        result.link_urls.is_empty(),
+        "unregistered TLD should not match: {result:?}"
+    );
+}
+
+#[test]
+fn bare_domain_not_extracted_from_email_address() {
+    // comrak autolinks user@example.com → mailto: link; the domain must not
+    // also appear as a separate bare-domain entry in link_urls.
+    let result = extract_markdown_urls_sync("contact user@example.com for info");
+    assert!(
+        !result.link_urls.iter().any(|u| u == "example.com"),
+        "email domain should not be double-extracted: {result:?}"
+    );
+}
+
+#[test]
+fn bare_domain_path_trailing_punctuation_trimmed() {
+    // Trailing sentence punctuation must be stripped from the path.
+    let result = extract_markdown_urls_sync("see example.com/path. for details");
+    assert_eq!(result.link_urls, vec!["example.com/path"]);
+}
+
+#[test]
 fn rejects_semicolonless_decimal_entity_in_javascript_link() {
     assert!(!is_safe_link_url("javascript&#58alert(1)"));
 }

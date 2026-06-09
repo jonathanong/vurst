@@ -215,17 +215,27 @@ static BARE_DOMAIN_RE: LazyLock<Regex> = LazyLock::new(|| {
 ///
 /// Only ICANN-registered TLDs are accepted; private PSL entries (npm scopes,
 /// CDN domains, etc.) are excluded to avoid false positives on tokens like
-/// `node.js`.
+/// `node.js`.  Email addresses (`user@example.com`) are also skipped.
 fn extract_bare_domains(text: &str, links: &mut Vec<String>) {
+    let bytes = text.as_bytes();
     for cap in BARE_DOMAIN_RE.captures_iter(text) {
-        let host = cap.get(1).map_or("", |m| m.as_str());
+        // group 1 is non-optional in BARE_DOMAIN_RE — always present.
+        let host_match = cap.get(1).expect("BUG: BARE_DOMAIN_RE group 1 missing");
+        // Skip domains that are part of an email address (preceded by '@').
+        if host_match.start() > 0 && bytes[host_match.start() - 1] == b'@' {
+            continue;
+        }
+        let host = host_match.as_str();
         let Some(domain) = psl::domain(host.as_bytes()) else {
             continue;
         };
         if domain.suffix().typ() != Some(psl::Type::Icann) {
             continue;
         }
-        let path = cap.get(2).map_or("", |m| m.as_str());
+        let path = cap
+            .get(2)
+            .map_or("", |m| m.as_str())
+            .trim_end_matches(['.', ',', ';', '?', '!', ':']);
         links.push(format!("{host}{path}"));
     }
 }
