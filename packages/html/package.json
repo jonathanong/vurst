@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-html",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Rust + N-API: HTML sanitization, extraction, and boilerstrip.",
   "main": "index.js",
   "types": "index.d.ts",

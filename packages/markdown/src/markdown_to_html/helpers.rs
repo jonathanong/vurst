@@ -1,4 +1,6 @@
 use comrak::nodes::NodeValue;
+use regex::Regex;
+use std::sync::LazyLock;
 
 pub const LINK_SCHEMES: &[&str] = &["http", "https", "mailto", "tel"];
 pub const IMAGE_SCHEMES: &[&str] = &["http", "https"];
@@ -197,6 +199,70 @@ pub fn collect_urls<'a>(
     }
     for child in node.children() {
         collect_urls(child, links, images);
+    }
+}
+
+/// Candidate bare-domain tokens: one-or-more dot-separated labels optionally
+/// followed by a `/`-prefixed path.  ICANN-only PSL validation rejects file
+/// extensions and abbreviations (e.g. `node.js`, `v1.0`, `i.e.`).
+static BARE_DOMAIN_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\b([a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]+)+)(/\S*)?")
+        .expect("BUG: invalid BARE_DOMAIN_RE")
+});
+
+/// Scan a plain-text string for bare-domain links (e.g. `discord.gg/raid`,
+/// `t.me/x`) and push any PSL-validated candidates into `links`.
+///
+/// Only ICANN-registered TLDs are accepted; private PSL entries (npm scopes,
+/// CDN domains, etc.) are excluded to avoid false positives on tokens like
+/// `node.js`.  Email addresses (`user@example.com`) are also skipped.
+fn extract_bare_domains(text: &str, links: &mut Vec<String>) {
+    let bytes = text.as_bytes();
+    for cap in BARE_DOMAIN_RE.captures_iter(text) {
+        // group 1 is non-optional in BARE_DOMAIN_RE — always present.
+        let host_match = cap.get(1).expect("BUG: BARE_DOMAIN_RE group 1 missing");
+        // Skip domains that are part of an email address (preceded by '@').
+        if host_match.start() > 0 && bytes[host_match.start() - 1] == b'@' {
+            continue;
+        }
+        let host = host_match.as_str();
+        let Some(domain) = psl::domain(host.as_bytes()) else {
+            continue;
+        };
+        if domain.suffix().typ() != Some(psl::Type::Icann) {
+            continue;
+        }
+        let path = cap
+            .get(2)
+            .map_or("", |m| m.as_str())
+            .trim_end_matches(['.', ',', ';', '?', '!', ':']);
+        links.push(format!("{host}{path}"));
+    }
+}
+
+/// Walk the comrak AST and extract bare-domain links from `Text` nodes,
+/// skipping code spans/blocks, raw HTML, and already-linked nodes.
+pub fn collect_plaintext_links<'a>(node: &'a comrak::nodes::AstNode<'a>, links: &mut Vec<String>) {
+    {
+        let data = node.data.borrow();
+        match &data.value {
+            // Code/HTML nodes are not user prose; Link/Image already captured
+            // by collect_urls.  Skip them all (and their children).
+            NodeValue::Code(_)
+            | NodeValue::CodeBlock(_)
+            | NodeValue::HtmlInline(_)
+            | NodeValue::HtmlBlock(_)
+            | NodeValue::Link(_)
+            | NodeValue::Image(_) => return,
+            NodeValue::Text(text) => {
+                extract_bare_domains(text, links);
+                return; // Text is a leaf — no children to recurse into.
+            }
+            _ => {}
+        }
+    }
+    for child in node.children() {
+        collect_plaintext_links(child, links);
     }
 }
 

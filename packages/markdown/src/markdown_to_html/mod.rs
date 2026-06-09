@@ -7,7 +7,7 @@ use comrak::{create_formatter, parse_document, Arena, Options};
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
-use helpers::{collect_urls, walk_and_sanitize_urls};
+use helpers::{collect_plaintext_links, collect_urls, walk_and_sanitize_urls};
 use sanitize_admin::{sanitize_admin_html_with_options, AdminHtmlOptions};
 use vurst_shared::image_proxy::{
     is_external_http_url, rewrite_image_to_proxy, should_proxy_image,
@@ -203,6 +203,12 @@ pub fn extract_markdown_urls_sync(text: &str) -> MarkdownUrlsResult {
     let mut links = Vec::new();
     let mut images = Vec::new();
     collect_urls(root, &mut links, &mut images);
+    collect_plaintext_links(root, &mut links);
+
+    // Dedup preserving first-seen order (bare-domain scan may repeat for
+    // duplicate mentions; also guards against any overlap with autolinks).
+    let mut seen = std::collections::HashSet::new();
+    links.retain(|url| seen.insert(url.clone()));
 
     MarkdownUrlsResult {
         link_urls: links,

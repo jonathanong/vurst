@@ -119,6 +119,125 @@ fn extract_markdown_urls_sync_plain_text_has_no_urls() {
 }
 
 #[test]
+fn extract_bare_domain_with_path() {
+    let result = extract_markdown_urls_sync("join discord.gg/raid please");
+    assert_eq!(result.link_urls, vec!["discord.gg/raid"]);
+    assert!(result.image_urls.is_empty());
+}
+
+#[test]
+fn extract_bare_domain_short_tld() {
+    let result = extract_markdown_urls_sync("msg me on t.me/spam");
+    assert_eq!(result.link_urls, vec!["t.me/spam"]);
+}
+
+#[test]
+fn extract_bare_domain_common_tld() {
+    let result = extract_markdown_urls_sync("see example.com/path for details");
+    assert_eq!(result.link_urls, vec!["example.com/path"]);
+}
+
+#[test]
+fn extract_bare_domain_url_shortener() {
+    let result = extract_markdown_urls_sync("click bit.ly/x now");
+    assert_eq!(result.link_urls, vec!["bit.ly/x"]);
+}
+
+#[test]
+fn extract_bare_domain_without_path() {
+    let result = extract_markdown_urls_sync("visit example.com today");
+    assert_eq!(result.link_urls, vec!["example.com"]);
+}
+
+#[test]
+fn bare_domain_not_extracted_from_file_extension_like_tokens() {
+    // node.js has no registered TLD (.js is not in the PSL)
+    let result = extract_markdown_urls_sync("node.js is fast");
+    assert!(
+        result.link_urls.is_empty(),
+        "node.js should not match: {result:?}"
+    );
+}
+
+#[test]
+fn bare_domain_not_extracted_from_version_strings() {
+    let result = extract_markdown_urls_sync("use version v1.0 today");
+    assert!(
+        result.link_urls.is_empty(),
+        "v1.0 should not match: {result:?}"
+    );
+}
+
+#[test]
+fn bare_domain_not_extracted_from_abbreviations() {
+    let result = extract_markdown_urls_sync("i.e. some clarification");
+    assert!(
+        result.link_urls.is_empty(),
+        "i.e. should not match: {result:?}"
+    );
+}
+
+#[test]
+fn bare_domain_not_extracted_from_code_span() {
+    // Inline code spans must not be scanned for links.
+    let result = extract_markdown_urls_sync("run `example.com` in your browser");
+    assert!(
+        result.link_urls.is_empty(),
+        "code span should not match: {result:?}"
+    );
+}
+
+#[test]
+fn bare_domain_not_extracted_from_code_fence() {
+    let result = extract_markdown_urls_sync("```\nexample.com\n```");
+    assert!(
+        result.link_urls.is_empty(),
+        "code fence should not match: {result:?}"
+    );
+}
+
+#[test]
+fn bare_domain_deduped_when_repeated() {
+    let result = extract_markdown_urls_sync("visit discord.gg/raid or discord.gg/raid");
+    assert_eq!(result.link_urls, vec!["discord.gg/raid"]);
+}
+
+#[test]
+fn bare_domain_not_duplicated_when_markdown_link_already_present() {
+    // Explicit markdown link + same bare-domain text — should appear once.
+    let result = extract_markdown_urls_sync("[join](discord.gg/raid) or discord.gg/raid");
+    assert_eq!(result.link_urls, vec!["discord.gg/raid"]);
+}
+
+#[test]
+fn bare_domain_not_extracted_when_psl_returns_none() {
+    // Tokens that match the regex but have no registered TLD in the PSL.
+    let result = extract_markdown_urls_sync("see foo.notregistered for more");
+    assert!(
+        result.link_urls.is_empty(),
+        "unregistered TLD should not match: {result:?}"
+    );
+}
+
+#[test]
+fn bare_domain_not_extracted_from_email_address() {
+    // comrak autolinks user@example.com → mailto: link; the domain must not
+    // also appear as a separate bare-domain entry in link_urls.
+    let result = extract_markdown_urls_sync("contact user@example.com for info");
+    assert!(
+        !result.link_urls.iter().any(|u| u == "example.com"),
+        "email domain should not be double-extracted: {result:?}"
+    );
+}
+
+#[test]
+fn bare_domain_path_trailing_punctuation_trimmed() {
+    // Trailing sentence punctuation must be stripped from the path.
+    let result = extract_markdown_urls_sync("see example.com/path. for details");
+    assert_eq!(result.link_urls, vec!["example.com/path"]);
+}
+
+#[test]
 fn rejects_semicolonless_decimal_entity_in_javascript_link() {
     assert!(!is_safe_link_url("javascript&#58alert(1)"));
 }
