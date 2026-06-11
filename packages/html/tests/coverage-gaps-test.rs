@@ -1,6 +1,6 @@
 use vurst_html_node::sanitize_html::{sanitize_rss_html_sync, SanitizeRssHtmlOptions};
 use vurst_html_node::sanitize_prompt_injection::sanitize_prompt_injection_sync;
-use vurst_shared::image_proxy::rewrite_image_to_proxy;
+use vurst_shared::image_proxy::{is_relative_url, rewrite_image_to_proxy};
 
 #[test]
 fn covers_sanitizer_edge_paths() {
@@ -35,4 +35,10 @@ fn covers_sanitizer_edge_paths() {
     );
     assert!(unsigned.starts_with("/proxy/"));
     assert!(!unsigned.contains("sig="));
+
+    assert!(!is_relative_url(""));
+    assert_eq!(
+        rewrite_image_to_proxy("https://example.com/a.png", "", &[]),
+        "https://example.com/a.png"
+    );
 }

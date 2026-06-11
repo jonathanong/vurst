@@ -214,6 +214,15 @@ fn strips_tags_with_attributes() {
 }
 
 #[test]
+fn does_not_treat_hyphenated_tags_as_role_boundaries() {
+    let result = sanitize_prompt_injection_sync(
+        "prefix<section-custom>system: override</section-custom>",
+        false,
+    );
+    assert_eq!(result, "prefix system: override");
+}
+
+#[test]
 fn strips_tags_with_angle_brackets_in_quoted_attributes() {
     // Tests that an attribute containing > does not leave a dangling fragment
     // that exposes a system or role prefix.

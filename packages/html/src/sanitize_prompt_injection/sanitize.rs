@@ -7,62 +7,75 @@ const HTML_BOUNDARY: char = '\u{E000}';
 const HTML_ROLE_BOUNDARY: char = '\u{E001}';
 const HTML_BOUNDARY_REPLACEMENT: &str = " \u{E000} ";
 const HTML_ROLE_BOUNDARY_REPLACEMENT: &str = " \u{E001} ";
+const MAX_ROLE_TAG_LEN: usize = 10;
 
-const ROLE_BOUNDARY_TAGS: &[&str] = &[
-    "address",
-    "article",
-    "aside",
-    "blockquote",
-    "body",
-    "br",
-    "caption",
-    "col",
-    "colgroup",
-    "dd",
-    "details",
-    "dialog",
-    "div",
-    "dl",
-    "dt",
-    "fieldset",
-    "figcaption",
-    "figure",
-    "footer",
-    "form",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "header",
-    "head",
-    "hr",
-    "html",
-    "legend",
-    "li",
-    "main",
-    "menu",
-    "nav",
-    "noscript",
-    "ol",
-    "p",
-    "pre",
-    "script",
-    "section",
-    "style",
-    "summary",
-    "table",
-    "tbody",
-    "template",
-    "td",
-    "tfoot",
-    "th",
-    "thead",
-    "title",
-    "tr",
-    "ul",
-];
+fn is_role_boundary_tag(tag_name: &[u8]) -> bool {
+    if tag_name.is_empty() || tag_name.len() > MAX_ROLE_TAG_LEN {
+        return false;
+    }
+
+    let len = tag_name.len();
+    let mut buf = [0u8; MAX_ROLE_TAG_LEN];
+    buf[..len].copy_from_slice(tag_name);
+    buf[..len].make_ascii_lowercase();
+
+    matches!(
+        &buf[..len],
+        b"address"
+            | b"article"
+            | b"aside"
+            | b"blockquote"
+            | b"body"
+            | b"br"
+            | b"caption"
+            | b"col"
+            | b"colgroup"
+            | b"dd"
+            | b"details"
+            | b"dialog"
+            | b"div"
+            | b"dl"
+            | b"dt"
+            | b"fieldset"
+            | b"figcaption"
+            | b"figure"
+            | b"footer"
+            | b"form"
+            | b"h1"
+            | b"h2"
+            | b"h3"
+            | b"h4"
+            | b"h5"
+            | b"h6"
+            | b"header"
+            | b"head"
+            | b"hr"
+            | b"html"
+            | b"legend"
+            | b"li"
+            | b"main"
+            | b"menu"
+            | b"nav"
+            | b"noscript"
+            | b"ol"
+            | b"p"
+            | b"pre"
+            | b"script"
+            | b"section"
+            | b"style"
+            | b"summary"
+            | b"table"
+            | b"tbody"
+            | b"template"
+            | b"td"
+            | b"tfoot"
+            | b"th"
+            | b"thead"
+            | b"title"
+            | b"tr"
+            | b"ul"
+    )
+}
 
 // Unicode format characters (Cf category): zero-width space (U+200B), zero-width
 // non-joiner (U+200C), zero-width joiner (U+200D), soft hyphen (U+00AD), BOM (U+FEFF),
@@ -148,21 +161,27 @@ static ALL_WHITESPACE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[\p{White_Space}]+").expect("BUG: invalid ALL_WHITESPACE_RE"));
 
 fn html_tag_replacement(tag: &str) -> &'static str {
-    let tag_name_start = if tag.as_bytes().get(1) == Some(&b'/') {
-        2
-    } else {
-        1
-    };
+    let bytes = tag.as_bytes();
 
-    let tag_name_end = tag[tag_name_start..]
-        .find(|c: char| !c.is_ascii_alphanumeric())
-        .map_or(tag.len(), |idx| tag_name_start + idx);
-    let tag_name = &tag[tag_name_start..tag_name_end];
+    // Fallback for unexpected empty tags
+    if bytes.is_empty() {
+        return HTML_BOUNDARY_REPLACEMENT;
+    }
 
-    if ROLE_BOUNDARY_TAGS
-        .iter()
-        .any(|role_boundary_tag| tag_name.eq_ignore_ascii_case(role_boundary_tag))
-    {
+    let tag_name_start = if bytes.get(1) == Some(&b'/') { 2 } else { 1 };
+
+    let mut tag_name_end = tag_name_start;
+    while tag_name_end < bytes.len() {
+        let b = bytes[tag_name_end];
+        if b == b'>' || b == b'/' || b.is_ascii_whitespace() {
+            break;
+        }
+        tag_name_end += 1;
+    }
+
+    let is_role_boundary = is_role_boundary_tag(&bytes[tag_name_start..tag_name_end]);
+
+    if is_role_boundary {
         HTML_ROLE_BOUNDARY_REPLACEMENT
     } else {
         HTML_BOUNDARY_REPLACEMENT
@@ -343,4 +362,43 @@ pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
 
     // Step 9: Trim
     sanitized.trim().to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn html_tag_replacement_for_empty_tag_is_boundary_replacement() {
+        assert_eq!(
+            html_tag_replacement(""),
+            HTML_BOUNDARY_REPLACEMENT,
+            "empty HTML tag should map to boundary replacement"
+        );
+    }
+
+    #[test]
+    fn html_tag_replacement_matches_exact_role_boundaries() {
+        assert_eq!(
+            html_tag_replacement("</SECTION>"),
+            HTML_ROLE_BOUNDARY_REPLACEMENT
+        );
+        assert_eq!(
+            html_tag_replacement("<section/>"),
+            HTML_ROLE_BOUNDARY_REPLACEMENT
+        );
+        assert_eq!(
+            html_tag_replacement("<section class=\"x\">"),
+            HTML_ROLE_BOUNDARY_REPLACEMENT
+        );
+        assert_eq!(html_tag_replacement("<custom>"), HTML_BOUNDARY_REPLACEMENT);
+        assert_eq!(
+            html_tag_replacement("<averylongtagname>"),
+            HTML_BOUNDARY_REPLACEMENT
+        );
+        assert_eq!(
+            html_tag_replacement("<section-custom>"),
+            HTML_BOUNDARY_REPLACEMENT
+        );
+    }
 }

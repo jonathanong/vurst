@@ -1,3 +1,7 @@
+## 2026-06-10 - Preserve full HTML tag names before role-boundary matching
+**Learning:** Matching HTML tag names for role-boundary detection using partial parsing (e.g., stopping at the first non-alphanumeric byte) can produce false positives for names like `section-custom`, turning structure-like prefixes into control-boundary markers.
+**Action:** Extract the full tag token up to a delimiter (`>`, `/`, or whitespace), then lower-case it into a fixed stack buffer via `copy_from_slice`/`make_ascii_lowercase` and compare it exactly against known role-boundary literals with a shared `MAX_ROLE_TAG_LEN` limit.
+
 ## 2024-05-19 - Optimize ammonia string and vec cloning in HTML sanitizer
 **Learning:** In Rust, when passing configuration objects containing strings and collections (like `String` and `Vec<String>`) into closures that require `'static` lifetimes (such as Ammonia's `attribute_filter`), deep cloning these structures on every invocation introduces significant `O(N)` allocation overhead. Wrapping them in `Arc<str>` and `Arc<[String]>` in the configuration struct allows cheap reference counting (`O(1)` cloning) instead.
 **Action:** When designing N-API wrapper options that will be passed into `'static` closures, use `Arc<str>` instead of `String` and `Arc<[T]>` instead of `Vec<T>` to avoid deep cloning overhead, especially when the options are reused across many calls.
@@ -37,10 +41,6 @@
 ## 2024-05-18 - Early Exit Matching for Dangerous URL Schemes
 **Learning:** Checking URL schemes iteratively using an array of strings creates excessive looping overhead for the "happy path" (safe URLs), especially when iterators need to be created and advanced multiple times.
 **Action:** When filtering or matching strings against a small, known set of prefixes, match on the first byte immediately to provide an `O(1)` fast-path reject for the vast majority of non-matching strings.
-## 2026-06-11 - Safe Zero-Allocation String Prefix Matching
-**Learning:** Replacing heap-allocating `.to_ascii_lowercase()` with direct indexing (`url[..7]` or `url.as_bytes()[..7]`) can panic for short inputs or invalid UTF-8 boundaries.
-**Action:** When checking arbitrary user input against ASCII prefixes, use `.get(..N).is_some_and(...)` on `as_bytes()` (for example, `url.as_bytes().get(..7).is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"http://"))`) to avoid panics.
-
-## 2024-06-09 - Optimize Array String Contains via Early-Exit Matching
-**Learning:** Sequential linear searches (`.iter().any(|s| ...)`) against a known, small array of strings incur looping overhead. Replacing the slice-based iteration with a function that matches on the first byte (`bytes[0].to_ascii_lowercase()`) to early-exit creates an `O(1)` fast-path, which is about ~3x faster.
-**Action:** When repeatedly searching strings against a static, limited list of targets, replace arrays and iterators with a single matched fast-path using the string's length or first byte before validating the rest via `eq_ignore_ascii_case`.
+## 2025-02-13 - O(1) Perfect Hashing for HTML Tag Lookups
+**Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | b"tag2"`) is heavily optimized by the compiler into an O(1) jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
+**Action:** When searching a static, known list of strings (where case-insensitivity is needed), copy the string's bytes into a small stack-allocated buffer (`[0u8; MAX_LEN]`), lowercase them, and `match` on the slice bounds instead of using `.iter().any()`.
