@@ -20,23 +20,47 @@ const CLEAN_CONTENT_TAGS: &[&str] = &[
     "math", "meta",
 ];
 
-/// Container tag names eligible for empty-element cleanup.
-const CONTAINER_TAGS: &[&str] = &[
-    "div",
-    "span",
-    "section",
-    "article",
-    "aside",
-    "header",
-    "footer",
-    "nav",
-    "main",
-    "figure",
-    "figcaption",
-    "details",
-    "summary",
-    "p",
-];
+/// Fast-path matching for container tags eligible for empty-element cleanup.
+///
+/// Keep this list in sync with container-tag handling across HTML sanitization.
+/// Any newly added container tag must be added here or it will be skipped.
+fn is_container_tag(tag: &str) -> bool {
+    let bytes = tag.as_bytes();
+    if bytes.is_empty() {
+        return false;
+    }
+
+    match bytes[0].to_ascii_lowercase() {
+        b'a' => match bytes.len() {
+            7 => tag.eq_ignore_ascii_case("article"),
+            5 => tag.eq_ignore_ascii_case("aside"),
+            _ => false,
+        },
+        b'd' => match bytes.len() {
+            3 => tag.eq_ignore_ascii_case("div"),
+            7 => tag.eq_ignore_ascii_case("details"),
+            _ => false,
+        },
+        b'f' => match bytes.len() {
+            6 => tag.eq_ignore_ascii_case("footer") || tag.eq_ignore_ascii_case("figure"),
+            10 => tag.eq_ignore_ascii_case("figcaption"),
+            _ => false,
+        },
+        b'h' => bytes.len() == 6 && tag.eq_ignore_ascii_case("header"),
+        b'm' => bytes.len() == 4 && tag.eq_ignore_ascii_case("main"),
+        b'n' => bytes.len() == 3 && tag.eq_ignore_ascii_case("nav"),
+        b'p' => match bytes.len() {
+            1 => tag.eq_ignore_ascii_case("p"),
+            _ => false,
+        },
+        b's' => match bytes.len() {
+            4 => tag.eq_ignore_ascii_case("span"),
+            7 => tag.eq_ignore_ascii_case("section") || tag.eq_ignore_ascii_case("summary"),
+            _ => false,
+        },
+        _ => false,
+    }
+}
 
 /// Options for [`sanitize_rss_html_sync`].
 pub struct SanitizeRssHtmlOptions {
@@ -359,10 +383,7 @@ pub(super) fn may_have_empty_container(html: &str) -> bool {
             .position(|b| !b.is_ascii_alphanumeric())
             .map_or(bytes.len(), |offset| tag_start + offset);
         let tag = &html[tag_start..tag_end];
-        if !CONTAINER_TAGS
-            .iter()
-            .any(|container| container.eq_ignore_ascii_case(tag))
-        {
+        if !is_container_tag(tag) {
             i = tag_end;
             continue;
         }
@@ -407,7 +428,7 @@ fn remove_empty_containers(fragment: &mut Html) {
                 continue;
             };
             let tag: &str = element.name.local.as_ref();
-            CONTAINER_TAGS.contains(&tag)
+            is_container_tag(tag)
                 && node.children().all(
                     |child| matches!(child.value(), scraper::Node::Text(t) if t.trim().is_empty()),
                 )

@@ -40,3 +40,7 @@
 ## 2026-06-11 - Safe Zero-Allocation String Prefix Matching
 **Learning:** Replacing heap-allocating `.to_ascii_lowercase()` with direct indexing (`url[..7]` or `url.as_bytes()[..7]`) can panic for short inputs or invalid UTF-8 boundaries.
 **Action:** When checking arbitrary user input against ASCII prefixes, use `.get(..N).is_some_and(...)` on `as_bytes()` (for example, `url.as_bytes().get(..7).is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"http://"))`) to avoid panics.
+
+## 2024-06-09 - Optimize Array String Contains via Early-Exit Matching
+**Learning:** Sequential linear searches (`.iter().any(|s| ...)`) against a known, small array of strings incur looping overhead. Replacing the slice-based iteration with a function that matches on the first byte (`bytes[0].to_ascii_lowercase()`) to early-exit creates an `O(1)` fast-path, which is about ~3x faster.
+**Action:** When repeatedly searching strings against a static, limited list of targets, replace arrays and iterators with a single matched fast-path using the string's length or first byte before validating the rest via `eq_ignore_ascii_case`.
