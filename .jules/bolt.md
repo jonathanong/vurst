@@ -37,3 +37,6 @@
 ## 2024-05-18 - Early Exit Matching for Dangerous URL Schemes
 **Learning:** Checking URL schemes iteratively using an array of strings creates excessive looping overhead for the "happy path" (safe URLs), especially when iterators need to be created and advanced multiple times.
 **Action:** When filtering or matching strings against a small, known set of prefixes, match on the first byte immediately to provide an `O(1)` fast-path reject for the vast majority of non-matching strings.
+## 2026-06-11 - Safe Zero-Allocation String Prefix Matching
+**Learning:** Replacing heap-allocating `.to_ascii_lowercase()` with direct indexing (`url[..7]` or `url.as_bytes()[..7]`) can panic for short inputs or invalid UTF-8 boundaries.
+**Action:** When checking arbitrary user input against ASCII prefixes, use `.get(..N).is_some_and(...)` on `as_bytes()` (for example, `url.as_bytes().get(..7).is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"http://"))`) to avoid panics.
