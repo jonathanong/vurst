@@ -22,10 +22,10 @@ pub fn is_external_http_url(url: &str) -> bool {
     let trimmed_bytes = url.trim().as_bytes();
     trimmed_bytes
         .get(..7)
-        .map_or(false, |prefix| prefix.eq_ignore_ascii_case(b"http://"))
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"http://"))
         || trimmed_bytes
             .get(..8)
-            .map_or(false, |prefix| prefix.eq_ignore_ascii_case(b"https://"))
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"https://"))
 }
 
 /// Returns true if the URL is relative (no scheme, not protocol-relative).
