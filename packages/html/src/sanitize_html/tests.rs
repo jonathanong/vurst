@@ -55,27 +55,49 @@ fn container_tag_fast_path_checks_lengths() {
     assert!(!super::sanitize::may_have_empty_container("<a></a>"));
     assert!(!super::sanitize::may_have_empty_container("<aa></aa>"));
     assert!(super::sanitize::may_have_empty_container("<aside></aside>"));
-    assert!(!super::sanitize::may_have_empty_container("<articlex></articlex>"));
-    assert!(!super::sanitize::may_have_empty_container("<asidebook></asidebook>"));
+    assert!(!super::sanitize::may_have_empty_container(
+        "<articlex></articlex>"
+    ));
+    assert!(!super::sanitize::may_have_empty_container(
+        "<asidebook></asidebook>"
+    ));
     assert!(super::sanitize::may_have_empty_container("<div></div>"));
     assert!(!super::sanitize::may_have_empty_container("<dive></dive>"));
-    assert!(super::sanitize::may_have_empty_container("<details></details>"));
-    assert!(super::sanitize::may_have_empty_container("<figure></figure>"));
-    assert!(super::sanitize::may_have_empty_container("<figcaption></figcaption>"));
+    assert!(super::sanitize::may_have_empty_container(
+        "<details></details>"
+    ));
+    assert!(super::sanitize::may_have_empty_container(
+        "<figure></figure>"
+    ));
+    assert!(super::sanitize::may_have_empty_container(
+        "<figcaption></figcaption>"
+    ));
     assert!(!super::sanitize::may_have_empty_container("<fig></fig>"));
-    assert!(super::sanitize::may_have_empty_container("<header></header>"));
+    assert!(super::sanitize::may_have_empty_container(
+        "<header></header>"
+    ));
     assert!(!super::sanitize::may_have_empty_container("<head></head>"));
     assert!(super::sanitize::may_have_empty_container("<main></main>"));
-    assert!(!super::sanitize::may_have_empty_container("<mains></mains>"));
+    assert!(!super::sanitize::may_have_empty_container(
+        "<mains></mains>"
+    ));
     assert!(super::sanitize::may_have_empty_container("<nav></nav>"));
-    assert!(!super::sanitize::may_have_empty_container("<navigate></navigate>"));
+    assert!(!super::sanitize::may_have_empty_container(
+        "<navigate></navigate>"
+    ));
     assert!(super::sanitize::may_have_empty_container("<p> </p>"));
     assert!(super::sanitize::may_have_empty_container("<P> </P>"));
     assert!(!super::sanitize::may_have_empty_container("<pp> </pp>"));
     assert!(super::sanitize::may_have_empty_container("<span> </span>"));
-    assert!(super::sanitize::may_have_empty_container("<section> </section>"));
-    assert!(!super::sanitize::may_have_empty_container("<sections> </sections>"));
-    assert!(!super::sanitize::may_have_empty_container("<summarys> </summarys>"));
+    assert!(super::sanitize::may_have_empty_container(
+        "<section> </section>"
+    ));
+    assert!(!super::sanitize::may_have_empty_container(
+        "<sections> </sections>"
+    ));
+    assert!(!super::sanitize::may_have_empty_container(
+        "<summarys> </summarys>"
+    ));
 }
 
 #[test]
