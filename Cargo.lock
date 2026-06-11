@@ -117,9 +117,9 @@ dependencies = [
 
 [[package]]
 name = "boilerstrip"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60a2125c0b459c308d531c6a6b290f3609f32fe16ce80e89134d6f51642499a5"
+checksum = "af24c2fc06ad14a52612750c59ff0e7d38e3919f417eef638bcdd54ae21f3255"
 dependencies = [
  "ego-tree",
  "lol_html",
