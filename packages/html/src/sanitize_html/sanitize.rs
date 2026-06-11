@@ -21,7 +21,9 @@ const CLEAN_CONTENT_TAGS: &[&str] = &[
 ];
 
 /// Fast-path matching for container tags eligible for empty-element cleanup.
-/// Provides early-exit `O(1)` performance (~3x faster) compared to iterating over string slices.
+///
+/// Keep this list in sync with container-tag handling across HTML sanitization.
+/// Any newly added container tag must be added here or it will be skipped.
 fn is_container_tag(tag: &str) -> bool {
     let bytes = tag.as_bytes();
     if bytes.is_empty() {
@@ -29,22 +31,33 @@ fn is_container_tag(tag: &str) -> bool {
     }
 
     match bytes[0].to_ascii_lowercase() {
-        b'a' => tag.eq_ignore_ascii_case("article") || tag.eq_ignore_ascii_case("aside"),
-        b'd' => tag.eq_ignore_ascii_case("div") || tag.eq_ignore_ascii_case("details"),
-        b'f' => {
-            tag.eq_ignore_ascii_case("footer")
-                || tag.eq_ignore_ascii_case("figure")
-                || tag.eq_ignore_ascii_case("figcaption")
-        }
-        b'h' => tag.eq_ignore_ascii_case("header"),
-        b'm' => tag.eq_ignore_ascii_case("main"),
-        b'n' => tag.eq_ignore_ascii_case("nav"),
-        b'p' => bytes.len() == 1,
-        b's' => {
-            tag.eq_ignore_ascii_case("span")
-                || tag.eq_ignore_ascii_case("section")
-                || tag.eq_ignore_ascii_case("summary")
-        }
+        b'a' => match bytes.len() {
+            7 => tag.eq_ignore_ascii_case("article"),
+            5 => tag.eq_ignore_ascii_case("aside"),
+            _ => false,
+        },
+        b'd' => match bytes.len() {
+            3 => tag.eq_ignore_ascii_case("div"),
+            7 => tag.eq_ignore_ascii_case("details"),
+            _ => false,
+        },
+        b'f' => match bytes.len() {
+            6 => tag.eq_ignore_ascii_case("footer") || tag.eq_ignore_ascii_case("figure"),
+            10 => tag.eq_ignore_ascii_case("figcaption"),
+            _ => false,
+        },
+        b'h' => bytes.len() == 6 && tag.eq_ignore_ascii_case("header"),
+        b'm' => bytes.len() == 4 && tag.eq_ignore_ascii_case("main"),
+        b'n' => bytes.len() == 3 && tag.eq_ignore_ascii_case("nav"),
+        b'p' => match bytes.len() {
+            1 => tag.eq_ignore_ascii_case("p"),
+            _ => false,
+        },
+        b's' => match bytes.len() {
+            4 => tag.eq_ignore_ascii_case("span"),
+            7 => tag.eq_ignore_ascii_case("section") || tag.eq_ignore_ascii_case("summary"),
+            _ => false,
+        },
         _ => false,
     }
 }
