@@ -376,4 +376,29 @@ mod tests {
             "empty HTML tag should map to boundary replacement"
         );
     }
+
+    #[test]
+    fn html_tag_replacement_matches_exact_role_boundaries() {
+        assert_eq!(
+            html_tag_replacement("</SECTION>"),
+            HTML_ROLE_BOUNDARY_REPLACEMENT
+        );
+        assert_eq!(
+            html_tag_replacement("<section/>"),
+            HTML_ROLE_BOUNDARY_REPLACEMENT
+        );
+        assert_eq!(
+            html_tag_replacement("<section class=\"x\">"),
+            HTML_ROLE_BOUNDARY_REPLACEMENT
+        );
+        assert_eq!(html_tag_replacement("<custom>"), HTML_BOUNDARY_REPLACEMENT);
+        assert_eq!(
+            html_tag_replacement("<averylongtagname>"),
+            HTML_BOUNDARY_REPLACEMENT
+        );
+        assert_eq!(
+            html_tag_replacement("<section-custom>"),
+            HTML_BOUNDARY_REPLACEMENT
+        );
+    }
 }
