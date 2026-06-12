@@ -16,7 +16,8 @@ fn test_get_content_from_html_input_size_limit() {
                 link_rel_tokens_to_remove: None,
                 use_text_density_filter: None,
             },
-        ).await;
+        )
+        .await;
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.reason.contains("Input too large"));
