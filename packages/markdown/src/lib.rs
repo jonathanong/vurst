@@ -257,3 +257,24 @@ pub async fn chunk_napi(text: Buffer, options: Option<NapiChunkOptions>) -> Resu
     }))
     .await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use napi::bindgen_prelude::Buffer;
+
+    #[tokio::test]
+    async fn test_extract_markdown_urls_size_limit() {
+        let max_bytes = SANITIZE_MAX_INPUT_BYTES;
+        let oversize_data = vec![b'a'; max_bytes + 1];
+        let buffer = Buffer::from(oversize_data);
+
+        let result = extract_markdown_urls(buffer).await;
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(e.reason.contains("Input too large"));
+        } else {
+            panic!("Expected Err, got Ok");
+        }
+    }
+}

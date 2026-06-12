@@ -46,3 +46,17 @@ test('extractMarkdownUrls separates link and image URLs', async () => {
   assert.deepEqual(urls.linkUrls, ['https://example.com'])
   assert.deepEqual(urls.imageUrls, ['https://example.com/a.png'])
 })
+
+test('extractMarkdownUrls rejects inputs exceeding the size limit', async () => {
+  // 10 MiB + 1 byte
+  const oversizeBuffer = Buffer.alloc(10 * 1024 * 1024 + 1)
+  await assert.rejects(
+    async () => {
+      await extractMarkdownUrls(oversizeBuffer)
+    },
+    (err) => {
+      assert.match(err.message, /Input too large: 10485761 bytes \(max 10485760 bytes\)/)
+      return true
+    }
+  )
+})
