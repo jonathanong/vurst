@@ -216,18 +216,15 @@ fn remove_injection_patterns(content: &str) -> Cow<'_, str> {
     borrowed_if_unchanged(content, INJECTION_RE.replace_all(content, " "))
 }
 
-fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static str)> {
-    let bytes = content.as_bytes();
-    let len = bytes.len();
-
+fn find_tag_name_start(bytes: &[u8], tag_start: usize) -> Option<usize> {
     let mut cursor = tag_start + 1;
-    if cursor >= len {
+    if cursor >= bytes.len() {
         return None;
     }
 
     if bytes[cursor] == b'/' {
         cursor += 1;
-        if cursor >= len {
+        if cursor >= bytes.len() {
             return None;
         }
     }
@@ -236,8 +233,14 @@ fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static st
         return None;
     }
 
+    Some(cursor)
+}
+
+fn find_tag_end(bytes: &[u8], start_cursor: usize) -> Option<usize> {
     let mut quote: Option<u8> = None;
-    while cursor < len {
+    let mut cursor = start_cursor;
+
+    while cursor < bytes.len() {
         let b = bytes[cursor];
 
         if let Some(quote_char) = quote {
@@ -247,10 +250,7 @@ fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static st
         } else if b == b'"' || b == b'\'' {
             quote = Some(b);
         } else if b == b'>' {
-            return Some((
-                cursor + 1,
-                html_tag_replacement(&content[tag_start..=cursor]),
-            ));
+            return Some(cursor);
         }
 
         cursor += 1;
@@ -259,12 +259,23 @@ fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static st
     None
 }
 
+fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static str)> {
+    let bytes = content.as_bytes();
+
+    let name_start = find_tag_name_start(bytes, tag_start)?;
+    let tag_end = find_tag_end(bytes, name_start)?;
+
+    Some((
+        tag_end + 1,
+        html_tag_replacement(&content[tag_start..=tag_end]),
+    ))
+}
+
 fn strip_html_markup(content: &str) -> Cow<'_, str> {
     // Fast path: if there are no HTML comments or tags, return early
     if !content.contains('<') {
         return Cow::Borrowed(content);
     }
-
     // Remove HTML comments
     let sanitized = HTML_COMMENT_RE.replace_all(content, HTML_BOUNDARY_REPLACEMENT);
 

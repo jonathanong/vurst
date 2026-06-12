@@ -52,10 +52,8 @@ export interface NapiSanitizeRssHtmlResult {
   firstImageSrc?: string
 }
 
-export type SanitizeRssHtmlResult = NapiSanitizeRssHtmlResult
-
 export declare function sanitizePromptInjection(content: Buffer, isTitle?: boolean | undefined | null): Promise<Buffer>
 
-export declare function sanitizeRssHtml(html: Buffer, options?: NapiSanitizeRssHtmlOptions | undefined | null): Promise<SanitizeRssHtmlResult>
+export declare function sanitizeRssHtml(html: Buffer, options?: NapiSanitizeRssHtmlOptions | undefined | null): Promise<NapiSanitizeRssHtmlResult>
 
-export declare function sanitizeRssHtmlBatch(inputs: Array<Buffer>, options?: NapiSanitizeRssHtmlOptions | undefined | null): Promise<Array<SanitizeRssHtmlResult>>
+export declare function sanitizeRssHtmlBatch(inputs: Array<Buffer>, options?: NapiSanitizeRssHtmlOptions | undefined | null): Promise<Array<NapiSanitizeRssHtmlResult>>
