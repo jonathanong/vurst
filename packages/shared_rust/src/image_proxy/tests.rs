@@ -113,3 +113,13 @@ fn test_rewrite_invalid_hex_key_falls_back_unsigned() {
     assert!(result.starts_with(PREFIX));
     assert!(!result.contains("?sig="));
 }
+
+#[test]
+fn test_should_proxy_image_large_prefix() {
+    let url = "https://example.com/img.jpg";
+    let large_prefix = "a".repeat(10000);
+    assert!(should_proxy_image(url, &large_prefix));
+
+    let proxy_url = format!("{}{}", large_prefix, "some_base64_data");
+    assert!(!should_proxy_image(&proxy_url, &large_prefix));
+}
