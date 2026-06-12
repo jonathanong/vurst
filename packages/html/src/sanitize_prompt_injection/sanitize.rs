@@ -9,6 +9,69 @@ const HTML_BOUNDARY_REPLACEMENT: &str = " \u{E000} ";
 const HTML_ROLE_BOUNDARY_REPLACEMENT: &str = " \u{E001} ";
 const MAX_ROLE_TAG_LEN: usize = 10;
 
+fn is_heading_tag(tag_name: &[u8]) -> bool {
+    matches!(
+        tag_name,
+        b"h1" | b"h2" | b"h3" | b"h4" | b"h5" | b"h6" | b"header" | b"head"
+    )
+}
+
+fn is_table_tag(tag_name: &[u8]) -> bool {
+    matches!(
+        tag_name,
+        b"caption"
+            | b"col"
+            | b"colgroup"
+            | b"table"
+            | b"tbody"
+            | b"td"
+            | b"tfoot"
+            | b"th"
+            | b"thead"
+            | b"tr"
+    )
+}
+
+fn is_list_tag(tag_name: &[u8]) -> bool {
+    matches!(
+        tag_name,
+        b"dd" | b"dl" | b"dt" | b"li" | b"ol" | b"ul" | b"menu"
+    )
+}
+
+fn is_document_tag(tag_name: &[u8]) -> bool {
+    matches!(
+        tag_name,
+        b"body" | b"html" | b"main" | b"script" | b"style" | b"title" | b"template" | b"noscript"
+    )
+}
+
+fn is_block_tag(tag_name: &[u8]) -> bool {
+    matches!(
+        tag_name,
+        b"address"
+            | b"article"
+            | b"aside"
+            | b"blockquote"
+            | b"br"
+            | b"details"
+            | b"dialog"
+            | b"div"
+            | b"fieldset"
+            | b"figcaption"
+            | b"figure"
+            | b"footer"
+            | b"form"
+            | b"hr"
+            | b"legend"
+            | b"nav"
+            | b"p"
+            | b"pre"
+            | b"section"
+            | b"summary"
+    )
+}
+
 fn is_role_boundary_tag(tag_name: &[u8]) -> bool {
     if tag_name.is_empty() || tag_name.len() > MAX_ROLE_TAG_LEN {
         return false;
@@ -19,62 +82,12 @@ fn is_role_boundary_tag(tag_name: &[u8]) -> bool {
     buf[..len].copy_from_slice(tag_name);
     buf[..len].make_ascii_lowercase();
 
-    matches!(
-        &buf[..len],
-        b"address"
-            | b"article"
-            | b"aside"
-            | b"blockquote"
-            | b"body"
-            | b"br"
-            | b"caption"
-            | b"col"
-            | b"colgroup"
-            | b"dd"
-            | b"details"
-            | b"dialog"
-            | b"div"
-            | b"dl"
-            | b"dt"
-            | b"fieldset"
-            | b"figcaption"
-            | b"figure"
-            | b"footer"
-            | b"form"
-            | b"h1"
-            | b"h2"
-            | b"h3"
-            | b"h4"
-            | b"h5"
-            | b"h6"
-            | b"header"
-            | b"head"
-            | b"hr"
-            | b"html"
-            | b"legend"
-            | b"li"
-            | b"main"
-            | b"menu"
-            | b"nav"
-            | b"noscript"
-            | b"ol"
-            | b"p"
-            | b"pre"
-            | b"script"
-            | b"section"
-            | b"style"
-            | b"summary"
-            | b"table"
-            | b"tbody"
-            | b"template"
-            | b"td"
-            | b"tfoot"
-            | b"th"
-            | b"thead"
-            | b"title"
-            | b"tr"
-            | b"ul"
-    )
+    let tag = &buf[..len];
+    is_heading_tag(tag)
+        || is_table_tag(tag)
+        || is_list_tag(tag)
+        || is_document_tag(tag)
+        || is_block_tag(tag)
 }
 
 // Unicode format characters (Cf category): zero-width space (U+200B), zero-width
