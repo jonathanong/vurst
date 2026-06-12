@@ -154,24 +154,15 @@ fn sanitize_with_ammonia(html: &str, opts: &SanitizeRssHtmlOptions) -> (String, 
         .rm_tag_attributes("img", IMG_ATTRS_TO_STRIP)
         .add_clean_content_tags(CLEAN_CONTENT_TAGS)
         .attribute_filter(move |tag, attr, value| {
-            if (attr == "href" || attr == "src") && has_dangerous_url_scheme(value) {
-                return None;
-            }
-            if tag == "img" && attr == "src" && should_proxy_image(value, &url_prefix) {
-                let mut captured = first_image_src_filter
-                    .lock()
-                    .expect("BUG: first image capture mutex poisoned");
-                captured.get_or_insert_with(|| value.to_string());
-
-                if proxy_images {
-                    return Some(Cow::Owned(rewrite_image_to_proxy(
-                        value,
-                        &url_prefix,
-                        &signing_keys,
-                    )));
-                }
-            }
-            Some(Cow::Borrowed(value))
+            filter_attribute(
+                tag,
+                attr,
+                value,
+                proxy_images,
+                &url_prefix,
+                &signing_keys,
+                &first_image_src_filter,
+            )
         });
 
     let sanitized = builder.clean(html).to_string();
@@ -180,6 +171,35 @@ fn sanitize_with_ammonia(html: &str, opts: &SanitizeRssHtmlOptions) -> (String, 
         .expect("BUG: first image capture mutex poisoned")
         .clone();
     (sanitized, first_image_src)
+}
+
+fn filter_attribute<'a>(
+    tag: &str,
+    attr: &str,
+    value: &'a str,
+    proxy_images: bool,
+    url_prefix: &str,
+    signing_keys: &[String],
+    first_image_src_filter: &Mutex<Option<String>>,
+) -> Option<Cow<'a, str>> {
+    if (attr == "href" || attr == "src") && has_dangerous_url_scheme(value) {
+        return None;
+    }
+    if tag == "img" && attr == "src" && should_proxy_image(value, url_prefix) {
+        let mut captured = first_image_src_filter
+            .lock()
+            .expect("BUG: first image capture mutex poisoned");
+        captured.get_or_insert_with(|| value.to_string());
+
+        if proxy_images {
+            return Some(Cow::Owned(rewrite_image_to_proxy(
+                value,
+                url_prefix,
+                signing_keys,
+            )));
+        }
+    }
+    Some(Cow::Borrowed(value))
 }
 
 pub(super) fn has_dangerous_url_scheme(url: &str) -> bool {
