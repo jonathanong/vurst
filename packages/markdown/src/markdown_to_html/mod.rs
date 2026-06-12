@@ -208,7 +208,15 @@ pub fn extract_markdown_urls_sync(text: &str) -> MarkdownUrlsResult {
     // Dedup preserving first-seen order (bare-domain scan may repeat for
     // duplicate mentions; also guards against any overlap with autolinks).
     let mut seen = std::collections::HashSet::new();
-    links.retain(|url| seen.insert(url.clone()));
+    links.retain(|url| {
+        // Optimize: skip allocating a clone for URLs we have already seen.
+        if seen.contains(url) {
+            false
+        } else {
+            seen.insert(url.clone());
+            true
+        }
+    });
 
     MarkdownUrlsResult {
         link_urls: links,
