@@ -74,3 +74,20 @@ fn converts_upstream_ai_classification() {
         SlopClassification::Ai
     );
 }
+
+#[test]
+fn detect_ai_generated_text_rejects_out_of_bounds_threshold() {
+    let error_negative = detect_ai_generated_text("some text", -0.1)
+        .expect_err("should reject negative threshold");
+    assert_eq!(
+        error_negative,
+        "confidence_threshold must be between 0.0 and 1.0, got -0.1"
+    );
+
+    let error_too_large = detect_ai_generated_text("some text", 1.1)
+        .expect_err("should reject threshold > 1.0");
+    assert_eq!(
+        error_too_large,
+        "confidence_threshold must be between 0.0 and 1.0, got 1.1"
+    );
+}
