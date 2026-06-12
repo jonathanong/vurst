@@ -139,13 +139,13 @@ fn test_no_header_with_title() {
     let chunks = chunk(
         text,
         Some(ChunkOptions {
-            title: Some("test title".to_string()),
+            title: Some("test title".to_string().into()),
             ..Default::default()
         }),
     );
     assert_eq!(chunks.len(), 1);
     assert_eq!(chunks[0].breadcrumb.as_ref().as_str(), "test title");
-    assert_eq!(chunks[0].header, Some("test title".to_string()));
+    assert_eq!(chunks[0].header, Some("test title".to_string().into()));
 }
 
 #[test]
