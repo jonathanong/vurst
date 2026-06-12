@@ -22,3 +22,25 @@ fn test_invalid_utf8_in_apply_dom_removals() {
         }
     }
 }
+
+#[test]
+fn test_apply_dom_removals_to_html_size_limit() {
+    let rt = Runtime::new().unwrap();
+    rt.block_on(async {
+        let large_html = vec![b'a'; 10 * 1024 * 1024 + 1];
+        let buffer = Buffer::from(large_html);
+        let removals = ExtractDomRemovalsResult {
+            css_selectors_to_remove: vec![],
+            html_to_remove: vec![],
+        };
+
+        let result = apply_dom_removals_to_html(buffer, removals).await;
+        assert!(result.is_err());
+        match result {
+            Err(e) => {
+                assert!(e.reason.contains("Input too large"));
+            }
+            Ok(_) => panic!("Expected error due to large input"),
+        }
+    });
+}
