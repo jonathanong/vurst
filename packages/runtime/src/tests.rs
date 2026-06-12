@@ -40,6 +40,12 @@ fn returns_none_on_garbage() {
 }
 
 #[test]
+fn returns_none_on_negative_numbers() {
+    assert_eq!(super::parse_positive_usize("-42"), None);
+    assert_eq!(super::parse_positive_usize("-1"), None);
+}
+
+#[test]
 fn spawn_blocking_runs_tasks() {
     let mut handles = Vec::with_capacity(50);
     for i in 0..50 {
