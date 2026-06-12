@@ -128,3 +128,10 @@ fn extract_bare_domains_skips_bare_psl_suffix() {
         "bare PSL suffix should not produce a link: {links:?}"
     );
 }
+
+#[test]
+fn extract_bare_domains_exact_match_without_path() {
+    let mut links = Vec::new();
+    extract_bare_domains("example.com", &mut links);
+    assert_eq!(links, vec!["example.com"]);
+}
