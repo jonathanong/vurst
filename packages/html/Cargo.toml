@@ -29,3 +29,10 @@ vurst-shared = { version = "0.2.0", path = "../shared_rust" }
 
 [build-dependencies]
 napi-build = "2"
+
+[dev-dependencies]
+criterion = "0.8.2"
+
+[[bench]]
+name = "sanitize"
+harness = false

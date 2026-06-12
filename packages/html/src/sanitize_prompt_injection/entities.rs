@@ -170,31 +170,38 @@ fn html_entity_decode_work_budget(text: &str) -> usize {
     nested_work_budget.max(full_pass_budget)
 }
 
-pub(super) fn decode_html_entities(text: &str) -> String {
-    let mut decoded = text.to_string();
-    let mut remaining_work = html_entity_decode_work_budget(text);
+pub(super) fn decode_html_entities(text: std::borrow::Cow<'_, str>) -> std::borrow::Cow<'_, str> {
+    if !HTML_ENTITY_RE.is_match(&text) {
+        return text;
+    }
+
+    let mut decoded = text.into_owned();
+    let mut remaining_work = html_entity_decode_work_budget(&decoded);
     let mut decoded_once = false;
 
     loop {
-        if !HTML_ENTITY_RE.is_match(&decoded) {
-            return decoded;
-        }
-
         let pass_work = decoded.len().max(1);
         if decoded_once && remaining_work < pass_work {
-            return HTML_ENTITY_RE
-                .replace_all(&decoded, |caps: &regex::Captures| {
-                    let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
-                    format!(" {legacy_tail}")
-                })
-                .into_owned();
+            return std::borrow::Cow::Owned(
+                HTML_ENTITY_RE
+                    .replace_all(&decoded, |caps: &regex::Captures| {
+                        let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
+                        format!(" {legacy_tail}")
+                    })
+                    .into_owned(),
+            );
         }
         remaining_work = remaining_work.saturating_sub(pass_work);
 
         let next = decode_html_entities_once(&decoded);
         if next == decoded {
-            return decoded;
+            return std::borrow::Cow::Owned(decoded);
         }
+
+        if !HTML_ENTITY_RE.is_match(&next) {
+            return std::borrow::Cow::Owned(next);
+        }
+
         decoded_once = true;
         decoded = next;
     }
