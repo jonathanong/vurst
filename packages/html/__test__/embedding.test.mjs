@@ -10,3 +10,8 @@ test('htmlToEmbeddingText strips URLs and keeps text content', async () => {
   assert.match(text, /world/)
   assert.doesNotMatch(text, /example\.com/)
 })
+
+test('htmlToEmbeddingText rejects oversized input', async () => {
+  const oversized = Buffer.alloc(10 * 1024 * 1024 + 1, 0x20)
+  await assert.rejects(htmlToEmbeddingText(oversized), /Input too large/)
+})
