@@ -25,3 +25,11 @@ test('chunk respects chunkOptions', async () => {
   })
   assert.ok(chunks.length >= 1)
 })
+
+test('chunk rejects input exceeding maximum size', async () => {
+  const largeBuffer = Buffer.alloc(10 * 1024 * 1024 + 1)
+  await assert.rejects(
+    chunk(largeBuffer),
+    /Input too large/
+  )
+})
