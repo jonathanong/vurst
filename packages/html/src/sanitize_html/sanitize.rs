@@ -275,26 +275,36 @@ fn html_whitespace_entity_len(rest: &str) -> Option<usize> {
         .then_some(rest.len() - digits.len() + semicolon + 1)
 }
 
+fn consume_ascii_whitespace(bytes: &[u8]) -> usize {
+    // Fast-path: chunked ASCII whitespace check. We use iter().position
+    // for SIMD acceleration over long contiguous whitespaces.
+    bytes
+        .iter()
+        .position(|&b| !(b.is_ascii_whitespace() || b == 0x0B))
+        .unwrap_or(bytes.len())
+}
+
+fn consume_unicode_whitespace(rest: &str) -> Option<usize> {
+    let ch = rest
+        .chars()
+        .next()
+        .expect("BUG: loop condition guarantees a non-empty remainder");
+    // Keep Unicode-aware whitespace here (including vertical-tab) so empty-container
+    // detection behavior does not narrow from prior releases.
+    if ch.is_whitespace() {
+        Some(ch.len_utf8())
+    } else {
+        None
+    }
+}
+
 fn empty_text_candidate_end(html: &str, mut i: usize) -> usize {
     let bytes = html.as_bytes();
     while i < bytes.len() {
-        // Fast-path: chunked ASCII whitespace check. We use iter().position
-        // for SIMD acceleration over long contiguous whitespaces.
-        let rest_bytes = &bytes[i..];
-        let non_ws_idx = rest_bytes
-            .iter()
-            .position(|&b| !(b.is_ascii_whitespace() || b == 0x0B));
-
-        match non_ws_idx {
-            Some(0) => {} // first byte isn't ascii whitespace
-            Some(offset) => {
-                i += offset;
-                continue;
-            }
-            None => {
-                i = bytes.len();
-                break;
-            }
+        let skipped = consume_ascii_whitespace(&bytes[i..]);
+        if skipped > 0 {
+            i += skipped;
+            continue;
         }
 
         let b = bytes[i];
@@ -310,16 +320,11 @@ fn empty_text_candidate_end(html: &str, mut i: usize) -> usize {
             break;
         }
 
-        let ch = rest
-            .chars()
-            .next()
-            .expect("BUG: loop condition guarantees a non-empty remainder");
-        // Keep Unicode-aware whitespace here (including vertical-tab) so empty-container
-        // detection behavior does not narrow from prior releases.
-        if !ch.is_whitespace() {
+        if let Some(ch_len) = consume_unicode_whitespace(rest) {
+            i += ch_len;
+        } else {
             break;
         }
-        i += ch.len_utf8();
     }
 
     i
