@@ -340,29 +340,52 @@ fn opening_tag_end(bytes: &[u8], mut i: usize) -> Option<usize> {
     None
 }
 
+fn parse_open_tag(html: &str, tag_start: usize) -> Option<(&str, usize)> {
+    let bytes = html.as_bytes();
+    if tag_start >= bytes.len()
+        || matches!(
+            bytes[tag_start],
+            b'/' | b'!' | b'?' | b'0'..=b'9' | b'-' | b'.'
+        )
+    {
+        return None;
+    }
+
+    let tag_end = bytes[tag_start..]
+        .iter()
+        .position(|b| !b.is_ascii_alphanumeric())
+        .map_or(bytes.len(), |offset| tag_start + offset);
+    Some((&html[tag_start..tag_end], tag_end))
+}
+
+fn has_matching_close_tag(html: &str, content_end: usize, tag: &str) -> bool {
+    if !html[content_end..].starts_with("</") {
+        return false;
+    }
+    let close_tag_start = content_end + 2;
+    let close_tag_end = close_tag_start + tag.len();
+    let bytes = html.as_bytes();
+
+    close_tag_end <= bytes.len()
+        && html[close_tag_start..close_tag_end].eq_ignore_ascii_case(tag)
+        && bytes[close_tag_end..]
+            .iter()
+            .position(|b| !b.is_ascii_whitespace())
+            .is_some_and(|offset| bytes[close_tag_end + offset] == b'>')
+}
+
 pub(super) fn may_have_empty_container(html: &str) -> bool {
     let bytes = html.as_bytes();
     let mut i = 0;
-    let mut found = false;
 
     while let Some(open_offset) = bytes[i..].iter().position(|b| *b == b'<') {
-        let open = i + open_offset;
-        let tag_start = open + 1;
-        if tag_start >= bytes.len()
-            || matches!(
-                bytes[tag_start],
-                b'/' | b'!' | b'?' | b'0'..=b'9' | b'-' | b'.'
-            )
-        {
+        let tag_start = i + open_offset + 1;
+
+        let Some((tag, tag_end)) = parse_open_tag(html, tag_start) else {
             i = tag_start;
             continue;
-        }
+        };
 
-        let tag_end = bytes[tag_start..]
-            .iter()
-            .position(|b| !b.is_ascii_alphanumeric())
-            .map_or(bytes.len(), |offset| tag_start + offset);
-        let tag = &html[tag_start..tag_end];
         if !is_container_tag(tag) {
             i = tag_end;
             continue;
@@ -373,22 +396,14 @@ pub(super) fn may_have_empty_container(html: &str) -> bool {
         };
 
         let content_end = empty_text_candidate_end(html, open_end);
-        if html[content_end..].starts_with("</") {
-            let close_tag_start = content_end + 2;
-            let close_tag_end = close_tag_start + tag.len();
-            let has_matching_close = close_tag_end <= bytes.len()
-                && html[close_tag_start..close_tag_end].eq_ignore_ascii_case(tag)
-                && bytes[close_tag_end..]
-                    .iter()
-                    .position(|b| !b.is_ascii_whitespace())
-                    .is_some_and(|offset| bytes[close_tag_end + offset] == b'>');
-            found = has_matching_close;
+        if has_matching_close_tag(html, content_end, tag) {
+            return true;
         }
 
-        i = if found { bytes.len() } else { open_end };
+        i = open_end;
     }
 
-    found
+    false
 }
 
 /// Remove empty container elements via single-pass bottom-up traversal.
