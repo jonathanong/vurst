@@ -27,3 +27,8 @@ test('extractDomRemovals + applyDomRemovalsToHtml strips shared boilerplate', as
   assert.match(html, /Keep/)
   assert.doesNotMatch(html, /Drop/)
 })
+
+test('extractDomRemovals rejects oversized input', async () => {
+  const oversized = Buffer.alloc(10 * 1024 * 1024 + 1, 0x20)
+  await assert.rejects(extractDomRemovals([oversized]), /Input too large/)
+})
