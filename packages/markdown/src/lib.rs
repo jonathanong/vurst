@@ -206,11 +206,10 @@ impl From<Chunk> for NapiChunk {
     fn from(c: Chunk) -> Self {
         NapiChunk {
             level: c.level,
-            header: c.header.as_ref().map(|s| s.to_string()),
+            header: c.header.as_ref().map(ToString::to_string),
             headers: c
                 .headers
-                .iter()
-                .map(|s| s.as_ref().map(|h| h.to_string()))
+                .iter().map(|s| s.as_ref().map(ToString::to_string))
                 .collect(),
             breadcrumb: c.breadcrumb.to_string(),
             text: c.text,
