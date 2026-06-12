@@ -112,46 +112,47 @@ fn lookup_named_html_entity(entity: &str) -> Option<&'static str> {
         })
 }
 
+fn decode_numeric_entity(inner: &str) -> Option<char> {
+    if let Some(digits) = inner
+        .strip_prefix("#x")
+        .or_else(|| inner.strip_prefix("#X"))
+    {
+        return u32::from_str_radix(digits, 16)
+            .ok()
+            .and_then(char::from_u32);
+    }
+
+    if let Some(digits) = inner.strip_prefix('#') {
+        return digits.parse::<u32>().ok().and_then(char::from_u32);
+    }
+
+    None
+}
+
+fn decode_html_entity_match(caps: &regex::Captures) -> String {
+    let m = &caps[0];
+    let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
+    let entity = if legacy_tail.is_empty() {
+        m
+    } else {
+        &m[..m.len() - legacy_tail.len()]
+    };
+
+    if let Some(replacement) = lookup_named_html_entity(entity) {
+        return format!("{replacement}{legacy_tail}");
+    }
+
+    if !entity.ends_with(';') {
+        return m.to_string();
+    }
+
+    let inner = &entity[1..entity.len() - 1];
+    decode_numeric_entity(inner).map_or_else(|| m.to_string(), |c| c.to_string())
+}
+
 fn decode_html_entities_once(text: &str) -> String {
     HTML_ENTITY_RE
-        .replace_all(text, |caps: &regex::Captures| {
-            let m = &caps[0];
-            let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
-            let entity = if legacy_tail.is_empty() {
-                m
-            } else {
-                &m[..m.len() - legacy_tail.len()]
-            };
-
-            if let Some(replacement) = lookup_named_html_entity(entity) {
-                return format!("{replacement}{legacy_tail}");
-            }
-
-            if !entity.ends_with(';') {
-                return m.to_string();
-            }
-
-            let inner = &entity[1..entity.len() - 1];
-            if let Some(digits) = inner
-                .strip_prefix("#x")
-                .or_else(|| inner.strip_prefix("#X"))
-            {
-                return u32::from_str_radix(digits, 16)
-                    .ok()
-                    .and_then(char::from_u32)
-                    .map_or_else(|| m.to_string(), |c| c.to_string());
-            }
-
-            if let Some(digits) = inner.strip_prefix('#') {
-                return digits
-                    .parse::<u32>()
-                    .ok()
-                    .and_then(char::from_u32)
-                    .map_or_else(|| m.to_string(), |c| c.to_string());
-            }
-
-            m.to_string()
-        })
+        .replace_all(text, decode_html_entity_match)
         .into_owned()
 }
 
