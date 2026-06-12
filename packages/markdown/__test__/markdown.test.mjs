@@ -51,7 +51,7 @@ test('renderMarkdownToHtml rejects input exceeding size limit', async () => {
   const largeBuffer = Buffer.alloc(10 * 1024 * 1024 + 1)
   await assert.rejects(
     renderMarkdownToHtml(largeBuffer),
-    /Input too large/
+    /Input too large/,
   )
 })
 
@@ -59,7 +59,17 @@ test('renderMarkdownToHtmlBatch rejects input exceeding size limit', async () =>
   const largeBuffer = Buffer.alloc(10 * 1024 * 1024 + 1)
   await assert.rejects(
     renderMarkdownToHtmlBatch([largeBuffer]),
-    /Input too large/
+    /Input too large/,
+  )
+})
+
+test('renderMarkdownToHtmlBatch rejects total input exceeding size limit', async () => {
+  const maxBytes = 10 * 1024 * 1024
+  const buf1 = Buffer.alloc(maxBytes / 2 + 100, 'a')
+  const buf2 = Buffer.alloc(maxBytes / 2 + 100, 'b')
+  await assert.rejects(
+    renderMarkdownToHtmlBatch([buf1, buf2]),
+    /Input too large/,
   )
 })
 
@@ -67,6 +77,6 @@ test('extractMarkdownUrls rejects input exceeding size limit', async () => {
   const largeBuffer = Buffer.alloc(10 * 1024 * 1024 + 1)
   await assert.rejects(
     extractMarkdownUrls(largeBuffer),
-    /Input too large/
+    /Input too large/,
   )
 })
