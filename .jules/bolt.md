@@ -44,3 +44,9 @@
 ## 2025-02-13 - O(1) Perfect Hashing for HTML Tag Lookups
 **Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | b"tag2"`) is heavily optimized by the compiler into an O(1) jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
 **Action:** When searching a static, known list of strings (where case-insensitivity is needed), copy the string's bytes into a small stack-allocated buffer (`[0u8; MAX_LEN]`), lowercase them, and `match` on the slice bounds instead of using `.iter().any()`.
+## 2026-06-15 - Delay string allocations in Cow-based text pipelines
+**Learning:** When transitioning a text processing pipeline to use  and delaying string allocations until a modification is required, it is critical to explicitly copy the unmodified prefix of the string (e.g., ) into the newly allocated  before appending the first replacement, otherwise the output will be missing the beginning of the string.
+**Action:** Use  when conditionally allocating strings during an iterator/byte scanning loop.
+## 2025-02-12 - Delay string allocations in Cow-based text pipelines
+**Learning:** When transitioning a text processing pipeline to use `Cow<'_, str>` and delaying string allocations until a modification is required, it is critical to explicitly copy the unmodified prefix of the string (e.g., `&input[..cursor]`) into the newly allocated `String` before appending the first replacement, otherwise the output will be missing the beginning of the string.
+**Action:** Use `.get_or_insert_with(|| { let mut s = String::with_capacity(len); s.push_str(&input[..cursor]); s })` when conditionally allocating strings during an iterator/byte scanning loop.
