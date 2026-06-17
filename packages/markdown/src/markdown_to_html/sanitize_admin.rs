@@ -7,60 +7,6 @@ use vurst_shared::image_proxy::{
     DEFAULT_IMAGE_PROXY_URL_PREFIX,
 };
 
-/// Tags allowed in admin HTML content (permissive allowlist).
-const ALLOWED_ADMIN_TAGS: &[&str] = &[
-    "p",
-    "br",
-    "a",
-    "strong",
-    "em",
-    "b",
-    "i",
-    "u",
-    "s",
-    "del",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "ul",
-    "ol",
-    "li",
-    "blockquote",
-    "pre",
-    "code",
-    "table",
-    "thead",
-    "tbody",
-    "tr",
-    "th",
-    "td",
-    "img",
-    "hr",
-    "figure",
-    "figcaption",
-    "details",
-    "summary",
-    "sup",
-    "sub",
-    "span",
-    "div",
-    "dl",
-    "dt",
-    "dd",
-];
-
-/// Tags removed entirely including all descendants.
-const DANGEROUS_ADMIN_TAGS: &[&str] = &[
-    "script", "style", "iframe", "object", "embed", "form", "input", "button", "select",
-    "textarea", "meta", "base", "svg",
-];
-
-/// Void tags rendered without closing tags.
-const VOID_ADMIN_TAGS: &[&str] = &["br", "hr", "img"];
-
 /// Attributes allowed on `<a>` tags.
 const ALLOWED_A_ATTRS: &[&str] = &["href", "title"];
 
@@ -193,7 +139,8 @@ fn render_element_attrs(
     children: &str,
     opts: &AdminHtmlOptions<'_>,
 ) -> String {
-    let is_void = VOID_ADMIN_TAGS.contains(&tag);
+    // ⚡ Bolt: Fast match for void tags
+    let is_void = matches!(tag, "br" | "hr" | "img");
 
     let mut open = format!("<{tag}");
     let mut has_external_href = false;
@@ -253,13 +200,72 @@ fn render_node<'a>(node: NodeRef<'a, Node>, opts: &'a AdminHtmlOptions<'a>) -> C
         Node::Element(elem) => {
             let tag: &str = elem.name.local.as_ref();
 
-            if DANGEROUS_ADMIN_TAGS.contains(&tag) {
+            // ⚡ Bolt: Fast match for dangerous tags
+            if matches!(
+                tag,
+                "script"
+                    | "style"
+                    | "iframe"
+                    | "object"
+                    | "embed"
+                    | "form"
+                    | "input"
+                    | "button"
+                    | "select"
+                    | "textarea"
+                    | "meta"
+                    | "base"
+                    | "svg"
+            ) {
                 return Cow::Borrowed("");
             }
 
             let children = render_children(node, opts);
 
-            if !ALLOWED_ADMIN_TAGS.contains(&tag) {
+            // ⚡ Bolt: Fast match for allowed tags
+            if !matches!(
+                tag,
+                "p" | "br"
+                    | "a"
+                    | "strong"
+                    | "em"
+                    | "b"
+                    | "i"
+                    | "u"
+                    | "s"
+                    | "del"
+                    | "h1"
+                    | "h2"
+                    | "h3"
+                    | "h4"
+                    | "h5"
+                    | "h6"
+                    | "ul"
+                    | "ol"
+                    | "li"
+                    | "blockquote"
+                    | "pre"
+                    | "code"
+                    | "table"
+                    | "thead"
+                    | "tbody"
+                    | "tr"
+                    | "th"
+                    | "td"
+                    | "img"
+                    | "hr"
+                    | "figure"
+                    | "figcaption"
+                    | "details"
+                    | "summary"
+                    | "sup"
+                    | "sub"
+                    | "span"
+                    | "div"
+                    | "dl"
+                    | "dt"
+                    | "dd"
+            ) {
                 return Cow::Owned(children);
             }
 
