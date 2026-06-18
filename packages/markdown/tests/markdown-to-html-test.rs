@@ -1,46 +1,31 @@
+mod common;
 use vurst_markdown_node::markdown_to_html::{
-    extract_markdown_urls_sync, render_markdown_to_html_with_options, MarkdownRenderOptions,
+    extract_markdown_urls_sync, render_markdown_to_html_with_options,
 };
-
-fn default_opts() -> MarkdownRenderOptions {
-    MarkdownRenderOptions {
-        proxy_images: false,
-        ..MarkdownRenderOptions::default()
-    }
-}
-
-fn admin_opts() -> MarkdownRenderOptions {
-    MarkdownRenderOptions {
-        allow_html: true,
-        nofollow_links: false,
-        proxy_images: false,
-        ..MarkdownRenderOptions::default()
-    }
-}
 
 #[test]
 fn renders_basic_paragraph() {
-    let result = render_markdown_to_html_with_options("Hello world", &default_opts());
+    let result = render_markdown_to_html_with_options("Hello world", &common::default_opts());
     assert!(result.contains("<p>Hello world</p>"));
 }
 
 #[test]
 fn escapes_raw_html() {
-    let result = render_markdown_to_html_with_options("<strong>Hi</strong>", &default_opts());
+    let result = render_markdown_to_html_with_options("<strong>Hi</strong>", &common::default_opts());
     assert!(!result.contains("<strong>Hi</strong>"));
     assert!(result.contains("&lt;strong&gt;Hi&lt;/strong&gt;"));
 }
 
 #[test]
 fn admin_passes_raw_html() {
-    let result = render_markdown_to_html_with_options("<strong>Hi</strong>", &admin_opts());
+    let result = render_markdown_to_html_with_options("<strong>Hi</strong>", &common::admin_opts());
     assert!(result.contains("<strong>Hi</strong>"));
 }
 
 #[test]
 fn external_link_gets_rel_and_target() {
     let result =
-        render_markdown_to_html_with_options("[Example](https://example.com)", &default_opts());
+        render_markdown_to_html_with_options("[Example](https://example.com)", &common::default_opts());
     assert!(result.contains(r#"rel="nofollow ugc noopener""#));
     assert!(result.contains(r#"target="_blank""#));
     assert!(result.contains(r#"href="https://example.com""#));
@@ -48,7 +33,7 @@ fn external_link_gets_rel_and_target() {
 
 #[test]
 fn internal_link_no_rel() {
-    let result = render_markdown_to_html_with_options("[Page](/path)", &default_opts());
+    let result = render_markdown_to_html_with_options("[Page](/path)", &common::default_opts());
     assert!(result.contains(r#"href="/path""#));
     assert!(!result.contains("nofollow"));
     assert!(!result.contains("target="));
@@ -58,7 +43,7 @@ fn internal_link_no_rel() {
 fn relative_links_with_colons_after_boundaries_are_preserved() {
     let result = render_markdown_to_html_with_options(
         "[redirect](/login?url=http://example.com) [path](./path:with:colons) [fragment](#redirect:https://example.com)",
-        &default_opts(),
+        &common::default_opts(),
     );
     assert!(result.contains(r#"href="/login?url=http://example.com""#));
     assert!(result.contains(r#"href="./path:with:colons""#));
@@ -67,7 +52,7 @@ fn relative_links_with_colons_after_boundaries_are_preserved() {
 
 #[test]
 fn bare_unknown_colon_scheme_href_removed() {
-    let result = render_markdown_to_html_with_options("[path](path:with:colons)", &default_opts());
+    let result = render_markdown_to_html_with_options("[path](path:with:colons)", &common::default_opts());
     assert!(result.contains("path"));
     assert!(!result.contains(r#"href=""#));
 }
@@ -75,7 +60,7 @@ fn bare_unknown_colon_scheme_href_removed() {
 #[test]
 fn javascript_link_href_removed() {
     let result =
-        render_markdown_to_html_with_options("[Click](javascript:alert(1))", &default_opts());
+        render_markdown_to_html_with_options("[Click](javascript:alert(1))", &common::default_opts());
     assert!(result.contains("Click"));
     assert!(!result.contains("javascript:"));
     assert!(!result.contains(r#"href=""#));
@@ -83,7 +68,7 @@ fn javascript_link_href_removed() {
 
 #[test]
 fn ws_link_href_removed() {
-    let result = render_markdown_to_html_with_options("[WS](ws://evil.com)", &default_opts());
+    let result = render_markdown_to_html_with_options("[WS](ws://evil.com)", &common::default_opts());
     assert!(result.contains("WS"));
     assert!(!result.contains("ws://"));
 }
@@ -91,7 +76,7 @@ fn ws_link_href_removed() {
 #[test]
 fn data_image_src_removed() {
     let result =
-        render_markdown_to_html_with_options("![img](data:image/png;base64,abc)", &default_opts());
+        render_markdown_to_html_with_options("![img](data:image/png;base64,abc)", &common::default_opts());
     assert!(!result.contains("data:"));
 }
 
@@ -99,7 +84,7 @@ fn data_image_src_removed() {
 fn https_image_src_preserved() {
     let result = render_markdown_to_html_with_options(
         "![img](https://example.com/img.png)",
-        &default_opts(),
+        &common::default_opts(),
     );
     assert!(result.contains(r#"src="https://example.com/img.png""#));
 }
@@ -152,7 +137,7 @@ fn extracts_relative_urls_with_colons_after_boundaries() {
 #[test]
 fn digit_first_scheme_href_removed() {
     let result =
-        render_markdown_to_html_with_options("[link](1abc://attacker.com)", &default_opts());
+        render_markdown_to_html_with_options("[link](1abc://attacker.com)", &common::default_opts());
     assert!(
         !result.contains("href="),
         "digit-first scheme should be rejected"
@@ -162,28 +147,28 @@ fn digit_first_scheme_href_removed() {
 #[test]
 fn protocol_relative_link_href_removed() {
     let result =
-        render_markdown_to_html_with_options("[link](//attacker.com/path)", &default_opts());
+        render_markdown_to_html_with_options("[link](//attacker.com/path)", &common::default_opts());
     assert!(
         !result.contains("href="),
         "protocol-relative URL should be rejected"
     );
 
     let result2 =
-        render_markdown_to_html_with_options("[link](\\attacker.com/path)", &default_opts());
+        render_markdown_to_html_with_options("[link](\\attacker.com/path)", &common::default_opts());
     assert!(
         !result2.contains("href="),
         "protocol-relative URL starting with \\ should be rejected"
     );
 
     let result3 =
-        render_markdown_to_html_with_options("[link](/\\attacker.com/path)", &default_opts());
+        render_markdown_to_html_with_options("[link](/\\attacker.com/path)", &common::default_opts());
     assert!(
         !result3.contains("href="),
         "protocol-relative URL starting with /\\ should be rejected"
     );
 
     let result4 =
-        render_markdown_to_html_with_options("[link](/attacker.com/path)", &default_opts());
+        render_markdown_to_html_with_options("[link](/attacker.com/path)", &common::default_opts());
     assert!(
         result4.contains("href="),
         "valid relative URL starting with / should be allowed"
@@ -193,21 +178,21 @@ fn protocol_relative_link_href_removed() {
 #[test]
 fn protocol_relative_image_src_removed() {
     let result =
-        render_markdown_to_html_with_options("![img](//attacker.com/img.jpg)", &default_opts());
+        render_markdown_to_html_with_options("![img](//attacker.com/img.jpg)", &common::default_opts());
     assert!(
         !result.contains("src="),
         "protocol-relative image URL should be rejected"
     );
 
     let result2 =
-        render_markdown_to_html_with_options("![img](\\attacker.com/img.jpg)", &default_opts());
+        render_markdown_to_html_with_options("![img](\\attacker.com/img.jpg)", &common::default_opts());
     assert!(
         !result2.contains("src="),
         "protocol-relative image URL starting with \\ should be rejected"
     );
 
     let result3 =
-        render_markdown_to_html_with_options("![img](/\\attacker.com/img.jpg)", &default_opts());
+        render_markdown_to_html_with_options("![img](/\\attacker.com/img.jpg)", &common::default_opts());
     assert!(
         !result3.contains("src="),
         "protocol-relative image URL starting with /\\ should be rejected"
@@ -218,7 +203,7 @@ fn protocol_relative_image_src_removed() {
 fn bang_prefixed_same_site_post_url_keeps_bang_and_autolinks_url() {
     let result = render_markdown_to_html_with_options(
         "!https://example.com/discussion/test-post",
-        &default_opts(),
+        &common::default_opts(),
     );
     assert!(result.contains("!<a "));
     assert!(result.contains(r#"href="https://example.com/discussion/test-post""#));
@@ -228,7 +213,7 @@ fn bang_prefixed_same_site_post_url_keeps_bang_and_autolinks_url() {
 fn bang_prefixed_same_site_comment_url_keeps_bang_and_autolinks_url() {
     let result = render_markdown_to_html_with_options(
         "!https://example.com/discussion/root-post/comment/019c64e6-f720-7001-a001-000000000010",
-        &default_opts(),
+        &common::default_opts(),
     );
     assert!(result.contains("!<a "));
     assert!(result.contains(

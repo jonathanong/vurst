@@ -1,35 +1,27 @@
+mod common;
 use vurst_markdown_node::markdown_to_html::{
-    render_markdown_to_html_with_options, MarkdownRenderOptions,
+    render_markdown_to_html_with_options,
 };
-
-fn admin_opts() -> MarkdownRenderOptions {
-    MarkdownRenderOptions {
-        allow_html: true,
-        nofollow_links: false,
-        proxy_images: false,
-        ..MarkdownRenderOptions::default()
-    }
-}
 
 #[test]
 fn allows_safe_formatting_tags() {
     let result = render_markdown_to_html_with_options(
         "<p><strong>bold</strong> and <em>italic</em></p>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(result.contains("<p><strong>bold</strong> and <em>italic</em></p>"));
 }
 
 #[test]
 fn renders_empty_admin_html_as_empty_output() {
-    assert_eq!(render_markdown_to_html_with_options("", &admin_opts()), "");
+    assert_eq!(render_markdown_to_html_with_options("", &common::admin_opts()), "");
 }
 
 #[test]
 fn strips_script_tags() {
     let result = render_markdown_to_html_with_options(
         "<p>safe</p><script>alert('xss')</script>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(result.contains("<p>safe</p>"));
     assert!(!result.contains("<script>"));
@@ -40,7 +32,7 @@ fn strips_script_tags() {
 fn strips_iframe_tags() {
     let result = render_markdown_to_html_with_options(
         "<p>text</p><iframe src=\"https://evil.com\"></iframe>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(result.contains("<p>text</p>"));
     assert!(!result.contains("<iframe"));
@@ -50,7 +42,7 @@ fn strips_iframe_tags() {
 fn strips_style_tags() {
     let result = render_markdown_to_html_with_options(
         "<p>text</p><style>body{display:none}</style>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(result.contains("<p>text</p>"));
     assert!(!result.contains("<style>"));
@@ -60,7 +52,7 @@ fn strips_style_tags() {
 #[test]
 fn strips_event_handlers() {
     let result =
-        render_markdown_to_html_with_options("<p onclick=\"alert('xss')\">text</p>", &admin_opts());
+        render_markdown_to_html_with_options("<p onclick=\"alert('xss')\">text</p>", &common::admin_opts());
     assert!(result.contains("<p>text</p>"));
     assert!(!result.contains("onclick"));
 }
@@ -68,7 +60,7 @@ fn strips_event_handlers() {
 #[test]
 fn strips_style_attribute() {
     let result =
-        render_markdown_to_html_with_options("<p style=\"color:red\">text</p>", &admin_opts());
+        render_markdown_to_html_with_options("<p style=\"color:red\">text</p>", &common::admin_opts());
     assert!(result.contains("<p>text</p>"));
     assert!(!result.contains("style="));
 }
@@ -77,7 +69,7 @@ fn strips_style_attribute() {
 fn strips_javascript_url_in_href() {
     let result = render_markdown_to_html_with_options(
         "<a href=\"javascript:alert('xss')\">click</a>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(result.contains("click"));
     assert!(!result.contains("javascript:"));
@@ -87,7 +79,7 @@ fn strips_javascript_url_in_href() {
 fn strips_data_url_in_img() {
     let result = render_markdown_to_html_with_options(
         "<img src=\"data:image/png;base64,abc\">",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(!result.contains("data:"));
 }
@@ -96,7 +88,7 @@ fn strips_data_url_in_img() {
 fn allows_class_and_id_attrs() {
     let result = render_markdown_to_html_with_options(
         "<div class=\"container\" id=\"main\">text</div>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(result.contains("class=\"container\""));
     assert!(result.contains("id=\"main\""));
@@ -105,7 +97,7 @@ fn allows_class_and_id_attrs() {
 #[test]
 fn strips_unknown_attributes() {
     let result =
-        render_markdown_to_html_with_options("<p aria-label=\"ignored\">text</p>", &admin_opts());
+        render_markdown_to_html_with_options("<p aria-label=\"ignored\">text</p>", &common::admin_opts());
     assert!(result.contains("<p>text</p>"));
     assert!(!result.contains("aria-label"));
 }
@@ -114,7 +106,7 @@ fn strips_unknown_attributes() {
 fn allows_table_structure() {
     let result = render_markdown_to_html_with_options(
         "<table><thead><tr><th>H</th></tr></thead><tbody><tr><td>D</td></tr></tbody></table>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(result.contains("<table>"));
     assert!(result.contains("<th>H</th>"));
@@ -125,7 +117,7 @@ fn allows_table_structure() {
 fn allows_details_summary() {
     let result = render_markdown_to_html_with_options(
         "<details><summary>Click</summary>Content</details>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(result.contains("<details>"));
     assert!(result.contains("<summary>Click</summary>"));
@@ -135,7 +127,7 @@ fn allows_details_summary() {
 fn strips_form_elements() {
     let result = render_markdown_to_html_with_options(
         "<form action=\"/\"><input type=\"text\"><button>Submit</button></form>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(!result.contains("<form"));
     assert!(!result.contains("<input"));
@@ -145,7 +137,7 @@ fn strips_form_elements() {
 #[test]
 fn unwraps_unknown_tags() {
     let result =
-        render_markdown_to_html_with_options("<custom>preserved text</custom>", &admin_opts());
+        render_markdown_to_html_with_options("<custom>preserved text</custom>", &common::admin_opts());
     assert!(result.contains("preserved text"));
     assert!(!result.contains("<custom>"));
 }
@@ -153,25 +145,25 @@ fn unwraps_unknown_tags() {
 #[test]
 fn allows_anchor_fragment_links() {
     let result =
-        render_markdown_to_html_with_options("<a href=\"#section\">jump</a>", &admin_opts());
+        render_markdown_to_html_with_options("<a href=\"#section\">jump</a>", &common::admin_opts());
     assert!(result.contains("href=\"#section\""));
 }
 
 #[test]
 fn allows_relative_path_links() {
     let result =
-        render_markdown_to_html_with_options("<a href=\"../other\">relative</a>", &admin_opts());
+        render_markdown_to_html_with_options("<a href=\"../other\">relative</a>", &common::admin_opts());
     assert!(result.contains("href=\"../other\""));
 
     let result2 =
-        render_markdown_to_html_with_options("<a href=\"./page\">current</a>", &admin_opts());
+        render_markdown_to_html_with_options("<a href=\"./page\">current</a>", &common::admin_opts());
     assert!(result2.contains("href=\"./page\""));
 }
 
 #[test]
 fn allows_query_string_links() {
     let result =
-        render_markdown_to_html_with_options("<a href=\"?sort=new\">sort</a>", &admin_opts());
+        render_markdown_to_html_with_options("<a href=\"?sort=new\">sort</a>", &common::admin_opts());
     assert!(result.contains("href=\"?sort=new\""));
 }
 
@@ -179,7 +171,7 @@ fn allows_query_string_links() {
 fn allows_relative_admin_links_with_colons_after_boundaries() {
     let result = render_markdown_to_html_with_options(
         "<a href=\"/login?url=http://example.com\">redirect</a><a href=\"./path:with:colons\">path</a>",
-        &admin_opts(),
+        &common::admin_opts(),
     );
     assert!(result.contains("href=\"/login?url=http://example.com\""));
     assert!(result.contains("href=\"./path:with:colons\""));
@@ -188,13 +180,13 @@ fn allows_relative_admin_links_with_colons_after_boundaries() {
 #[test]
 fn allows_tel_links() {
     let result =
-        render_markdown_to_html_with_options("<a href=\"tel:+123456789\">call</a>", &admin_opts());
+        render_markdown_to_html_with_options("<a href=\"tel:+123456789\">call</a>", &common::admin_opts());
     assert!(result.contains("href=\"tel:+123456789\""));
 }
 
 #[test]
 fn rejects_protocol_relative_urls_in_admin_html() {
     let result =
-        render_markdown_to_html_with_options("<a href=\"//attacker.com\">bad</a>", &admin_opts());
+        render_markdown_to_html_with_options("<a href=\"//attacker.com\">bad</a>", &common::admin_opts());
     assert!(!result.contains("//attacker.com"));
 }
