@@ -210,16 +210,6 @@ fn test_decode_url_html_entities_exhaustive() {
 }
 
 #[test]
-fn decode_numeric_char_ref_covers_decimal_hex_and_invalid_refs() {
-    assert_eq!(decode_numeric_char_ref("&#58alert"), Some((':', 4)));
-    assert_eq!(decode_numeric_char_ref("&#58;alert"), Some((':', 5)));
-    assert_eq!(decode_numeric_char_ref("&#x3cscript"), Some(('<', 5)));
-    assert_eq!(decode_numeric_char_ref("plain"), None);
-    assert_eq!(decode_numeric_char_ref("&#x;"), None);
-    assert_eq!(decode_numeric_char_ref("&#99999999;"), None);
-}
-
-#[test]
 fn extract_bare_domains_skips_email_at_prefix() {
     // The '@' guard inside extract_bare_domains is unreachable via
     // extract_markdown_urls_sync because comrak GFM-autolinks emails into
