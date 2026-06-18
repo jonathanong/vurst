@@ -114,7 +114,7 @@ fn lookup_named_html_entity(entity: &str) -> Option<&'static str> {
 
 fn decode_html_entities_once(text: &str) -> String {
     HTML_ENTITY_RE
-        .replace_all(text, |caps: &regex::Captures| {
+        .replace_all(text, |caps: &regex::Captures| -> std::borrow::Cow<'static, str> {
             let m = &caps[0];
             let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
             let entity = if legacy_tail.is_empty() {
@@ -124,11 +124,14 @@ fn decode_html_entities_once(text: &str) -> String {
             };
 
             if let Some(replacement) = lookup_named_html_entity(entity) {
-                return format!("{replacement}{legacy_tail}");
+                if legacy_tail.is_empty() {
+                    return std::borrow::Cow::Borrowed(replacement);
+                }
+                return std::borrow::Cow::Owned(format!("{replacement}{legacy_tail}"));
             }
 
             if !entity.ends_with(';') {
-                return m.to_string();
+                return std::borrow::Cow::Owned(m.to_string());
             }
 
             let inner = &entity[1..entity.len() - 1];
@@ -139,7 +142,7 @@ fn decode_html_entities_once(text: &str) -> String {
                 return u32::from_str_radix(digits, 16)
                     .ok()
                     .and_then(char::from_u32)
-                    .map_or_else(|| m.to_string(), |c| c.to_string());
+                    .map_or_else(|| std::borrow::Cow::Owned(m.to_string()), |c| std::borrow::Cow::Owned(c.to_string()));
             }
 
             if let Some(digits) = inner.strip_prefix('#') {
@@ -147,10 +150,10 @@ fn decode_html_entities_once(text: &str) -> String {
                     .parse::<u32>()
                     .ok()
                     .and_then(char::from_u32)
-                    .map_or_else(|| m.to_string(), |c| c.to_string());
+                    .map_or_else(|| std::borrow::Cow::Owned(m.to_string()), |c| std::borrow::Cow::Owned(c.to_string()));
             }
 
-            m.to_string()
+            std::borrow::Cow::Owned(m.to_string())
         })
         .into_owned()
 }

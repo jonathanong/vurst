@@ -44,3 +44,6 @@
 ## 2025-02-13 - O(1) Perfect Hashing for HTML Tag Lookups
 **Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | b"tag2"`) is heavily optimized by the compiler into an O(1) jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
 **Action:** When searching a static, known list of strings (where case-insensitivity is needed), copy the string's bytes into a small stack-allocated buffer (`[0u8; MAX_LEN]`), lowercase them, and `match` on the slice bounds instead of using `.iter().any()`.
+## 2025-01-08 - Zero-Allocation Regex Replacements
+**Learning:** In Rust, `regex::Regex::replace_all` closure can return `Cow<'static, str>`. This allows returning a zero-allocation `Cow::Borrowed(&'static str)` for static string replacements, bypassing the allocation overhead of `format!()` or `.to_string()` while satisfying the `regex::Captures` lifetime requirements safely.
+**Action:** When performing `replace_all` with known, static replacement strings, explicitly set the closure return type to `Cow<'static, str>` and use `Cow::Borrowed(static_str)` for matches instead of returning allocated `String`s.
