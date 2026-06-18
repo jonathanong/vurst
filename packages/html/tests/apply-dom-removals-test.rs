@@ -1,6 +1,6 @@
-use vurst_html_node::{apply_dom_removals_to_html, ExtractDomRemovalsResult};
 use napi::bindgen_prelude::Buffer;
 use tokio::runtime::Runtime;
+use vurst_html_node::{apply_dom_removals_to_html, ExtractDomRemovalsResult};
 
 #[test]
 fn test_invalid_utf8_in_apply_dom_removals() {
