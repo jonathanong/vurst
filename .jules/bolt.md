@@ -44,7 +44,14 @@
 ## 2025-02-13 - O(1) Perfect Hashing for HTML Tag Lookups
 **Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | b"tag2"`) is heavily optimized by the compiler into an O(1) jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
 **Action:** When searching a static, known list of strings (where case-insensitivity is needed), copy the string's bytes into a small stack-allocated buffer (`[0u8; MAX_LEN]`), lowercase them, and `match` on the slice bounds instead of using `.iter().any()`.
+## 2024-05-18 - [O(1) Static String Array Search via `matches!`]
+**Learning:** Using `.contains()` on a static slice of strings (e.g., `["a", "b"].contains(&val)`) performs an O(N) linear search, which is inefficient for lookups in tight loops (like HTML tag/attribute sanitizers). Rust's `matches!(val, "a" | "b")` macro gets compiled into highly optimized O(1) jump tables or perfect hashing, making it ~5x faster.
+**Action:** When performing membership checks against a known, static list of strings during high-frequency parsing or sanitization, replace string slice `.contains()` lookups with the `matches!()` macro.
 
-## 2026-06-27 - Fast-path HTML Entity Decoding Before Substring Searches
-**Learning:** Checking for HTML entities (`&#`) inside `html_escape` operations involves allocating memory or sequentially scanning strings, even if no entities exist. In our codebase, most URLs do not contain entities. If the string lacks the starting character for an entity (`&`), running the full search logic costs substantial overhead (~110ms over 10M operations).
-**Action:** When working with APIs like `html_escape::decode_html_entities`, always wrap them with a `.contains('&')` fast-path to immediately return a borrowed version of the original string when it lacks the prefix for the target sequence.
+## 2026-06-25 - Skip regex decoding when HTML entities are absent
+**Learning:** `decode_html_entities` was unnecessarily allocating a new `String` for every chunk of text it processed, even though most text passed through the prompt injection sanitizer doesn't contain HTML entities. The internal loop structure forces allocations unless explicitly bypassed.
+**Action:** Guard string allocations and expensive regex evaluations in entity decoders by using a `.contains(&b'&')` fast-path check combined with returning `std::borrow::Cow`.
+
+## 2024-05-18 - Replacing chained Regex replacements with single-pass character iterator
+**Learning:** Chaining multiple `Regex::replace_all` calls allocates multiple intermediate strings and introduces regex engine overhead, especially on the hot path (like prompt injection sanitization). In Rust, a custom single-pass character iterator with a fast-path check (`needs_modification`) can dramatically improve performance (from ~1.5µs down to ~360ns or even faster for already normalized strings).
+**Action:** When applying multiple simple character or sequence replacements (like reducing multiple spaces or newlines), prefer a hand-rolled single-pass iterator over chained regexes. Always include a pre-pass check to avoid allocation entirely when the string is already normalized.

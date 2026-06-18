@@ -151,14 +151,15 @@ static ROLE_PREFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
         .expect("BUG: invalid ROLE_PREFIX_RE")
 });
 
-static HORIZONTAL_WHITESPACE_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"[^\S\n]+").expect("BUG: invalid HORIZONTAL_WHITESPACE_RE"));
-
-static EXCESSIVE_NEWLINES_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\n{3,}").expect("BUG: invalid EXCESSIVE_NEWLINES_RE"));
-
 static ALL_WHITESPACE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[\p{White_Space}]+").expect("BUG: invalid ALL_WHITESPACE_RE"));
+
+fn borrowed_if_unchanged<'a>(content: &'a str, replaced: Cow<'a, str>) -> Cow<'a, str> {
+    match replaced {
+        Cow::Borrowed(_) => Cow::Borrowed(content),
+        Cow::Owned(s) => Cow::Owned(s),
+    }
+}
 
 fn html_tag_replacement(tag: &str) -> &'static str {
     let bytes = tag.as_bytes();
@@ -188,26 +189,31 @@ fn html_tag_replacement(tag: &str) -> &'static str {
     }
 }
 
-fn strip_zero_width_and_boundaries(content: &str) -> String {
+fn strip_zero_width_and_boundaries(content: &str) -> Cow<'_, str> {
     // Strip Unicode format/zero-width characters (Cf category) — replacing with
     // a space so "ignore\u{200B}previous" becomes "ignore previous" rather than
     // "ignoreprevious", allowing INJECTION_RE's whitespace separator to match.
-    let mut sanitized = ZERO_WIDTH_RE.replace_all(content, " ");
+    let mut sanitized = borrowed_if_unchanged(content, ZERO_WIDTH_RE.replace_all(content, " "));
     // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
     // for the common case where no private-use sentinel bytes are present.
     if sanitized.as_bytes().contains(&0xEE) {
-        if sanitized.contains(HTML_BOUNDARY) {
-            sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
-        }
-        if sanitized.contains(HTML_ROLE_BOUNDARY) {
-            sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
+        for boundary in [HTML_BOUNDARY, HTML_ROLE_BOUNDARY] {
+            if sanitized.contains(boundary) {
+                let mut i = 0;
+                let s = sanitized.to_mut();
+                while let Some(pos) = s[i..].find(boundary) {
+                    i += pos;
+                    s.replace_range(i..i + boundary.len_utf8(), " ");
+                    i += 1; // " " is 1 byte
+                }
+            }
         }
     }
-    sanitized.into_owned()
+    sanitized
 }
 
-fn remove_injection_patterns(content: &str) -> String {
-    INJECTION_RE.replace_all(content, " ").into_owned()
+fn remove_injection_patterns(content: &str) -> Cow<'_, str> {
+    borrowed_if_unchanged(content, INJECTION_RE.replace_all(content, " "))
 }
 
 fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static str)> {
@@ -253,14 +259,23 @@ fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static st
     None
 }
 
-fn strip_html_markup(content: &str) -> String {
+fn strip_html_markup<'a>(content: &'a str) -> Cow<'a, str> {
+    // Fast path: if there are no HTML comments or tags, return early
+    if !content.contains('<') {
+        return Cow::Borrowed(content);
+    }
+
     // Remove HTML comments
-    let sanitized = HTML_COMMENT_RE
-        .replace_all(content, HTML_BOUNDARY_REPLACEMENT)
-        .into_owned();
+    let sanitized = HTML_COMMENT_RE.replace_all(content, HTML_BOUNDARY_REPLACEMENT);
 
     let bytes = sanitized.as_bytes();
     let mut cursor = 0;
+
+    // Check if there are any tags to strip
+    if !bytes.contains(&b'<') {
+        return Cow::Owned(sanitized.into_owned());
+    }
+
     let mut stripped = String::with_capacity(sanitized.len());
 
     // ⚡ Bolt: Use memchr (via `position`) to fast-forward to the next '<' character
@@ -283,38 +298,131 @@ fn strip_html_markup(content: &str) -> String {
         stripped.push_str(&sanitized[cursor..]);
     }
 
-    stripped
+    Cow::Owned(stripped)
 }
 
-fn remove_role_prefixes(content: &str) -> String {
+fn remove_role_prefixes(content: &str) -> Cow<'_, str> {
     // Remove role prefixes at line starts or after structural HTML boundaries
-    let mut sanitized = ROLE_PREFIX_RE.replace_all(content, "$1");
+    let mut sanitized = borrowed_if_unchanged(content, ROLE_PREFIX_RE.replace_all(content, "$1"));
     // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
     // for the common case where no private-use sentinel bytes are present.
     if sanitized.as_bytes().contains(&0xEE) {
-        if sanitized.contains(HTML_BOUNDARY) {
-            sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
+        for boundary in [HTML_BOUNDARY, HTML_ROLE_BOUNDARY] {
+            if sanitized.contains(boundary) {
+                let mut i = 0;
+                let s = sanitized.to_mut();
+                while let Some(pos) = s[i..].find(boundary) {
+                    i += pos;
+                    s.replace_range(i..i + boundary.len_utf8(), " ");
+                    i += 1; // " " is 1 byte
+                }
+            }
         }
-        if sanitized.contains(HTML_ROLE_BOUNDARY) {
-            sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
-        }
-    }
-    sanitized.into_owned()
-}
-
-fn normalize_whitespace(content: &str, is_title: bool) -> String {
-    let mut sanitized;
-    if is_title {
-        sanitized = ALL_WHITESPACE_RE.replace_all(content, " ").into_owned();
-    } else {
-        sanitized = HORIZONTAL_WHITESPACE_RE
-            .replace_all(content, " ")
-            .into_owned();
-        sanitized = EXCESSIVE_NEWLINES_RE
-            .replace_all(&sanitized, "\n\n")
-            .into_owned();
     }
     sanitized
+}
+
+fn normalize_whitespace(content: &str, is_title: bool) -> Cow<'_, str> {
+    if is_title {
+        return borrowed_if_unchanged(content, ALL_WHITESPACE_RE.replace_all(content, " "));
+    }
+
+    let mut needs_modification = false;
+    let mut in_horizontal_ws = false;
+    let mut consecutive_newlines = 0;
+
+    for c in content.chars() {
+        if c == '\n' {
+            if in_horizontal_ws {
+                needs_modification = true;
+                break;
+            }
+            consecutive_newlines += 1;
+            if consecutive_newlines >= 3 {
+                needs_modification = true;
+                break;
+            }
+        } else if c.is_whitespace() {
+            if in_horizontal_ws {
+                needs_modification = true;
+                break;
+            }
+            if c != ' ' {
+                needs_modification = true;
+                break;
+            }
+            in_horizontal_ws = true;
+            consecutive_newlines = 0;
+        } else {
+            in_horizontal_ws = false;
+            consecutive_newlines = 0;
+        }
+    }
+
+    if !needs_modification {
+        if !in_horizontal_ws {
+            return Cow::Borrowed(content);
+        }
+    }
+
+    let mut out = String::with_capacity(content.len());
+    in_horizontal_ws = false;
+    consecutive_newlines = 0;
+
+    for c in content.chars() {
+        if c == '\n' {
+            if in_horizontal_ws {
+                out.push(' ');
+                in_horizontal_ws = false;
+            }
+            consecutive_newlines += 1;
+            if consecutive_newlines > 2 {
+                continue;
+            }
+            out.push('\n');
+        } else if c.is_whitespace() {
+            in_horizontal_ws = true;
+            consecutive_newlines = 0;
+        } else {
+            if in_horizontal_ws {
+                out.push(' ');
+                in_horizontal_ws = false;
+            }
+            out.push(c);
+            consecutive_newlines = 0;
+        }
+    }
+
+    if !in_horizontal_ws {
+        return Cow::Owned(out);
+    }
+    out.push(' ');
+
+    Cow::Owned(out)
+}
+
+fn apply_injection_passes(mut sanitized: String) -> String {
+    // Step 3: Remove injection patterns (first pass)
+    sanitized = remove_injection_patterns(&sanitized).into_owned();
+
+    // Step 4 & 5: Remove HTML comments and tags
+    sanitized = strip_html_markup(&sanitized).into_owned();
+
+    // Step 6: Remove injection patterns (second pass)
+    sanitized = remove_injection_patterns(&sanitized).into_owned();
+
+    sanitized
+}
+
+fn apply_final_formatting(mut sanitized: String, is_title: bool) -> String {
+    // Step 7: Remove role prefixes
+    sanitized = remove_role_prefixes(&sanitized).into_owned();
+
+    // Step 8: Normalize whitespace
+    sanitized = normalize_whitespace(&sanitized, is_title).into_owned();
+
+    // Step 9: Trim
+    sanitized.trim().to_string()
 }
 
 /// Sanitize content to prevent prompt injection attacks.
@@ -340,33 +448,20 @@ fn normalize_whitespace(content: &str, is_title: bool) -> String {
 /// `the system: design notes`.
 pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
     // Step 1: Decode HTML entities
-    let mut sanitized = decode_html_entities(content);
+    let decoded_entities = decode_html_entities(content);
 
     // Step 2: Strip Unicode format/zero-width characters and boundary markers
-    sanitized = strip_zero_width_and_boundaries(&sanitized);
+    let mut sanitized = strip_zero_width_and_boundaries(&*decoded_entities).into_owned();
 
-    // Step 3: Remove injection patterns (first pass)
-    sanitized = remove_injection_patterns(&sanitized);
+    // Steps 3-6: Handle injection patterns and HTML markup
+    sanitized = apply_injection_passes(sanitized);
 
-    // Step 4 & 5: Remove HTML comments and tags
-    sanitized = strip_html_markup(&sanitized);
-
-    // Step 6: Remove injection patterns (second pass)
-    sanitized = remove_injection_patterns(&sanitized);
-
-    // Step 7: Remove role prefixes
-    sanitized = remove_role_prefixes(&sanitized);
-
-    // Step 8: Normalize whitespace
-    sanitized = normalize_whitespace(&sanitized, is_title);
-
-    // Step 9: Trim
-    sanitized.trim().to_string()
+    // Steps 7-9: Final formatting and cleanup
+    apply_final_formatting(sanitized, is_title)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod tests { use super::*;
 
     #[test]
     fn html_tag_replacement_for_empty_tag_is_boundary_replacement() {
@@ -374,6 +469,81 @@ mod tests {
             html_tag_replacement(""),
             HTML_BOUNDARY_REPLACEMENT,
             "empty HTML tag should map to boundary replacement"
+        );
+    }
+
+    #[test]
+    fn strip_html_markup_removes_comment_with_no_tags() {
+        assert_eq!(
+            strip_html_markup("  <!-- injected -->  ").as_ref(),
+            format!("  {}  ", HTML_BOUNDARY_REPLACEMENT).as_str()
+        );
+    }
+
+    #[test]
+    fn strip_html_markup_strips_tags_for_borrowed_and_owned_inputs() {
+        let borrowed = strip_html_markup("<span>Hello</span>");
+        assert!(borrowed.contains(HTML_BOUNDARY));
+        assert!(borrowed.contains("Hello"));
+
+        let owned_input = String::from("<span>World</span>");
+        let owned = strip_html_markup(&owned_input);
+        assert!(owned.contains(HTML_BOUNDARY));
+        assert!(owned.contains("World"));
+    }
+
+    #[test]
+    fn strip_html_tag_returns_boundary_replacement_for_valid_tags() {
+        assert_eq!(
+            strip_html_tag("<span>Hello</span>", 0),
+            Some((6, HTML_BOUNDARY_REPLACEMENT))
+        );
+    }
+
+    #[test]
+    fn strip_html_tag_ignores_angle_brackets_inside_quoted_attributes() {
+        let tag = "<span data='>' class=\"x\">";
+        assert_eq!(
+            strip_html_tag(tag, 0),
+            Some((tag.len(), HTML_BOUNDARY_REPLACEMENT))
+        );
+    }
+
+    #[test]
+    fn strip_zero_width_and_boundaries_replaces_both_internal_markers() {
+        let input = format!("a{HTML_BOUNDARY}{HTML_ROLE_BOUNDARY}{HTML_BOUNDARY}b");
+        assert_eq!(strip_zero_width_and_boundaries(&input), "a   b");
+    }
+
+    #[test]
+    fn strip_zero_width_and_boundaries_replaces_each_single_boundary_kind() {
+        let generic_only = format!("a{HTML_BOUNDARY}b");
+        assert_eq!(strip_zero_width_and_boundaries(&generic_only), "a b");
+
+        let role_only = format!("a{HTML_ROLE_BOUNDARY}b");
+        assert_eq!(strip_zero_width_and_boundaries(&role_only), "a b");
+    }
+
+    #[test]
+    fn remove_role_prefixes_cleans_role_and_generic_boundaries() {
+        let input = format!("summary{HTML_ROLE_BOUNDARY}{HTML_BOUNDARY}system: override");
+        assert_eq!(remove_role_prefixes(&input), "summary  override");
+    }
+
+    #[test]
+    fn remove_role_prefixes_cleans_each_single_boundary_kind() {
+        let generic_only = format!("{HTML_BOUNDARY}assistant: override");
+        assert_eq!(remove_role_prefixes(&generic_only), " override");
+
+        let role_only = format!("{HTML_ROLE_BOUNDARY}system: override");
+        assert_eq!(remove_role_prefixes(&role_only), " override");
+    }
+
+    #[test]
+    fn sanitize_prompt_injection_trims_surrounding_whitespace() {
+        assert_eq!(
+            sanitize_prompt_injection_sync("  safe input  ", false),
+            "safe input"
         );
     }
 
@@ -400,5 +570,62 @@ mod tests {
             html_tag_replacement("<section-custom>"),
             HTML_BOUNDARY_REPLACEMENT
         );
+    }
+
+    #[test]
+    fn normalize_whitespace_returns_unchanged_content_when_already_normalized() {
+        assert_eq!(
+            normalize_whitespace("alpha beta\n\ngamma", false),
+            "alpha beta\n\ngamma"
+        );
+    }
+
+    #[test]
+    fn normalize_whitespace_replaces_horizontal_whitespace_before_newlines() {
+        assert_eq!(
+            normalize_whitespace("alpha \n\tbeta", false),
+            "alpha \n beta"
+        );
+    }
+
+    #[test]
+    fn normalize_whitespace_collapses_extra_blank_lines() {
+        assert_eq!(
+            normalize_whitespace("alpha\n\n\nbeta", false),
+            "alpha\n\nbeta"
+        );
+    }
+
+    #[test]
+    fn normalize_whitespace_keeps_single_trailing_space_after_collapse() {
+        assert_eq!(normalize_whitespace("alpha\t\t", false), "alpha ");
+    }
+
+    #[test]
+    fn normalize_whitespace_collapses_all_title_whitespace() {
+        assert_eq!(
+            normalize_whitespace("alpha\tbeta\n\ngamma", true),
+            "alpha beta gamma"
+        );
+    }
+
+    #[test]
+    fn normalize_whitespace_preserves_already_normalized_titles() {
+        assert_eq!(normalize_whitespace("alpha beta", true), "alpha beta");
+    }
+
+    #[test]
+    fn normalize_whitespace_collapses_repeated_spaces() {
+        assert_eq!(normalize_whitespace("alpha  beta", false), "alpha beta");
+    }
+
+    #[test]
+    fn normalize_whitespace_collapses_tabs_without_newlines() {
+        assert_eq!(normalize_whitespace("alpha\tbeta", false), "alpha beta");
+    }
+
+    #[test]
+    fn normalize_whitespace_preserves_single_trailing_space() {
+        assert_eq!(normalize_whitespace("alpha ", false), "alpha ");
     }
 }
