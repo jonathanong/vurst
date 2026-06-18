@@ -1,2 +1,2 @@
-pub mod image_proxy;
 pub mod html;
+pub mod image_proxy;
