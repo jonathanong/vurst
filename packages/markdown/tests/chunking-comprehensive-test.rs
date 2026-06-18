@@ -145,7 +145,10 @@ fn test_no_header_with_title() {
     );
     assert_eq!(chunks.len(), 1);
     assert_eq!(chunks[0].breadcrumb.as_ref().as_str(), "test title");
-    assert_eq!(chunks[0].header.as_deref().map(|s| s.as_str()), Some("test title"));
+    assert_eq!(
+        chunks[0].header.as_deref().map(|s| s.as_str()),
+        Some("test title")
+    );
 }
 
 #[test]

@@ -278,7 +278,11 @@ impl From<Chunk> for NapiChunk {
         NapiChunk {
             level: c.level,
             header: c.header.map(|h| h.to_string()),
-            headers: c.headers.iter().map(|h| h.as_deref().map(ToString::to_string)).collect(),
+            headers: c
+                .headers
+                .iter()
+                .map(|h| h.as_deref().map(ToString::to_string))
+                .collect(),
             breadcrumb: c.breadcrumb.to_string(),
             text: c.text,
             // Safe: input is bounded by SANITIZE_MAX_INPUT_BYTES (10 MiB ≈ 10M chars),
