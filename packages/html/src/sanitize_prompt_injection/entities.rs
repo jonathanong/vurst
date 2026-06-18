@@ -47,12 +47,12 @@ static SECURITY_CRITICAL_CASE_INSENSITIVE_HTML_ENTITY_MAP: LazyLock<
         .collect()
 });
 
-static CASE_INSENSITIVE_NAMED_HTML_ENTITIES: LazyLock<HashMap<String, &'static str>> =
+static CASE_INSENSITIVE_NAMED_HTML_ENTITIES: LazyLock<HashMap<Box<str>, &'static str>> =
     LazyLock::new(|| {
-        let mut candidates = HashMap::<String, Option<&'static str>>::new();
+        let mut candidates = HashMap::<Box<str>, Option<&'static str>>::new();
 
         for entity in &entities::ENTITIES {
-            match candidates.entry(entity.entity.to_ascii_lowercase()) {
+            match candidates.entry(entity.entity.to_ascii_lowercase().into_boxed_str()) {
                 Entry::Vacant(entry) => {
                     entry.insert(Some(entity.characters));
                 }
