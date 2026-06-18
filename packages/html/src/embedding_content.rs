@@ -36,10 +36,24 @@ static REF_LINK_DEF_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 /// usage and improves embedding quality.
 pub fn html_to_embedding_text(html: &str) -> String {
     let markdown = convert(html, &ConvertOptions::default()).content;
+
+    // Fast paths: avoid running the regex engine if the string doesn't
+    // contain the basic structural characters of the target patterns.
+    let mut current = markdown;
+
     // Images must be replaced before links to prevent the link pattern
     // from consuming the alt-text brackets in `![alt](url)`.
-    let without_images = IMAGE_REGEX.replace_all(&markdown, "$1");
-    let without_links = LINK_REGEX.replace_all(&without_images, "$1");
-    let without_ref_defs = REF_LINK_DEF_REGEX.replace_all(&without_links, "");
-    without_ref_defs.trim().to_string()
+    if current.contains("![") {
+        current = IMAGE_REGEX.replace_all(&current, "$1").into_owned();
+    }
+
+    if current.contains("](") {
+        current = LINK_REGEX.replace_all(&current, "$1").into_owned();
+    }
+
+    if current.contains("]:") {
+        current = REF_LINK_DEF_REGEX.replace_all(&current, "").into_owned();
+    }
+
+    current.trim().to_string()
 }

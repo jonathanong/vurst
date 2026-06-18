@@ -44,3 +44,7 @@
 ## 2025-02-13 - O(1) Perfect Hashing for HTML Tag Lookups
 **Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | b"tag2"`) is heavily optimized by the compiler into an O(1) jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
 **Action:** When searching a static, known list of strings (where case-insensitivity is needed), copy the string's bytes into a small stack-allocated buffer (`[0u8; MAX_LEN]`), lowercase them, and `match` on the slice bounds instead of using `.iter().any()`.
+
+## 2024-06-18 - Regex Fast Paths
+**Learning:** In Rust, `regex::Regex::replace_all` incurs significant overhead even when it finds no matches and returns a borrowed string. This creates bottlenecks in pipelines processing mostly plain text.
+**Action:** Guard expensive regex replacements with a highly-optimized `str::contains()` fast-path check for the pattern's basic structural characters (e.g., checking for `![` before running a markdown image regex) to bypass the regex engine entirely when unnecessary.
