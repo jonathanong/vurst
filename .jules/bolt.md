@@ -44,3 +44,7 @@
 ## 2025-02-13 - O(1) Perfect Hashing for HTML Tag Lookups
 **Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | b"tag2"`) is heavily optimized by the compiler into an O(1) jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
 **Action:** When searching a static, known list of strings (where case-insensitivity is needed), copy the string's bytes into a small stack-allocated buffer (`[0u8; MAX_LEN]`), lowercase them, and `match` on the slice bounds instead of using `.iter().any()`.
+
+## 2024-05-18 - Two-Pass Deduplication for Vec<String>
+**Learning:** In Rust, `HashSet<&str>` cannot be used directly inside `Vec::retain` closures due to mutable borrow conflicts on the vector. However, a two-pass approach using a cheap parallel boolean mask (`Vec<bool>`) and an immutable block-scoped `HashSet<&str>` completely avoids O(N) `String` heap allocations for duplicates.
+**Action:** Use this two-pass boolean mask pattern to implement zero-allocation `Vec<String>` deduplication when `Vec::retain` is required.

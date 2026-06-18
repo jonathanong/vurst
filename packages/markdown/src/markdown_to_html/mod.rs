@@ -193,6 +193,7 @@ pub fn render_markdown_to_html_with_options(text: &str, opts: &MarkdownRenderOpt
     html.trim().to_string()
 }
 
+#[allow(clippy::missing_panics_doc)]
 pub fn extract_markdown_urls_sync(text: &str) -> MarkdownUrlsResult {
     let mut options = Options::default();
     options.extension.autolink = true;
@@ -207,8 +208,25 @@ pub fn extract_markdown_urls_sync(text: &str) -> MarkdownUrlsResult {
 
     // Dedup preserving first-seen order (bare-domain scan may repeat for
     // duplicate mentions; also guards against any overlap with autolinks).
-    let mut seen = std::collections::HashSet::new();
-    links.retain(|url| seen.insert(url.clone()));
+    let mut keep = Vec::with_capacity(links.len());
+    {
+        let mut seen = std::collections::HashSet::new();
+        for url in &links {
+            keep.push(seen.insert(url.as_str()));
+        }
+    }
+    let mut keep_iter = keep.into_iter();
+    links.retain(|_| keep_iter.next().unwrap());
+
+    let mut keep_images = Vec::with_capacity(images.len());
+    {
+        let mut seen = std::collections::HashSet::new();
+        for url in &images {
+            keep_images.push(seen.insert(url.as_str()));
+        }
+    }
+    let mut keep_images_iter = keep_images.into_iter();
+    images.retain(|_| keep_images_iter.next().unwrap());
 
     MarkdownUrlsResult {
         link_urls: links,
