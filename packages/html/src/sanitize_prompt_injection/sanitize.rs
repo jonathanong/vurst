@@ -196,10 +196,15 @@ fn strip_zero_width_and_boundaries(content: &str) -> String {
     // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
     // for the common case where no private-use sentinel bytes are present.
     if sanitized.as_bytes().contains(&0xEE) {
-        if sanitized.contains(HTML_BOUNDARY) {
+        let contains_boundary = sanitized.contains(HTML_BOUNDARY);
+        let contains_role_boundary = sanitized.contains(HTML_ROLE_BOUNDARY);
+
+        if contains_boundary && contains_role_boundary {
+            sanitized =
+                Cow::Owned(sanitized.replace(&[HTML_BOUNDARY, HTML_ROLE_BOUNDARY][..], " "));
+        } else if contains_boundary {
             sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
-        }
-        if sanitized.contains(HTML_ROLE_BOUNDARY) {
+        } else if contains_role_boundary {
             sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
         }
     }
@@ -292,10 +297,15 @@ fn remove_role_prefixes(content: &str) -> String {
     // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
     // for the common case where no private-use sentinel bytes are present.
     if sanitized.as_bytes().contains(&0xEE) {
-        if sanitized.contains(HTML_BOUNDARY) {
+        let contains_boundary = sanitized.contains(HTML_BOUNDARY);
+        let contains_role_boundary = sanitized.contains(HTML_ROLE_BOUNDARY);
+
+        if contains_boundary && contains_role_boundary {
+            sanitized =
+                Cow::Owned(sanitized.replace(&[HTML_BOUNDARY, HTML_ROLE_BOUNDARY][..], " "));
+        } else if contains_boundary {
             sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
-        }
-        if sanitized.contains(HTML_ROLE_BOUNDARY) {
+        } else if contains_role_boundary {
             sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
         }
     }
