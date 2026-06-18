@@ -435,5 +435,4 @@ mod entity_decode_tests {
             "javascript:alert(1)"
         );
     }
-
 }
