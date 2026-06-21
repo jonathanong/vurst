@@ -44,3 +44,6 @@
 ## 2025-02-13 - O(1) Perfect Hashing for HTML Tag Lookups
 **Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | b"tag2"`) is heavily optimized by the compiler into an O(1) jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
 **Action:** When searching a static, known list of strings (where case-insensitivity is needed), copy the string's bytes into a small stack-allocated buffer (`[0u8; MAX_LEN]`), lowercase them, and `match` on the slice bounds instead of using `.iter().any()`.
+## 2024-05-15 - Fast path for HTML entity decoding
+**Learning:** `html_escape::decode_html_entities` incurs significant overhead even when there are no HTML entities present in the string.
+**Action:** Guard calls to `html_escape::decode_html_entities` with a fast-path check `if !url.contains('&')` to return early and avoid the parsing overhead when possible.
