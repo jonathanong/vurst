@@ -35,11 +35,18 @@ static REF_LINK_DEF_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 /// URLs are noise for semantic similarity — stripping them reduces token
 /// usage and improves embedding quality.
 pub fn html_to_embedding_text(html: &str) -> String {
-    let markdown = convert(html, &ConvertOptions::default()).content;
+    let mut markdown = convert(html, &ConvertOptions::default()).content;
     // Images must be replaced before links to prevent the link pattern
     // from consuming the alt-text brackets in `![alt](url)`.
-    let without_images = IMAGE_REGEX.replace_all(&markdown, "$1");
-    let without_links = LINK_REGEX.replace_all(&without_images, "$1");
-    let without_ref_defs = REF_LINK_DEF_REGEX.replace_all(&without_links, "");
-    without_ref_defs.trim().to_string()
+    // ⚡ Bolt: Fast-path structural checks before heavy regex scans.
+    if markdown.contains("![") {
+        markdown = IMAGE_REGEX.replace_all(&markdown, "$1").into_owned();
+    }
+    if markdown.contains("](") {
+        markdown = LINK_REGEX.replace_all(&markdown, "$1").into_owned();
+    }
+    if markdown.contains("]:") {
+        markdown = REF_LINK_DEF_REGEX.replace_all(&markdown, "").into_owned();
+    }
+    markdown.trim().to_string()
 }
