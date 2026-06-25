@@ -184,11 +184,14 @@ pub(super) fn decode_html_entities<'a>(
     text: impl Into<std::borrow::Cow<'a, str>>,
 ) -> std::borrow::Cow<'a, str> {
     let text = text.into();
+    if !text.as_bytes().contains(&b'&') {
+        return text;
+    }
     if !HTML_ENTITY_RE.is_match(&text) {
         return text;
     }
 
-    let mut decoded = text.into_owned();
+    let mut decoded = text.to_string();
     let mut remaining_work = html_entity_decode_work_budget(&decoded);
     let mut decoded_once = false;
 
@@ -199,13 +202,14 @@ pub(super) fn decode_html_entities<'a>(
 
         let pass_work = decoded.len().max(1);
         if decoded_once && remaining_work < pass_work {
-            return HTML_ENTITY_RE
-                .replace_all(&decoded, |caps: &regex::Captures| {
-                    let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
-                    format!(" {legacy_tail}")
-                })
-                .into_owned()
-                .into();
+            return std::borrow::Cow::Owned(
+                HTML_ENTITY_RE
+                    .replace_all(&decoded, |caps: &regex::Captures| {
+                        let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
+                        format!(" {legacy_tail}")
+                    })
+                    .into_owned(),
+            );
         }
         remaining_work = remaining_work.saturating_sub(pass_work);
 
