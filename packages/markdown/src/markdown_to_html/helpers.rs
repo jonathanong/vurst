@@ -98,7 +98,6 @@ fn decode_url_html_entities(url: &str) -> std::borrow::Cow<'_, str> {
     if !url.contains('&') {
         return std::borrow::Cow::Borrowed(url);
     }
-
     let decoded = html_escape::decode_html_entities(url);
     let decoded_ref = decoded.as_ref();
     if !decoded_ref.contains("&#") {

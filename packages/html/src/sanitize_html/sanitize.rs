@@ -216,7 +216,6 @@ fn decode_url_html_entities(url: &str) -> Cow<'_, str> {
     if !url.contains('&') {
         return Cow::Borrowed(url);
     }
-
     let decoded = html_escape::decode_html_entities(url);
     let decoded_ref = decoded.as_ref();
     if !decoded_ref.contains("&#") {
