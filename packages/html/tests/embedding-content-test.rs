@@ -201,7 +201,10 @@ fn test_deeply_nested_html() {
         html.push_str("</div>");
     }
     let result = html_to_embedding_text(&html);
-    assert!(result.contains("deep content"), "content should be retained at max depth");
+    assert!(
+        result.contains("deep content"),
+        "content should be retained at max depth"
+    );
 }
 
 #[test]
