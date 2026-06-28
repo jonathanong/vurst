@@ -1,6 +1,23 @@
 use super::*;
 
 #[test]
+fn test_has_dangerous_prefix() {
+    assert!(has_dangerous_prefix(b""));
+    assert!(has_dangerous_prefix(b"//"));
+    assert!(has_dangerous_prefix(b"/\\"));
+    assert!(has_dangerous_prefix(b"\\/"));
+    assert!(has_dangerous_prefix(b"\\\\"));
+    assert!(has_dangerous_prefix(b"\\"));
+    assert!(has_dangerous_prefix(b"\\a"));
+    assert!(!has_dangerous_prefix(b"/"));
+    assert!(!has_dangerous_prefix(b"/a"));
+    assert!(!has_dangerous_prefix(b"a"));
+    assert!(!has_dangerous_prefix(b"a/"));
+    assert!(!has_dangerous_prefix(b"a\\"));
+    assert!(!has_dangerous_prefix(b"/login"));
+}
+
+#[test]
 fn scheme_and_url_helpers_cover_invalid_paths() {
     assert!(is_safe_link_url("https://example.com"));
     assert!(is_safe_link_url("mailto:test@example.com"));
