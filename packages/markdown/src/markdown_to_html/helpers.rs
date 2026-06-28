@@ -80,8 +80,8 @@ fn is_safe_url(url: &str, allowed_schemes: &[&str]) -> bool {
             .bytes()
             .filter(|&b| !b.is_ascii_whitespace() && !b.is_ascii_control()),
     );
-    debug_assert!(std::str::from_utf8(&clean_bytes).is_ok());
-    let clean_url = unsafe { String::from_utf8_unchecked(clean_bytes) };
+    let clean_url =
+        String::from_utf8(clean_bytes).expect("Filtered ASCII bytes must be valid UTF-8");
 
     if has_dangerous_prefix(clean_url.as_bytes()) {
         return false;
