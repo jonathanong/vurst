@@ -107,7 +107,10 @@ fn test_decode_url_html_entities_exhaustive() {
 
     // Named entities (handled by html_escape)
     assert_eq!(decode_url_html_entities("a&amp;b").as_ref(), "a&b");
-    assert_eq!(decode_url_html_entities("&lt;script&gt;").as_ref(), "<script>");
+    assert_eq!(
+        decode_url_html_entities("&lt;script&gt;").as_ref(),
+        "<script>"
+    );
 
     // Numeric entities (decimal)
     assert_eq!(decode_url_html_entities("&#58").as_ref(), ":");
