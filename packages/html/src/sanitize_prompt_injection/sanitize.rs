@@ -317,6 +317,30 @@ fn normalize_whitespace(content: &str, is_title: bool) -> String {
     sanitized
 }
 
+fn apply_injection_passes(mut sanitized: String) -> String {
+    // Step 3: Remove injection patterns (first pass)
+    sanitized = remove_injection_patterns(&sanitized);
+
+    // Step 4 & 5: Remove HTML comments and tags
+    sanitized = strip_html_markup(&sanitized);
+
+    // Step 6: Remove injection patterns (second pass)
+    sanitized = remove_injection_patterns(&sanitized);
+
+    sanitized
+}
+
+fn apply_final_formatting(mut sanitized: String, is_title: bool) -> String {
+    // Step 7: Remove role prefixes
+    sanitized = remove_role_prefixes(&sanitized);
+
+    // Step 8: Normalize whitespace
+    sanitized = normalize_whitespace(&sanitized, is_title);
+
+    // Step 9: Trim
+    sanitized.trim().to_string()
+}
+
 /// Sanitize content to prevent prompt injection attacks.
 ///
 /// Applies a 9-step pipeline:
@@ -345,23 +369,11 @@ pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
     // Step 2: Strip Unicode format/zero-width characters and boundary markers
     sanitized = strip_zero_width_and_boundaries(&sanitized);
 
-    // Step 3: Remove injection patterns (first pass)
-    sanitized = remove_injection_patterns(&sanitized);
+    // Steps 3-6: Handle injection patterns and HTML markup
+    sanitized = apply_injection_passes(sanitized);
 
-    // Step 4 & 5: Remove HTML comments and tags
-    sanitized = strip_html_markup(&sanitized);
-
-    // Step 6: Remove injection patterns (second pass)
-    sanitized = remove_injection_patterns(&sanitized);
-
-    // Step 7: Remove role prefixes
-    sanitized = remove_role_prefixes(&sanitized);
-
-    // Step 8: Normalize whitespace
-    sanitized = normalize_whitespace(&sanitized, is_title);
-
-    // Step 9: Trim
-    sanitized.trim().to_string()
+    // Steps 7-9: Final formatting and cleanup
+    apply_final_formatting(sanitized, is_title)
 }
 
 #[cfg(test)]
