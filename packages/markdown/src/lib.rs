@@ -34,7 +34,66 @@ pub use markdown_to_html::{
     MarkdownUrlsResult,
 };
 
-pub use breadchunks::{default_length_counter, Chunk, ChunkOptions};
+pub use breadchunks::{Chunk, ChunkOptions};
+
+/// Count characters in `text` after collapsing all runs of whitespace to a
+/// single space and trimming leading/trailing whitespace.
+///
+/// High-performance, single-pass, zero-allocation implementation.
+pub fn default_length_counter(text: &str) -> usize {
+    let mut count = 0usize;
+    let mut in_ws = false;
+    let mut started = false;
+
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if b > 32 && b < 127 {
+            // Find length of ascii non-whitespace block
+            let mut j = i + 1;
+            while j < bytes.len() {
+                let nb = bytes[j];
+                if nb <= 32 || nb >= 127 {
+                    break;
+                }
+                j += 1;
+            }
+            let chunk_len = j - i;
+            if in_ws {
+                count += 1;
+            }
+            count += chunk_len;
+            in_ws = false;
+            started = true;
+            i = j;
+        } else if b == b' ' || b == b'\n' || b == b'\t' || b == b'\r' {
+            if started {
+                in_ws = true;
+            }
+            i += 1;
+        } else {
+            // Slow path for multi-byte Unicode or rare ASCII control characters
+            let remaining = unsafe { std::str::from_utf8_unchecked(&bytes[i..]) };
+            let ch = remaining.chars().next().unwrap();
+            if ch.is_whitespace() {
+                if started {
+                    in_ws = true;
+                }
+            } else {
+                if in_ws {
+                    count += 1;
+                }
+                count += 1;
+                in_ws = false;
+                started = true;
+            }
+            i += ch.len_utf8();
+        }
+    }
+
+    count
+}
 pub use image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX;
 
 const ZERO_WIDTH_SPACE: char = '\u{200B}';
