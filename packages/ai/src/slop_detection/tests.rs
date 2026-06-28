@@ -74,3 +74,33 @@ fn converts_upstream_ai_classification() {
         SlopClassification::Ai
     );
 }
+
+#[test]
+fn slop_detector_panic_error_message_handles_str() {
+    let payload = catch_unwind(|| panic!("string slice error")).unwrap_err();
+    let message = slop_detector_panic_error_message(payload);
+    assert_eq!(
+        message,
+        "slop detector unavailable: upstream detector panicked while loading the model or predicting: string slice error"
+    );
+}
+
+#[test]
+fn slop_detector_panic_error_message_handles_string() {
+    let payload = catch_unwind(|| std::panic::panic_any(String::from("owned string error"))).unwrap_err();
+    let message = slop_detector_panic_error_message(payload);
+    assert_eq!(
+        message,
+        "slop detector unavailable: upstream detector panicked while loading the model or predicting: owned string error"
+    );
+}
+
+#[test]
+fn slop_detector_panic_error_message_handles_unknown_type() {
+    let payload = catch_unwind(|| std::panic::panic_any(123_i32)).unwrap_err();
+    let message = slop_detector_panic_error_message(payload);
+    assert_eq!(
+        message,
+        "slop detector unavailable: upstream detector panicked while loading the model or predicting: unknown panic"
+    );
+}
