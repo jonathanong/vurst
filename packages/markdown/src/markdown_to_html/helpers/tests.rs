@@ -94,15 +94,61 @@ fn test_is_safe_image_url_exhaustive() {
 }
 
 #[test]
-fn decode_url_html_entities_covers_borrowed_invalid_and_multiple_refs() {
+fn test_decode_url_html_entities_exhaustive() {
+    // No entities (returns Cow::Borrowed)
+    assert!(matches!(
+        decode_url_html_entities("https://example.com"),
+        std::borrow::Cow::Borrowed(_)
+    ));
     assert_eq!(
         decode_url_html_entities("https://example.com").as_ref(),
         "https://example.com"
     );
-    assert_eq!(decode_url_html_entities("a&#oops").as_ref(), "a&#oops");
+
+    // Named entities (handled by html_escape)
+    assert_eq!(decode_url_html_entities("a&amp;b").as_ref(), "a&b");
+    assert_eq!(decode_url_html_entities("&lt;script&gt;").as_ref(), "<script>");
+
+    // Numeric entities (decimal)
+    assert_eq!(decode_url_html_entities("&#58").as_ref(), ":");
+    assert_eq!(decode_url_html_entities("&#58;").as_ref(), ":");
+    assert_eq!(decode_url_html_entities("&#97").as_ref(), "a");
+
+    // Numeric entities (hexadecimal)
+    assert_eq!(decode_url_html_entities("&#x3a").as_ref(), ":");
+    assert_eq!(decode_url_html_entities("&#x3A;").as_ref(), ":");
+    assert_eq!(decode_url_html_entities("&#X3a").as_ref(), ":");
+    assert_eq!(decode_url_html_entities("&#X3A;").as_ref(), ":");
+
+    // Leading zeros
+    assert_eq!(decode_url_html_entities("&#000058").as_ref(), ":");
+    assert_eq!(decode_url_html_entities("&#x0003a;").as_ref(), ":");
+
+    // Consecutive numeric entities
+    assert_eq!(
+        decode_url_html_entities("&#106&#97&#118&#97&#115&#99&#114&#105&#112&#116&#58").as_ref(),
+        "javascript:"
+    );
+
+    // Invalid numeric entities
+    assert_eq!(decode_url_html_entities("&#").as_ref(), "&#");
+    assert_eq!(decode_url_html_entities("&#x").as_ref(), "&#x");
+    assert_eq!(decode_url_html_entities("&#x;").as_ref(), "&#x;");
+    assert_eq!(decode_url_html_entities("&#oops").as_ref(), "&#oops");
+    assert_eq!(
+        decode_url_html_entities("&#99999999;").as_ref(),
+        "&#99999999;"
+    );
+    assert_eq!(decode_url_html_entities("&#xG;").as_ref(), "&#xG;");
+
+    // Mixed text
     assert_eq!(
         decode_url_html_entities("java&#115cript&#58alert(1)").as_ref(),
         "javascript:alert(1)"
+    );
+    assert_eq!(
+        decode_url_html_entities("hello &#119;&#111;&#114;&#108;&#100;!").as_ref(),
+        "hello world!"
     );
 }
 
