@@ -34,8 +34,63 @@ pub use markdown_to_html::{
     MarkdownUrlsResult,
 };
 
-pub use breadchunks::{default_length_counter, Chunk, ChunkOptions};
+pub use breadchunks::{Chunk, ChunkOptions};
 pub use image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX;
+
+/// Count characters in `text` after collapsing all runs of whitespace to a
+/// single space and trimming leading/trailing whitespace.
+///
+/// Single-pass, zero-allocation implementation optimized for large text.
+pub fn default_length_counter(text: &str) -> usize {
+    let mut count = 0usize;
+    let mut in_ws = false;
+    let mut started = false;
+
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+
+        // Fast path for ASCII characters (0x00 - 0x7F)
+        if b < 128 {
+            let is_ws = b == b' ' || b.is_ascii_whitespace();
+            if is_ws {
+                if started {
+                    in_ws = true;
+                }
+            } else {
+                if in_ws {
+                    count += 2;
+                    in_ws = false;
+                } else {
+                    count += 1;
+                }
+                started = true;
+            }
+            i += 1;
+        } else {
+            // Non-ASCII character, fallback to full UTF-8 decoding.
+            // Using chars().next() on the remaining slice safely decodes one char.
+            let ch = text[i..].chars().next().unwrap();
+            let is_ws = ch.is_whitespace();
+            if is_ws {
+                if started {
+                    in_ws = true;
+                }
+            } else {
+                if in_ws {
+                    count += 2;
+                    in_ws = false;
+                } else {
+                    count += 1;
+                }
+                started = true;
+            }
+            i += ch.len_utf8();
+        }
+    }
+    count
+}
 
 const ZERO_WIDTH_SPACE: char = '\u{200B}';
 
