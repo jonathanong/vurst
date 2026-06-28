@@ -6,13 +6,11 @@ pub const LINK_SCHEMES: &[&str] = &["http", "https", "mailto", "tel"];
 pub const IMAGE_SCHEMES: &[&str] = &["http", "https"];
 
 fn scheme_candidate(url: &str) -> Option<&str> {
-    let colon_idx = url.find(':')?;
-    let first_path_query_or_fragment = url.find(['/', '?', '#']);
-    if first_path_query_or_fragment.is_some_and(|idx| idx < colon_idx) {
+    let (scheme, _) = url.split_once(':')?;
+    if scheme.contains(['/', '?', '#']) {
         return None;
     }
-
-    Some(&url[..colon_idx])
+    Some(scheme)
 }
 
 fn is_valid_scheme(scheme: &str) -> bool {
