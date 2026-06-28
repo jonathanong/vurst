@@ -7,12 +7,12 @@ pub const IMAGE_SCHEMES: &[&str] = &["http", "https"];
 
 fn scheme_candidate(url: &str) -> Option<&str> {
     let colon_idx = url.find(':')?;
-    let first_path_query_or_fragment = url.find(['/', '?', '#']);
-    if first_path_query_or_fragment.is_some_and(|idx| idx < colon_idx) {
+    let prefix = &url[..colon_idx];
+    if prefix.contains(['/', '?', '#']) {
         return None;
     }
 
-    Some(&url[..colon_idx])
+    Some(prefix)
 }
 
 fn is_valid_scheme(scheme: &str) -> bool {
