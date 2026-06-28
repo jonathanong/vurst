@@ -87,7 +87,8 @@ fn slop_detector_panic_error_message_handles_str() {
 
 #[test]
 fn slop_detector_panic_error_message_handles_string() {
-    let payload = catch_unwind(|| std::panic::panic_any(String::from("owned string error"))).unwrap_err();
+    let payload =
+        catch_unwind(|| std::panic::panic_any(String::from("owned string error"))).unwrap_err();
     let message = slop_detector_panic_error_message(payload);
     assert_eq!(
         message,
