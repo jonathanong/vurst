@@ -40,6 +40,12 @@ pub use breadchunks::{Chunk, ChunkOptions};
 /// single space and trimming leading/trailing whitespace.
 ///
 /// High-performance, single-pass, zero-allocation implementation.
+///
+/// # Panics
+///
+/// This function will not panic. The internal `unwrap()` call when iterating
+/// characters is guaranteed safe because the loop only advances to exact UTF-8
+/// character boundaries, ensuring `remaining` is always valid UTF-8 data.
 pub fn default_length_counter(text: &str) -> usize {
     let mut count = 0usize;
     let mut in_ws = false;
