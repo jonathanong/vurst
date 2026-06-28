@@ -190,7 +190,9 @@ fn test_invalid_html() {
 #[test]
 fn test_deeply_nested_html() {
     let mut html = String::new();
-    let depth = 100; // boilerstrip/html5ever seems to have a lower depth limit
+    // html5ever aborts nested parsing silently for depths > 200 to prevent stack overflows,
+    // which results in empty output. This tests the maximum parsed depth (200).
+    let depth = 200;
     for _ in 0..depth {
         html.push_str("<div>");
     }
@@ -199,7 +201,7 @@ fn test_deeply_nested_html() {
         html.push_str("</div>");
     }
     let result = html_to_embedding_text(&html);
-    assert!(result.contains("deep content"));
+    assert!(result.contains("deep content"), "content should be retained at max depth");
 }
 
 #[test]
