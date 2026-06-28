@@ -471,3 +471,54 @@ mod entity_decode_tests {
         assert_eq!(decode_numeric_char_ref("&#99999999;"), None);
     }
 }
+
+#[cfg(test)]
+mod is_container_tag_tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_string() {
+        assert!(!is_container_tag(""));
+    }
+
+    #[test]
+    fn test_valid_container_tags() {
+        let valid_tags = [
+            "article",
+            "aside",
+            "div",
+            "details",
+            "footer",
+            "figure",
+            "figcaption",
+            "header",
+            "main",
+            "nav",
+            "p",
+            "span",
+            "section",
+            "summary",
+        ];
+
+        for tag in valid_tags {
+            assert!(is_container_tag(tag), "Failed for tag: {}", tag);
+            let upper_tag = tag.to_uppercase();
+            assert!(
+                is_container_tag(&upper_tag),
+                "Failed for tag: {}",
+                upper_tag
+            );
+        }
+    }
+
+    #[test]
+    fn test_invalid_container_tags() {
+        let invalid_tags = [
+            "a", "img", "script", "style", "div2", "span2", "b", "i", "strong", "em", "unknown",
+        ];
+
+        for tag in invalid_tags {
+            assert!(!is_container_tag(tag), "Failed for invalid tag: {}", tag);
+        }
+    }
+}
