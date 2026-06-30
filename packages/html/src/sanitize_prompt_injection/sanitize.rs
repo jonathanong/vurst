@@ -429,7 +429,7 @@ mod tests {
     fn strip_html_markup_removes_comment_with_no_tags() {
         assert_eq!(
             strip_html_markup("  <!-- injected -->  ").as_ref(),
-            format!("  {}  ", HTML_BOUNDARY_REPLACEMENT).as_str()
+            &format!("  {HTML_BOUNDARY_REPLACEMENT}  ")
         );
     }
 

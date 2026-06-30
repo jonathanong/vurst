@@ -471,12 +471,11 @@ mod is_container_tag_tests {
         ];
 
         for tag in valid_tags {
-            assert!(is_container_tag(tag), "Failed for tag: {}", tag);
+            assert!(is_container_tag(tag), "Failed for tag: {tag}");
             let upper_tag = tag.to_uppercase();
             assert!(
                 is_container_tag(&upper_tag),
-                "Failed for tag: {}",
-                upper_tag
+                "Failed for tag: {upper_tag}"
             );
         }
     }
@@ -488,7 +487,7 @@ mod is_container_tag_tests {
         ];
 
         for tag in invalid_tags {
-            assert!(!is_container_tag(tag), "Failed for invalid tag: {}", tag);
+            assert!(!is_container_tag(tag), "Failed for invalid tag: {tag}");
         }
     }
 }
