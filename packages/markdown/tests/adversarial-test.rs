@@ -178,12 +178,10 @@ fn test_code_block_placeholder_collision() {
     // Real code blocks should be preserved
     assert!(all_text.contains("real_code"), "Code should be preserved");
 
-    // VULNERABILITY: If user text contains our placeholder pattern, it may be corrupted
-    // This test documents the issue but doesn't fail on it
-    if !all_text.contains("___CODE_BLOCK_0___") {
-        println!("WARN: User text '___CODE_BLOCK_0___' was removed/corrupted");
-        println!("This could happen if user is documenting code block handling");
-    }
+    assert!(
+        all_text.contains("___CODE_BLOCK_0___"),
+        "User text '___CODE_BLOCK_0___' was removed/corrupted. This could happen if user is documenting code block handling"
+    );
 }
 
 #[test]

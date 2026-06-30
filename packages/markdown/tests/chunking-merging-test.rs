@@ -161,7 +161,7 @@ fn test_header_regex_valid_only() {
 
     assert!(chunks
         .iter()
-        .any(|c| c.header == Some("Valid H1".to_string())));
+        .any(|c| c.header == Some("Valid H1".to_string().into())));
     assert!(!chunks
         .iter()
         .any(|c| c.header.as_ref().is_some_and(|h| h.contains("##Invalid"))));
