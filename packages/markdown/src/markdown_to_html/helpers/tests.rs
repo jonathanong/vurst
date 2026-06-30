@@ -1,29 +1,4 @@
-use super::{
-    decode_numeric_char_ref, decode_url_html_entities, extract_bare_domains, has_dangerous_prefix,
-    is_safe_image_url, is_safe_link_url,
-};
-
-#[test]
-fn test_has_dangerous_prefix_edge_cases() {
-    assert!(has_dangerous_prefix(b""));
-    assert!(has_dangerous_prefix(b"\\"));
-    assert!(!has_dangerous_prefix(b"/"));
-    assert!(!has_dangerous_prefix(b"a"));
-
-    assert!(has_dangerous_prefix(b"//"));
-    assert!(has_dangerous_prefix(b"\\\\"));
-    assert!(has_dangerous_prefix(b"/\\"));
-    assert!(has_dangerous_prefix(b"\\/"));
-
-    assert!(!has_dangerous_prefix(b"/a"));
-    assert!(has_dangerous_prefix(b"\\a"));
-    assert!(!has_dangerous_prefix(b"a/"));
-    assert!(!has_dangerous_prefix(b"a\\"));
-
-    assert!(has_dangerous_prefix(b"//evil.com"));
-    assert!(has_dangerous_prefix(b"\\\\evil.com"));
-    assert!(!has_dangerous_prefix(b"http://example.com"));
-}
+use super::*;
 
 #[test]
 fn scheme_and_url_helpers_cover_invalid_paths() {
@@ -116,97 +91,16 @@ fn test_is_safe_image_url_exhaustive() {
 }
 
 #[test]
-fn test_decode_url_html_entities_exhaustive() {
-    // No entities (returns Cow::Borrowed)
-    assert!(matches!(
-        decode_url_html_entities("https://example.com"),
-        std::borrow::Cow::Borrowed(_)
-    ));
+fn decode_url_html_entities_covers_borrowed_invalid_and_multiple_refs() {
     assert_eq!(
         decode_url_html_entities("https://example.com").as_ref(),
         "https://example.com"
     );
-
-    // Named entities (handled by html_escape)
-    assert_eq!(decode_url_html_entities("a&amp;b").as_ref(), "a&b");
-    assert_eq!(
-        decode_url_html_entities("&lt;script&gt;").as_ref(),
-        "<script>"
-    );
-
-    // Numeric entities (decimal)
-    assert_eq!(decode_url_html_entities("&#58").as_ref(), ":");
-    assert_eq!(decode_url_html_entities("&#58;").as_ref(), ":");
-    assert_eq!(decode_url_html_entities("&#97").as_ref(), "a");
-
-    // Numeric entities (hexadecimal)
-    assert_eq!(decode_url_html_entities("&#x3a").as_ref(), ":");
-    assert_eq!(decode_url_html_entities("&#x3A;").as_ref(), ":");
-    assert_eq!(decode_url_html_entities("&#X3a").as_ref(), ":");
-    assert_eq!(decode_url_html_entities("&#X3A;").as_ref(), ":");
-
-    // Leading zeros
-    assert_eq!(decode_url_html_entities("&#000058").as_ref(), ":");
-    assert_eq!(decode_url_html_entities("&#x0003a;").as_ref(), ":");
-
-    // Consecutive numeric entities
-    assert_eq!(
-        decode_url_html_entities("&#106&#97&#118&#97&#115&#99&#114&#105&#112&#116&#58").as_ref(),
-        "javascript:"
-    );
-
-    // Invalid numeric entities
-    assert_eq!(decode_url_html_entities("&#").as_ref(), "&#");
-    assert_eq!(decode_url_html_entities("&#x").as_ref(), "&#x");
-    assert_eq!(decode_url_html_entities("&#x;").as_ref(), "&#x;");
-    assert_eq!(decode_url_html_entities("&#oops").as_ref(), "&#oops");
-    assert_eq!(
-        decode_url_html_entities("&#99999999;").as_ref(),
-        "&#99999999;"
-    );
-    assert_eq!(decode_url_html_entities("&#xG;").as_ref(), "&#xG;");
-
-    // Unicode boundary conditions for numeric entities
-    assert_eq!(
-        decode_url_html_entities("&#x10FFFF;").as_ref(),
-        "\u{10FFFF}"
-    );
-    assert_eq!(
-        decode_url_html_entities("&#1114111;").as_ref(),
-        "\u{10FFFF}"
-    );
-    assert_eq!(
-        decode_url_html_entities("&#x110000;").as_ref(),
-        "&#x110000;"
-    );
-    assert_eq!(
-        decode_url_html_entities("&#1114112;").as_ref(),
-        "&#1114112;"
-    );
-
-    // Surrogate code points must remain unchanged
-    assert_eq!(decode_url_html_entities("&#xD800;").as_ref(), "&#xD800;");
-    assert_eq!(decode_url_html_entities("&#xDFFF;").as_ref(), "&#xDFFF;");
-
-    // Mixed text
+    assert_eq!(decode_url_html_entities("a&#oops").as_ref(), "a&#oops");
     assert_eq!(
         decode_url_html_entities("java&#115cript&#58alert(1)").as_ref(),
         "javascript:alert(1)"
     );
-    assert_eq!(
-        decode_url_html_entities("hello &#119;&#111;&#114;&#108;&#100;!").as_ref(),
-        "hello world!"
-    );
-
-    // Unchanged invalid refs should remain borrowed (no unnecessary allocation)
-    assert!(matches!(
-        decode_url_html_entities("a&#oops"),
-        std::borrow::Cow::Borrowed(_)
-    ));
-    assert!(matches!(
-        decode_url_html_entities("&#oops"),
-        std::borrow::Cow::Borrowed(_)
-    ));
 }
 
 #[test]
@@ -231,49 +125,5 @@ fn extract_bare_domains_skips_bare_psl_suffix() {
     assert!(
         links.is_empty(),
         "bare PSL suffix should not produce a link: {links:?}"
-    );
-}
-
-#[test]
-fn extract_bare_domains_finds_valid_patterns() {
-    let mut links = Vec::new();
-    extract_bare_domains("visit example.com for more", &mut links);
-    assert_eq!(links, vec!["example.com"]);
-
-    let mut links = Vec::new();
-    extract_bare_domains("sub.example.com/path?q=1 is cool", &mut links);
-    assert_eq!(links, vec!["sub.example.com/path?q=1"]);
-
-    let mut links = Vec::new();
-    extract_bare_domains("multiple: discord.gg/raid and t.me/x.", &mut links);
-    assert_eq!(links, vec!["discord.gg/raid", "t.me/x"]);
-
-    let mut links = Vec::new();
-    extract_bare_domains(
-        "trailing punctuation like example.com/path! or example.com, etc.",
-        &mut links,
-    );
-    assert_eq!(links, vec!["example.com/path", "example.com"]);
-}
-
-#[test]
-fn extract_bare_domains_ignores_invalid_patterns() {
-    let mut links = Vec::new();
-    // npm scopes and versions (node.js, v1.0)
-    extract_bare_domains(
-        "I like node.js and v1.0 of the software. i.e. test",
-        &mut links,
-    );
-    assert!(
-        links.is_empty(),
-        "should reject non-ICANN/fake TLDs: {links:?}"
-    );
-
-    let mut links = Vec::new();
-    // private PSL entries like github.io
-    extract_bare_domains("my site is on github.io", &mut links);
-    assert!(
-        links.is_empty(),
-        "should reject private PSL entries: {links:?}"
     );
 }

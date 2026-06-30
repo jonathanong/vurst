@@ -21,10 +21,7 @@ fn test_single_header() {
     let chunks = chunk(text, None);
     assert!(!chunks.is_empty());
     assert_eq!(chunks[0].level, 1);
-    assert_eq!(
-        chunks[0].header.as_deref().map(|s| s.as_str()),
-        Some("Header 1")
-    );
+    assert_eq!(chunks[0].header, Some("Header 1".to_string()));
 }
 
 #[test]
@@ -38,10 +35,10 @@ fn test_multiple_headers() {
     assert!(chunks.len() >= 2);
     assert!(chunks
         .iter()
-        .any(|c| c.header.as_deref().map(|s| s.as_str()) == Some("Header 1")));
+        .any(|c| c.header == Some("Header 1".to_string())));
     assert!(chunks
         .iter()
-        .any(|c| c.header.as_deref().map(|s| s.as_str()) == Some("Header 2")));
+        .any(|c| c.header == Some("Header 2".to_string())));
 }
 
 #[test]
@@ -49,15 +46,9 @@ fn test_breadcrumb_building() {
     let text = "# H1\n\nC1\n\n## H2\n\nC2\n\n### H3\n\nC3";
     let chunks = chunk(text, None);
 
-    let h1_chunk = chunks
-        .iter()
-        .find(|c| c.header.as_deref().map(|s| s.as_str()) == Some("H1"));
-    let h2_chunk = chunks
-        .iter()
-        .find(|c| c.header.as_deref().map(|s| s.as_str()) == Some("H2"));
-    let h3_chunk = chunks
-        .iter()
-        .find(|c| c.header.as_deref().map(|s| s.as_str()) == Some("H3"));
+    let h1_chunk = chunks.iter().find(|c| c.header == Some("H1".to_string()));
+    let h2_chunk = chunks.iter().find(|c| c.header == Some("H2".to_string()));
+    let h3_chunk = chunks.iter().find(|c| c.header == Some("H3".to_string()));
 
     if let Some(c) = h1_chunk {
         assert_eq!(c.breadcrumb.as_ref().as_str(), "H1");

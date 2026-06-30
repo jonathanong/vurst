@@ -15,7 +15,7 @@
 **Action:** Replace multiple `.replace` calls with a manual string scan using `char_indices` that builds an output buffer only when an escape character is encountered, returns `Cow<'_, str>`, and appends borrowed text directly when no replacements are needed.
 
 ## 2024-05-22 - Optimize string searching and building
-**Learning:** In tight loops over text, when searching for ASCII-only targets (like '<', '>', '&', '\"'), using `char_indices` incurs unnecessary UTF-8 decoding overhead. A byte-slice scan (`position` + offset jumps) can skip ahead to likely matches efficiently while preserving overall O(n) behavior, since ASCII bytes never overlap with multibyte UTF-8 sequences in valid input. Additionally, the `write!` macro introduces measurable overhead compared to direct `push`/`push_str` calls for simple string building.
+**Learning:** In tight loops over text, when searching for ASCII-only targets (like '<', '>', '&', '"'), using `char_indices` incurs unnecessary UTF-8 decoding overhead. A byte-slice scan (`position` + offset jumps) can skip ahead to likely matches efficiently while preserving overall O(n) behavior, since ASCII bytes never overlap with multibyte UTF-8 sequences in valid input. Additionally, the `write!` macro introduces measurable overhead compared to direct `push`/`push_str` calls for simple string building.
 **Action:** Use byte-slice scans with `as_bytes()` for ASCII boundary detection before falling back to scalar decoding where needed. Use `push()` and `push_str()` directly on `String` buffers instead of the `write!` macro for better performance.
 
 ## 2024-05-26 - Optimize HTML tag stripping
@@ -42,20 +42,9 @@
 **Learning:** Checking URL schemes iteratively using an array of strings creates excessive looping overhead for the "happy path" (safe URLs), especially when iterators need to be created and advanced multiple times.
 **Action:** When filtering or matching strings against a small, known set of prefixes, match on the first byte immediately to provide an `O(1)` fast-path reject for the vast majority of non-matching strings.
 ## 2025-02-13 - O(1) Perfect Hashing for HTML Tag Lookups
-**Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | "tag2"`) is heavily optimized by the compiler into an `O(1)` jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
+**Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | b"tag2"`) is heavily optimized by the compiler into an O(1) jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
 **Action:** When searching a static, known list of strings (where case-insensitivity is needed), copy the string's bytes into a small stack-allocated buffer (`[0u8; MAX_LEN]`), lowercase them, and `match` on the slice bounds instead of using `.iter().any()`.
-
-## 2026-06-25 - Skip regex decoding when HTML entities are absent
-**Learning:** `decode_html_entities` was unnecessarily allocating a new `String` for every chunk of text it processed, even though most text passed through the prompt injection sanitizer doesn't contain HTML entities. The internal loop structure forces allocations unless explicitly bypassed.
-**Action:** Guard string allocations and expensive regex evaluations in entity decoders by using a `.contains(&b'&')` fast-path check combined with returning `std::borrow::Cow`.
 
 ## 2026-06-27 - Fast-path HTML Entity Decoding Before Substring Searches
 **Learning:** Checking for HTML entities (`&#`) inside `html_escape` operations involves allocating memory or sequentially scanning strings, even if no entities exist. In our codebase, most URLs do not contain entities. If the string lacks the starting character for an entity (`&`), running the full search logic costs substantial overhead (~110ms over 10M operations).
 **Action:** When working with APIs like `html_escape::decode_html_entities`, always wrap them with a `.contains('&')` fast-path to immediately return a borrowed version of the original string when it lacks the prefix for the target sequence.
-## 2024-05-18 - [O(1) Static String Array Search via `matches!`]
-**Learning:** Using `.contains()` on a static slice of strings (e.g., `["a", "b"].contains(&val)`) performs an O(N) linear search, which is inefficient for lookups in tight loops (like HTML tag/attribute sanitizers). Rust's `matches!(val, "a" | "b")` macro gets compiled into highly optimized O(1) jump tables or perfect hashing, making it ~5x faster.
-**Action:** When performing membership checks against a known, static list of strings during high-frequency parsing or sanitization, replace string slice `.contains()` lookups with the `matches!()` macro.
-
-## 2024-05-18 - Markdown Chunking Options Zero-Allocation
-**Learning:** External dependencies (`breadchunks`) accepting `Option<ChunkOptions>` forces a clone. Upstream libraries with `Option<&ChunkOptions>` instead allow borrowers (`options.as_ref()`) to eliminate allocations entirely in nested calls.
-**Action:** Always prefer `Option<&T>` or `&Option<T>` for parameters representing complex configurations in Rust, rather than moving owned values, to enable zero-allocation delegation to child functions.
