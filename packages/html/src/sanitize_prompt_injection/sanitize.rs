@@ -1,6 +1,5 @@
 use super::entities::decode_html_entities;
 use regex::Regex;
-use std::borrow::Cow;
 use std::sync::LazyLock;
 
 const HTML_BOUNDARY: char = '\u{E000}';
@@ -200,11 +199,16 @@ fn strip_zero_width_and_boundaries<'a>(content: impl Into<Cow<'a, str>>) -> Cow<
     // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
     // for the common case where no private-use sentinel bytes are present.
     if sanitized.as_bytes().contains(&0xEE) {
-        if sanitized.contains(HTML_BOUNDARY) {
-            sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
-        }
-        if sanitized.contains(HTML_ROLE_BOUNDARY) {
-            sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
+        for boundary in [HTML_BOUNDARY, HTML_ROLE_BOUNDARY] {
+            if sanitized.contains(boundary) {
+                let mut i = 0;
+                let s = sanitized.to_mut();
+                while let Some(pos) = s[i..].find(boundary) {
+                    i += pos;
+                    s.replace_range(i..i + boundary.len_utf8(), " ");
+                    i += 1; // " " is 1 byte
+                }
+            }
         }
     }
     sanitized
@@ -314,11 +318,16 @@ fn remove_role_prefixes<'a>(content: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
     // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
     // for the common case where no private-use sentinel bytes are present.
     if sanitized.as_bytes().contains(&0xEE) {
-        if sanitized.contains(HTML_BOUNDARY) {
-            sanitized = Cow::Owned(sanitized.replace(HTML_BOUNDARY, " "));
-        }
-        if sanitized.contains(HTML_ROLE_BOUNDARY) {
-            sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
+        for boundary in [HTML_BOUNDARY, HTML_ROLE_BOUNDARY] {
+            if sanitized.contains(boundary) {
+                let mut i = 0;
+                let s = sanitized.to_mut();
+                while let Some(pos) = s[i..].find(boundary) {
+                    i += pos;
+                    s.replace_range(i..i + boundary.len_utf8(), " ");
+                    i += 1; // " " is 1 byte
+                }
+            }
         }
     }
     sanitized
