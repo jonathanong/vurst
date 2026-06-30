@@ -97,26 +97,32 @@ static HTML_ENTITY_RE: LazyLock<Regex> = LazyLock::new(|| {
     .expect("BUG: invalid HTML_ENTITY_RE")
 });
 
+fn lookup_case_insensitive_named_html_entity(entity: &str) -> Option<&'static str> {
+    if let Some(replacement) = SECURITY_CRITICAL_CASE_INSENSITIVE_HTML_ENTITY_MAP
+        .get(entity)
+        .copied()
+    {
+        return Some(replacement);
+    }
+
+    CASE_INSENSITIVE_NAMED_HTML_ENTITIES.get(entity).copied()
+}
+
 fn lookup_named_html_entity(entity: &str) -> Option<&'static str> {
     if let Some(replacement) = NAMED_HTML_ENTITIES.get(entity).copied() {
         return Some(replacement);
     }
 
-    let lookup = |entity: &str| {
-        SECURITY_CRITICAL_CASE_INSENSITIVE_HTML_ENTITY_MAP
-            .get(entity)
-            .copied()
-            .or_else(|| CASE_INSENSITIVE_NAMED_HTML_ENTITIES.get(entity).copied())
-    };
-
     if entity.len() <= MAX_STACK_ENTITY_NAME_BYTES {
         let mut buf = [0u8; MAX_STACK_ENTITY_NAME_BYTES];
         buf[..entity.len()].copy_from_slice(entity.as_bytes());
         buf[..entity.len()].make_ascii_lowercase();
-        // SAFE: Input `entity` is valid UTF-8. `make_ascii_lowercase` only mutates ASCII bytes.
-        lookup(unsafe { std::str::from_utf8_unchecked(&buf[..entity.len()]) })
+        let lowercased = std::str::from_utf8(&buf[..entity.len()])
+            .expect("BUG: ASCII lowercasing should preserve UTF-8");
+        lookup_case_insensitive_named_html_entity(lowercased)
     } else {
-        lookup(entity.to_ascii_lowercase().as_str())
+        let lowercased = entity.to_ascii_lowercase();
+        lookup_case_insensitive_named_html_entity(lowercased.as_str())
     }
 }
 
@@ -227,5 +233,40 @@ pub(super) fn decode_html_entities<'a>(
         }
         decoded_once = true;
         decoded = next;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lookup_named_html_entity_uses_stack_for_short_entities() {
+        assert_eq!(lookup_named_html_entity("&lt;"), Some("<"));
+        assert_eq!(lookup_named_html_entity("&LT;"), Some("<"));
+    }
+
+    #[test]
+    fn lookup_named_html_entity_uses_case_insensitive_named_map() {
+        assert_eq!(lookup_named_html_entity("&COPY;"), Some("©"));
+    }
+
+    #[test]
+    fn lookup_named_html_entity_uses_stack_allocation_at_max_entity_length() {
+        let exact = "&CounterClockwiseContourIntegral;";
+        let upper = "&COUNTERCLOCKWISECONTOURINTEGRAL;";
+
+        assert_eq!(exact.len(), MAX_STACK_ENTITY_NAME_BYTES);
+        assert_eq!(
+            lookup_named_html_entity(upper),
+            lookup_named_html_entity(exact)
+        );
+        assert!(lookup_named_html_entity(exact).is_some());
+    }
+
+    #[test]
+    fn lookup_named_html_entity_uses_heap_allocation_for_long_entities() {
+        let entity = "averyveryveryveryveryveryverylongentityname";
+        assert_eq!(lookup_named_html_entity(entity), None);
     }
 }
