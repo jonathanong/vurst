@@ -19,7 +19,7 @@ test('sanitizePromptInjection preserves benign content', async () => {
 test('sanitizePromptInjection rejects invalid UTF-8 input', async () => {
   const invalidUtf8 = Buffer.from([0xff, 0xfe, 0xfd])
   await assert.rejects(
-    sanitizePromptInjection(invalidUtf8, false),
+    () => sanitizePromptInjection(invalidUtf8, false),
     /Invalid UTF-8 in content/
   )
 })
