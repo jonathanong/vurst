@@ -203,6 +203,22 @@ fn test_deeply_nested_html() {
 }
 
 #[test]
+fn test_excessively_deeply_nested_html_does_not_panic() {
+    let mut html = String::new();
+    let depth = 50000;
+    for _ in 0..depth {
+        html.push_str("<div>");
+    }
+    html.push_str("deep content");
+    for _ in 0..depth {
+        html.push_str("</div>");
+    }
+    // Ensures that html_to_embedding_text doesn't panic on an extremely deep tree
+    // boilerstrip/html5ever drops content beyond a specific depth limit, but it shouldn't panic.
+    let _ = html_to_embedding_text(&html);
+}
+
+#[test]
 fn test_huge_input() {
     let snippet = "<p>Some text with <a href=\"https://example.com\">a link</a> and <img src=\"img.jpg\" alt=\"an image\">.</p>\n";
     let html = snippet.repeat(10000); // Create a string ~1MB in size
