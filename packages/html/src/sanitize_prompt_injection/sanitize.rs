@@ -303,17 +303,18 @@ fn remove_role_prefixes(content: &str) -> String {
 }
 
 fn normalize_whitespace(content: &str, is_title: bool) -> String {
+    let mut sanitized;
     if is_title {
-        ALL_WHITESPACE_RE.replace_all(content, " ").into_owned()
+        sanitized = ALL_WHITESPACE_RE.replace_all(content, " ").into_owned();
     } else {
-        let sanitized = HORIZONTAL_WHITESPACE_RE.replace_all(content, " ");
-        // ⚡ Bolt: Delay `.into_owned()` until after the second regex replacement
-        // to avoid an unnecessary intermediate String allocation when EXCESSIVE_NEWLINES_RE doesn't match
-        match EXCESSIVE_NEWLINES_RE.replace_all(&sanitized, "\n\n") {
-            Cow::Borrowed(_) => sanitized.into_owned(),
-            Cow::Owned(s) => s,
-        }
+        sanitized = HORIZONTAL_WHITESPACE_RE
+            .replace_all(content, " ")
+            .into_owned();
+        sanitized = EXCESSIVE_NEWLINES_RE
+            .replace_all(&sanitized, "\n\n")
+            .into_owned();
     }
+    sanitized
 }
 
 /// Sanitize content to prevent prompt injection attacks.
