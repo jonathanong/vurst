@@ -174,14 +174,21 @@ fn html_entity_decode_work_budget(text: &str) -> usize {
     nested_work_budget.max(full_pass_budget)
 }
 
-pub(super) fn decode_html_entities(text: &str) -> String {
-    let mut decoded = text.to_string();
-    let mut remaining_work = html_entity_decode_work_budget(text);
+pub(super) fn decode_html_entities<'a>(
+    text: impl Into<std::borrow::Cow<'a, str>>,
+) -> std::borrow::Cow<'a, str> {
+    let text = text.into();
+    if !HTML_ENTITY_RE.is_match(&text) {
+        return text;
+    }
+
+    let mut decoded = text.into_owned();
+    let mut remaining_work = html_entity_decode_work_budget(&decoded);
     let mut decoded_once = false;
 
     loop {
         if !HTML_ENTITY_RE.is_match(&decoded) {
-            return decoded;
+            return std::borrow::Cow::Owned(decoded);
         }
 
         let pass_work = decoded.len().max(1);
@@ -191,13 +198,14 @@ pub(super) fn decode_html_entities(text: &str) -> String {
                     let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
                     format!(" {legacy_tail}")
                 })
-                .into_owned();
+                .into_owned()
+                .into();
         }
         remaining_work = remaining_work.saturating_sub(pass_work);
 
         let next = decode_html_entities_once(&decoded);
         if next == decoded {
-            return decoded;
+            return std::borrow::Cow::Owned(decoded);
         }
         decoded_once = true;
         decoded = next;

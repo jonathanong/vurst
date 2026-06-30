@@ -188,11 +188,15 @@ fn html_tag_replacement(tag: &str) -> &'static str {
     }
 }
 
-fn strip_zero_width_and_boundaries(content: &str) -> String {
+fn strip_zero_width_and_boundaries<'a>(content: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
+    let content = content.into();
     // Strip Unicode format/zero-width characters (Cf category) — replacing with
     // a space so "ignore\u{200B}previous" becomes "ignore previous" rather than
     // "ignoreprevious", allowing INJECTION_RE's whitespace separator to match.
-    let mut sanitized = ZERO_WIDTH_RE.replace_all(content, " ");
+    let mut sanitized = match ZERO_WIDTH_RE.replace_all(&content, " ") {
+        Cow::Borrowed(_) => content,
+        Cow::Owned(s) => Cow::Owned(s),
+    };
     // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
     // for the common case where no private-use sentinel bytes are present.
     if sanitized.as_bytes().contains(&0xEE) {
@@ -203,11 +207,15 @@ fn strip_zero_width_and_boundaries(content: &str) -> String {
             sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
         }
     }
-    sanitized.into_owned()
+    sanitized
 }
 
-fn remove_injection_patterns(content: &str) -> String {
-    INJECTION_RE.replace_all(content, " ").into_owned()
+fn remove_injection_patterns<'a>(content: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
+    let content = content.into();
+    match INJECTION_RE.replace_all(&content, " ") {
+        Cow::Borrowed(_) => content,
+        Cow::Owned(s) => Cow::Owned(s),
+    }
 }
 
 fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static str)> {
@@ -253,14 +261,24 @@ fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static st
     None
 }
 
-fn strip_html_markup(content: &str) -> String {
+fn strip_html_markup<'a>(content: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
+    let content = content.into();
+    // Fast path: if there are no HTML comments or tags, return early
+    if !content.contains('<') {
+        return content;
+    }
+
     // Remove HTML comments
-    let sanitized = HTML_COMMENT_RE
-        .replace_all(content, HTML_BOUNDARY_REPLACEMENT)
-        .into_owned();
+    let sanitized = HTML_COMMENT_RE.replace_all(&content, HTML_BOUNDARY_REPLACEMENT);
 
     let bytes = sanitized.as_bytes();
     let mut cursor = 0;
+
+    // Check if there are any tags to strip
+    if !bytes.contains(&b'<') {
+        return Cow::Owned(sanitized.into_owned());
+    }
+
     let mut stripped = String::with_capacity(sanitized.len());
 
     // ⚡ Bolt: Use memchr (via `position`) to fast-forward to the next '<' character
@@ -283,12 +301,16 @@ fn strip_html_markup(content: &str) -> String {
         stripped.push_str(&sanitized[cursor..]);
     }
 
-    stripped
+    Cow::Owned(stripped)
 }
 
-fn remove_role_prefixes(content: &str) -> String {
+fn remove_role_prefixes<'a>(content: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
+    let content = content.into();
     // Remove role prefixes at line starts or after structural HTML boundaries
-    let mut sanitized = ROLE_PREFIX_RE.replace_all(content, "$1");
+    let mut sanitized = match ROLE_PREFIX_RE.replace_all(&content, "$1") {
+        Cow::Borrowed(_) => content,
+        Cow::Owned(s) => Cow::Owned(s),
+    };
     // ⚡ Bolt: Boundary sentinels both start with 0xEE in UTF-8; skip char scans
     // for the common case where no private-use sentinel bytes are present.
     if sanitized.as_bytes().contains(&0xEE) {
@@ -299,22 +321,26 @@ fn remove_role_prefixes(content: &str) -> String {
             sanitized = Cow::Owned(sanitized.replace(HTML_ROLE_BOUNDARY, " "));
         }
     }
-    sanitized.into_owned()
+    sanitized
 }
 
-fn normalize_whitespace(content: &str, is_title: bool) -> String {
-    let mut sanitized;
+fn normalize_whitespace<'a>(content: impl Into<Cow<'a, str>>, is_title: bool) -> Cow<'a, str> {
+    let content = content.into();
     if is_title {
-        sanitized = ALL_WHITESPACE_RE.replace_all(content, " ").into_owned();
+        match ALL_WHITESPACE_RE.replace_all(&content, " ") {
+            Cow::Borrowed(_) => content,
+            Cow::Owned(s) => Cow::Owned(s),
+        }
     } else {
-        sanitized = HORIZONTAL_WHITESPACE_RE
-            .replace_all(content, " ")
-            .into_owned();
-        sanitized = EXCESSIVE_NEWLINES_RE
-            .replace_all(&sanitized, "\n\n")
-            .into_owned();
+        let horiz_sanitized = match HORIZONTAL_WHITESPACE_RE.replace_all(&content, " ") {
+            Cow::Borrowed(_) => content,
+            Cow::Owned(s) => Cow::Owned(s),
+        };
+        match EXCESSIVE_NEWLINES_RE.replace_all(&horiz_sanitized, "\n\n") {
+            Cow::Borrowed(_) => horiz_sanitized,
+            Cow::Owned(s) => Cow::Owned(s),
+        }
     }
-    sanitized
 }
 
 /// Sanitize content to prevent prompt injection attacks.
@@ -340,28 +366,29 @@ fn normalize_whitespace(content: &str, is_title: bool) -> String {
 /// `the system: design notes`.
 pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
     // Step 1: Decode HTML entities
-    let mut sanitized = decode_html_entities(content);
+    let sanitized = decode_html_entities(content);
 
     // Step 2: Strip Unicode format/zero-width characters and boundary markers
-    sanitized = strip_zero_width_and_boundaries(&sanitized);
+    let sanitized = strip_zero_width_and_boundaries(sanitized);
 
     // Step 3: Remove injection patterns (first pass)
-    sanitized = remove_injection_patterns(&sanitized);
+    let sanitized = remove_injection_patterns(sanitized);
 
     // Step 4 & 5: Remove HTML comments and tags
-    sanitized = strip_html_markup(&sanitized);
+    let sanitized = strip_html_markup(sanitized);
 
     // Step 6: Remove injection patterns (second pass)
-    sanitized = remove_injection_patterns(&sanitized);
+    let sanitized = remove_injection_patterns(sanitized);
 
     // Step 7: Remove role prefixes
-    sanitized = remove_role_prefixes(&sanitized);
+    let sanitized = remove_role_prefixes(sanitized);
 
     // Step 8: Normalize whitespace
-    sanitized = normalize_whitespace(&sanitized, is_title);
+    let sanitized = normalize_whitespace(sanitized, is_title);
 
     // Step 9: Trim
-    sanitized.trim().to_string()
+    let sanitized = sanitized.trim();
+    sanitized.to_string()
 }
 
 #[cfg(test)]
@@ -374,6 +401,22 @@ mod tests {
             html_tag_replacement(""),
             HTML_BOUNDARY_REPLACEMENT,
             "empty HTML tag should map to boundary replacement"
+        );
+    }
+
+    #[test]
+    fn strip_html_markup_removes_comment_with_no_tags() {
+        assert_eq!(
+            strip_html_markup("  <!-- injected -->  ").as_ref(),
+            format!("  {}  ", HTML_BOUNDARY_REPLACEMENT).as_str()
+        );
+    }
+
+    #[test]
+    fn sanitize_prompt_injection_trims_surrounding_whitespace() {
+        assert_eq!(
+            sanitize_prompt_injection_sync("  safe input  ", false),
+            "safe input"
         );
     }
 
