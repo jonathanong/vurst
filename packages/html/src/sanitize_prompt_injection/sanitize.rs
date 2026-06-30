@@ -414,7 +414,10 @@ mod tests {
 
     #[test]
     fn sanitize_prompt_injection_trims_surrounding_whitespace() {
-        assert_eq!(sanitize_prompt_injection_sync("  safe input  ", false), "safe input");
+        assert_eq!(
+            sanitize_prompt_injection_sync("  safe input  ", false),
+            "safe input"
+        );
     }
 
     #[test]
