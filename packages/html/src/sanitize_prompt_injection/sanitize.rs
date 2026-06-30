@@ -585,6 +585,13 @@ mod tests {
     }
 
     #[test]
+    fn html_tag_replacement_covers_each_refactored_role_boundary_category() {
+        for tag in ["<h1>", "<table>", "<ul>", "<html>", "<div>"] {
+            assert_eq!(html_tag_replacement(tag), HTML_ROLE_BOUNDARY_REPLACEMENT);
+        }
+    }
+
+    #[test]
     fn normalize_whitespace_returns_unchanged_content_when_already_normalized() {
         assert_eq!(
             normalize_whitespace("alpha beta\n\ngamma", false),
