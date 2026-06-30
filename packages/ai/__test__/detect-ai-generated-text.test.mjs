@@ -2,6 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { detectAiGeneratedText } from '../index.js'
 
+function isMissingOnnxRuntimeError(error) {
+  return !process.env.CI && error instanceof Error && error.message.includes('ONNX Runtime dylib')
+}
+
 test('detectAiGeneratedText returns a valid result shape', async (t) => {
   try {
     const result = await detectAiGeneratedText(Buffer.from('This is some sample text.'))
@@ -14,7 +18,7 @@ test('detectAiGeneratedText returns a valid result shape', async (t) => {
     assert.equal(typeof result.detector, 'string')
     assert.equal(typeof result.detectorModelVersion, 'string')
   } catch (err) {
-    if (err.message && err.message.includes('Failed to load ONNX Runtime dylib')) {
+    if (isMissingOnnxRuntimeError(err)) {
       t.skip('Skipping because ONNX Runtime dylib is missing');
       return;
     }
@@ -29,10 +33,19 @@ test('detectAiGeneratedText rejects an invalid confidence threshold', async (t) 
       /confidenceThreshold must be between 0.0 and 1.0/,
     )
   } catch (err) {
-    if (err.message && err.message.includes('Failed to load ONNX Runtime dylib')) {
+    if (isMissingOnnxRuntimeError(err)) {
       t.skip('Skipping because ONNX Runtime dylib is missing');
       return;
     }
     throw err;
   }
+})
+
+test('detectAiGeneratedText rejects input larger than max size', async () => {
+  const maxSize = 10 * 1024 * 1024
+  const largeBuffer = Buffer.alloc(maxSize + 1)
+  await assert.rejects(
+    detectAiGeneratedText(largeBuffer),
+    /Input too large/,
+  )
 })
