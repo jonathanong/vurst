@@ -1,5 +1,6 @@
 use super::entities::decode_html_entities;
 use regex::Regex;
+use std::borrow::Cow;
 use std::sync::LazyLock;
 
 const HTML_BOUNDARY: char = '\u{E000}';
@@ -354,13 +355,13 @@ fn normalize_whitespace<'a>(content: impl Into<Cow<'a, str>>, is_title: bool) ->
 
 fn apply_injection_passes(mut sanitized: String) -> String {
     // Step 3: Remove injection patterns (first pass)
-    sanitized = remove_injection_patterns(&sanitized);
+    sanitized = remove_injection_patterns(&sanitized).into_owned();
 
     // Step 4 & 5: Remove HTML comments and tags
-    sanitized = strip_html_markup(&sanitized);
+    sanitized = strip_html_markup(&sanitized).into_owned();
 
     // Step 6: Remove injection patterns (second pass)
-    sanitized = remove_injection_patterns(&sanitized);
+    sanitized = remove_injection_patterns(&sanitized).into_owned();
 
     sanitized
 }
