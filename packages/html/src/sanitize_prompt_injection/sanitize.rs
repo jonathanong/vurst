@@ -367,10 +367,10 @@ fn apply_injection_passes(mut sanitized: String) -> String {
 
 fn apply_final_formatting(mut sanitized: String, is_title: bool) -> String {
     // Step 7: Remove role prefixes
-    sanitized = remove_role_prefixes(&sanitized);
+    sanitized = remove_role_prefixes(&sanitized).into_owned();
 
     // Step 8: Normalize whitespace
-    sanitized = normalize_whitespace(&sanitized, is_title);
+    sanitized = normalize_whitespace(&sanitized, is_title).into_owned();
 
     // Step 9: Trim
     sanitized.trim().to_string()
