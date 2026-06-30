@@ -1,6 +1,5 @@
 use regex::Regex;
 use std::{
-    borrow::Cow,
     collections::{hash_map::Entry, HashMap},
     sync::LazyLock,
 };
@@ -115,47 +114,54 @@ fn lookup_named_html_entity(entity: &str) -> Option<&'static str> {
 
 fn decode_html_entities_once(text: &str) -> String {
     HTML_ENTITY_RE
-        .replace_all(text, |caps: &regex::Captures| -> Cow<'static, str> {
-            let m = &caps[0];
-            let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
-            let entity = if legacy_tail.is_empty() {
-                m
-            } else {
-                &m[..m.len() - legacy_tail.len()]
-            };
+        .replace_all(
+            text,
+            |caps: &regex::Captures| -> std::borrow::Cow<'static, str> {
+                let m = &caps[0];
+                let legacy_tail = caps.name("legacy_tail").map_or("", |tail| tail.as_str());
+                let entity = if legacy_tail.is_empty() {
+                    m
+                } else {
+                    &m[..m.len() - legacy_tail.len()]
+                };
 
-            if let Some(replacement) = lookup_named_html_entity(entity) {
-                if legacy_tail.is_empty() {
-                    return Cow::Borrowed(replacement);
+                if let Some(replacement) = lookup_named_html_entity(entity) {
+                    if legacy_tail.is_empty() {
+                        return std::borrow::Cow::Borrowed(replacement);
+                    }
+                    return std::borrow::Cow::Owned(format!("{replacement}{legacy_tail}"));
                 }
-                return Cow::Owned(format!("{replacement}{legacy_tail}"));
-            }
 
-            if !entity.ends_with(';') {
-                return Cow::Owned(m.to_string());
-            }
+                if !entity.ends_with(';') {
+                    return std::borrow::Cow::Owned(m.to_string());
+                }
 
-            let inner = &entity[1..entity.len() - 1];
-            if let Some(digits) = inner
-                .strip_prefix("#x")
-                .or_else(|| inner.strip_prefix("#X"))
-            {
-                return u32::from_str_radix(digits, 16)
-                    .ok()
-                    .and_then(char::from_u32)
-                    .map_or_else(|| Cow::Owned(m.to_string()), |c| Cow::Owned(c.to_string()));
-            }
+                let inner = &entity[1..entity.len() - 1];
+                if let Some(digits) = inner
+                    .strip_prefix("#x")
+                    .or_else(|| inner.strip_prefix("#X"))
+                {
+                    return std::borrow::Cow::Owned(
+                        u32::from_str_radix(digits, 16)
+                            .ok()
+                            .and_then(char::from_u32)
+                            .map_or_else(|| m.to_string(), |c| c.to_string()),
+                    );
+                }
 
-            if let Some(digits) = inner.strip_prefix('#') {
-                return digits
-                    .parse::<u32>()
-                    .ok()
-                    .and_then(char::from_u32)
-                    .map_or_else(|| Cow::Owned(m.to_string()), |c| Cow::Owned(c.to_string()));
-            }
+                if let Some(digits) = inner.strip_prefix('#') {
+                    return std::borrow::Cow::Owned(
+                        digits
+                            .parse::<u32>()
+                            .ok()
+                            .and_then(char::from_u32)
+                            .map_or_else(|| m.to_string(), |c| c.to_string()),
+                    );
+                }
 
-            Cow::Owned(m.to_string())
-        })
+                std::borrow::Cow::Owned(m.to_string())
+            },
+        )
         .into_owned()
 }
 

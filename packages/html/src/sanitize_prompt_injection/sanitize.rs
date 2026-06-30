@@ -1,5 +1,6 @@
 use super::entities::decode_html_entities;
 use regex::Regex;
+use std::borrow::Cow;
 use std::sync::LazyLock;
 
 const HTML_BOUNDARY: char = '\u{E000}';
