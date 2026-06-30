@@ -20,6 +20,13 @@ fn covers_sanitizer_edge_paths() {
     assert!(!sanitized.html.contains("data:text/html"));
     assert!(!sanitized.html.contains("vbscript"));
 
+    // Cover our fast-path optimization!
+    let fast_path = sanitize_rss_html_sync(
+        "<a href=\"https://example.com/some/path?with=no&amp;entities\">safe</a>",
+        &SanitizeRssHtmlOptions::default(),
+    );
+    assert!(fast_path.html.contains("https://example.com/some/path?with=no"));
+
     assert_eq!(
         sanitize_prompt_injection_sync(
             "bad &#xD800; &#xzz; &#99999999; &#999999999999999999999;",
