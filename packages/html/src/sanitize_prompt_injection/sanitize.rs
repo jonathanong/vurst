@@ -353,6 +353,30 @@ fn normalize_whitespace<'a>(content: impl Into<Cow<'a, str>>, is_title: bool) ->
     }
 }
 
+fn apply_injection_passes(mut sanitized: String) -> String {
+    // Step 3: Remove injection patterns (first pass)
+    sanitized = remove_injection_patterns(&sanitized).into_owned();
+
+    // Step 4 & 5: Remove HTML comments and tags
+    sanitized = strip_html_markup(&sanitized).into_owned();
+
+    // Step 6: Remove injection patterns (second pass)
+    sanitized = remove_injection_patterns(&sanitized).into_owned();
+
+    sanitized
+}
+
+fn apply_final_formatting(mut sanitized: String, is_title: bool) -> String {
+    // Step 7: Remove role prefixes
+    sanitized = remove_role_prefixes(&sanitized).into_owned();
+
+    // Step 8: Normalize whitespace
+    sanitized = normalize_whitespace(&sanitized, is_title).into_owned();
+
+    // Step 9: Trim
+    sanitized.trim().to_string()
+}
+
 /// Sanitize content to prevent prompt injection attacks.
 ///
 /// Applies a 9-step pipeline:
@@ -376,29 +400,16 @@ fn normalize_whitespace<'a>(content: impl Into<Cow<'a, str>>, is_title: bool) ->
 /// `the system: design notes`.
 pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
     // Step 1: Decode HTML entities
-    let sanitized = decode_html_entities(content);
+    let mut sanitized = decode_html_entities(content).into_owned();
 
     // Step 2: Strip Unicode format/zero-width characters and boundary markers
-    let sanitized = strip_zero_width_and_boundaries(sanitized);
+    sanitized = strip_zero_width_and_boundaries(&sanitized).into_owned();
 
-    // Step 3: Remove injection patterns (first pass)
-    let sanitized = remove_injection_patterns(sanitized);
+    // Steps 3-6: Handle injection patterns and HTML markup
+    sanitized = apply_injection_passes(sanitized);
 
-    // Step 4 & 5: Remove HTML comments and tags
-    let sanitized = strip_html_markup(sanitized);
-
-    // Step 6: Remove injection patterns (second pass)
-    let sanitized = remove_injection_patterns(sanitized);
-
-    // Step 7: Remove role prefixes
-    let sanitized = remove_role_prefixes(sanitized);
-
-    // Step 8: Normalize whitespace
-    let sanitized = normalize_whitespace(sanitized, is_title);
-
-    // Step 9: Trim
-    let sanitized = sanitized.trim();
-    sanitized.to_string()
+    // Steps 7-9: Final formatting and cleanup
+    apply_final_formatting(sanitized, is_title)
 }
 
 #[cfg(test)]
