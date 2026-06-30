@@ -212,6 +212,10 @@ pub(super) fn has_dangerous_url_scheme(url: &str) -> bool {
 }
 
 fn decode_url_html_entities(url: &str) -> Cow<'_, str> {
+    if !url.contains('&') {
+        return Cow::Borrowed(url);
+    }
+
     let decoded = html_escape::decode_html_entities(url);
     let decoded_ref = decoded.as_ref();
     if !decoded_ref.contains("&#") {
@@ -454,6 +458,7 @@ mod entity_decode_tests {
             decode_url_html_entities("https://example.com").as_ref(),
             "https://example.com"
         );
+        assert_eq!(decode_url_html_entities("a&amp;b").as_ref(), "a&b");
         assert_eq!(decode_url_html_entities("a&#oops").as_ref(), "a&#oops");
         assert_eq!(
             decode_url_html_entities("java&#115cript&#58alert(1)").as_ref(),
