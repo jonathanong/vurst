@@ -23,3 +23,12 @@ test('sanitizePromptInjection rejects invalid UTF-8 input', async () => {
     /Invalid UTF-8 in content/
   )
 })
+
+test('sanitizePromptInjection rejects input larger than max allowed bytes', async () => {
+  const MAX_BYTES = 10 * 1024 * 1024
+  const largeBuffer = Buffer.alloc(MAX_BYTES + 1, 'a')
+  await assert.rejects(
+    sanitizePromptInjection(largeBuffer, false),
+    /Input too large/
+  )
+})
