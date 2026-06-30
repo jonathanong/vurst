@@ -6,6 +6,7 @@
 
 use boilerstrip::{convert, ConvertOptions};
 use regex::Regex;
+use std::borrow::Cow;
 use std::sync::LazyLock;
 
 /// Matches inline markdown images: `![alt](url)` — capture group 1 is alt text.
@@ -36,10 +37,31 @@ static REF_LINK_DEF_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 /// usage and improves embedding quality.
 pub fn html_to_embedding_text(html: &str) -> String {
     let markdown = convert(html, &ConvertOptions::default()).content;
-    // Images must be replaced before links to prevent the link pattern
-    // from consuming the alt-text brackets in `![alt](url)`.
-    let without_images = IMAGE_REGEX.replace_all(&markdown, "$1");
-    let without_links = LINK_REGEX.replace_all(&without_images, "$1");
-    let without_ref_defs = REF_LINK_DEF_REGEX.replace_all(&without_links, "");
-    without_ref_defs.trim().to_string()
+
+    // ⚡ Bolt: Fast-path skip markdown regexes for strings lacking bracket syntax
+    if !markdown.contains('[') {
+        return markdown.trim().to_string();
+    }
+
+    let mut current = Cow::Borrowed(markdown.as_str());
+
+    if current.contains("![") {
+        if let Cow::Owned(replaced) = IMAGE_REGEX.replace_all(&current, "$1") {
+            current = Cow::Owned(replaced);
+        }
+    }
+
+    if current.contains("](") {
+        if let Cow::Owned(replaced) = LINK_REGEX.replace_all(&current, "$1") {
+            current = Cow::Owned(replaced);
+        }
+    }
+
+    if current.contains("]:") {
+        if let Cow::Owned(replaced) = REF_LINK_DEF_REGEX.replace_all(&current, "") {
+            current = Cow::Owned(replaced);
+        }
+    }
+
+    current.trim().to_string()
 }
