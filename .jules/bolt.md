@@ -44,6 +44,11 @@
 ## 2025-02-13 - O(1) Perfect Hashing for HTML Tag Lookups
 **Learning:** In Rust, `matches!` over constant byte arrays (e.g. `b"tag1" | b"tag2"`) is heavily optimized by the compiler into an O(1) jump table or perfect hash function, whereas iterating an array of string slices with `.eq_ignore_ascii_case()` is O(N) and may allocate/decode.
 **Action:** When searching a static, known list of strings (where case-insensitivity is needed), copy the string's bytes into a small stack-allocated buffer (`[0u8; MAX_LEN]`), lowercase them, and `match` on the slice bounds instead of using `.iter().any()`.
+
 ## 2024-05-18 - [O(1) Static String Array Search via `matches!`]
 **Learning:** Using `.contains()` on a static slice of strings (e.g., `["a", "b"].contains(&val)`) performs an O(N) linear search, which is inefficient for lookups in tight loops (like HTML tag/attribute sanitizers). Rust's `matches!(val, "a" | "b")` macro gets compiled into highly optimized O(1) jump tables or perfect hashing, making it ~5x faster.
 **Action:** When performing membership checks against a known, static list of strings during high-frequency parsing or sanitization, replace string slice `.contains()` lookups with the `matches!()` macro.
+
+## 2024-05-18 - Markdown Chunking Options Zero-Allocation
+**Learning:** External dependencies (`breadchunks`) accepting `Option<ChunkOptions>` forces a clone. Upstream libraries with `Option<&ChunkOptions>` instead allow borrowers (`options.as_ref()`) to eliminate allocations entirely in nested calls.
+**Action:** Always prefer `Option<&T>` or `&Option<T>` for parameters representing complex configurations in Rust, rather than moving owned values, to enable zero-allocation delegation to child functions.

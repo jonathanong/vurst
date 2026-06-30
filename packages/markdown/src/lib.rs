@@ -102,11 +102,11 @@ pub fn default_length_counter(text: &str) -> usize {
 const ZERO_WIDTH_SPACE: char = '\u{200B}';
 
 pub fn chunk(text: &str, options: Option<ChunkOptions>) -> Vec<Chunk> {
-    let mut chunks = breadchunks_chunk(text, options.clone());
+    let mut chunks = breadchunks_chunk(text, options.as_ref());
 
     if chunks.is_empty() && !text.trim().is_empty() {
         let dummy_text = format!("{text}\n\n{ZERO_WIDTH_SPACE}");
-        chunks = breadchunks_chunk(&dummy_text, options);
+        chunks = breadchunks_chunk(&dummy_text, options.as_ref());
         if let Some(last_chunk) = chunks.last_mut() {
             if last_chunk.text.ends_with(ZERO_WIDTH_SPACE) {
                 let _ = last_chunk.text.pop();
@@ -277,8 +277,12 @@ impl From<Chunk> for NapiChunk {
     fn from(c: Chunk) -> Self {
         NapiChunk {
             level: c.level,
-            header: c.header,
-            headers: c.headers.to_vec(),
+            header: c.header.map(|h| h.to_string()),
+            headers: c
+                .headers
+                .iter()
+                .map(|h| h.as_deref().map(ToString::to_string))
+                .collect(),
             breadcrumb: c.breadcrumb.to_string(),
             text: c.text,
             // Safe: input is bounded by SANITIZE_MAX_INPUT_BYTES (10 MiB ≈ 10M chars),

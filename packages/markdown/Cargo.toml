@@ -13,7 +13,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 vurst-runtime-rs = { path = "../runtime" }
-breadchunks = "0.2.1"
+breadchunks = "0.2.2"
 comrak = { version = "0.52", default-features = false }
 ego-tree = "0.11"
 psl = "2"
