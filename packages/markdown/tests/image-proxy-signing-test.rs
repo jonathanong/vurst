@@ -181,5 +181,8 @@ fn image_proxy_helpers_cover_empty_relative_and_invalid_key_paths() {
         "/proxy/",
         &["not-hex".to_string(), TEST_KEY.to_string()],
     );
-    assert!(proxied.contains("?sig="), "expected fallback to next valid key: {proxied}");
+    assert!(
+        proxied.contains("?sig="),
+        "expected fallback to next valid key: {proxied}"
+    );
 }
