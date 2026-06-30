@@ -454,7 +454,7 @@ mod entity_decode_tests {
     use super::*;
 
     #[test]
-    fn decode_url_html_entities_covers_borrowed_invalid_and_multiple_refs() {
+    fn decode_url_html_entities_covers_borrowed_invalid_and_multiple_refs_and_ampersands() {
         assert_eq!(
             decode_url_html_entities("https://example.com").as_ref(),
             "https://example.com"
@@ -464,6 +464,7 @@ mod entity_decode_tests {
             decode_url_html_entities("java&#115cript&#58alert(1)").as_ref(),
             "javascript:alert(1)"
         );
+        assert_eq!(decode_url_html_entities("a&b").as_ref(), "a&b");
     }
 
     #[test]
