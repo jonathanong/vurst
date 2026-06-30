@@ -1,7 +1,5 @@
 mod common;
-use vurst_markdown_node::markdown_to_html::{
-    render_markdown_to_html_with_options,
-};
+use vurst_markdown_node::markdown_to_html::render_markdown_to_html_with_options;
 
 #[test]
 fn allows_safe_formatting_tags() {
@@ -14,7 +12,10 @@ fn allows_safe_formatting_tags() {
 
 #[test]
 fn renders_empty_admin_html_as_empty_output() {
-    assert_eq!(render_markdown_to_html_with_options("", &common::admin_opts()), "");
+    assert_eq!(
+        render_markdown_to_html_with_options("", &common::admin_opts()),
+        ""
+    );
 }
 
 #[test]
@@ -51,16 +52,20 @@ fn strips_style_tags() {
 
 #[test]
 fn strips_event_handlers() {
-    let result =
-        render_markdown_to_html_with_options("<p onclick=\"alert('xss')\">text</p>", &common::admin_opts());
+    let result = render_markdown_to_html_with_options(
+        "<p onclick=\"alert('xss')\">text</p>",
+        &common::admin_opts(),
+    );
     assert!(result.contains("<p>text</p>"));
     assert!(!result.contains("onclick"));
 }
 
 #[test]
 fn strips_style_attribute() {
-    let result =
-        render_markdown_to_html_with_options("<p style=\"color:red\">text</p>", &common::admin_opts());
+    let result = render_markdown_to_html_with_options(
+        "<p style=\"color:red\">text</p>",
+        &common::admin_opts(),
+    );
     assert!(result.contains("<p>text</p>"));
     assert!(!result.contains("style="));
 }
@@ -96,8 +101,10 @@ fn allows_class_and_id_attrs() {
 
 #[test]
 fn strips_unknown_attributes() {
-    let result =
-        render_markdown_to_html_with_options("<p aria-label=\"ignored\">text</p>", &common::admin_opts());
+    let result = render_markdown_to_html_with_options(
+        "<p aria-label=\"ignored\">text</p>",
+        &common::admin_opts(),
+    );
     assert!(result.contains("<p>text</p>"));
     assert!(!result.contains("aria-label"));
 }
@@ -136,34 +143,44 @@ fn strips_form_elements() {
 
 #[test]
 fn unwraps_unknown_tags() {
-    let result =
-        render_markdown_to_html_with_options("<custom>preserved text</custom>", &common::admin_opts());
+    let result = render_markdown_to_html_with_options(
+        "<custom>preserved text</custom>",
+        &common::admin_opts(),
+    );
     assert!(result.contains("preserved text"));
     assert!(!result.contains("<custom>"));
 }
 
 #[test]
 fn allows_anchor_fragment_links() {
-    let result =
-        render_markdown_to_html_with_options("<a href=\"#section\">jump</a>", &common::admin_opts());
+    let result = render_markdown_to_html_with_options(
+        "<a href=\"#section\">jump</a>",
+        &common::admin_opts(),
+    );
     assert!(result.contains("href=\"#section\""));
 }
 
 #[test]
 fn allows_relative_path_links() {
-    let result =
-        render_markdown_to_html_with_options("<a href=\"../other\">relative</a>", &common::admin_opts());
+    let result = render_markdown_to_html_with_options(
+        "<a href=\"../other\">relative</a>",
+        &common::admin_opts(),
+    );
     assert!(result.contains("href=\"../other\""));
 
-    let result2 =
-        render_markdown_to_html_with_options("<a href=\"./page\">current</a>", &common::admin_opts());
+    let result2 = render_markdown_to_html_with_options(
+        "<a href=\"./page\">current</a>",
+        &common::admin_opts(),
+    );
     assert!(result2.contains("href=\"./page\""));
 }
 
 #[test]
 fn allows_query_string_links() {
-    let result =
-        render_markdown_to_html_with_options("<a href=\"?sort=new\">sort</a>", &common::admin_opts());
+    let result = render_markdown_to_html_with_options(
+        "<a href=\"?sort=new\">sort</a>",
+        &common::admin_opts(),
+    );
     assert!(result.contains("href=\"?sort=new\""));
 }
 
@@ -179,14 +196,18 @@ fn allows_relative_admin_links_with_colons_after_boundaries() {
 
 #[test]
 fn allows_tel_links() {
-    let result =
-        render_markdown_to_html_with_options("<a href=\"tel:+123456789\">call</a>", &common::admin_opts());
+    let result = render_markdown_to_html_with_options(
+        "<a href=\"tel:+123456789\">call</a>",
+        &common::admin_opts(),
+    );
     assert!(result.contains("href=\"tel:+123456789\""));
 }
 
 #[test]
 fn rejects_protocol_relative_urls_in_admin_html() {
-    let result =
-        render_markdown_to_html_with_options("<a href=\"//attacker.com\">bad</a>", &common::admin_opts());
+    let result = render_markdown_to_html_with_options(
+        "<a href=\"//attacker.com\">bad</a>",
+        &common::admin_opts(),
+    );
     assert!(!result.contains("//attacker.com"));
 }

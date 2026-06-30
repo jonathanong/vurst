@@ -11,7 +11,8 @@ fn renders_basic_paragraph() {
 
 #[test]
 fn escapes_raw_html() {
-    let result = render_markdown_to_html_with_options("<strong>Hi</strong>", &common::default_opts());
+    let result =
+        render_markdown_to_html_with_options("<strong>Hi</strong>", &common::default_opts());
     assert!(!result.contains("<strong>Hi</strong>"));
     assert!(result.contains("&lt;strong&gt;Hi&lt;/strong&gt;"));
 }
@@ -24,8 +25,10 @@ fn admin_passes_raw_html() {
 
 #[test]
 fn external_link_gets_rel_and_target() {
-    let result =
-        render_markdown_to_html_with_options("[Example](https://example.com)", &common::default_opts());
+    let result = render_markdown_to_html_with_options(
+        "[Example](https://example.com)",
+        &common::default_opts(),
+    );
     assert!(result.contains(r#"rel="nofollow ugc noopener""#));
     assert!(result.contains(r#"target="_blank""#));
     assert!(result.contains(r#"href="https://example.com""#));
@@ -52,15 +55,18 @@ fn relative_links_with_colons_after_boundaries_are_preserved() {
 
 #[test]
 fn bare_unknown_colon_scheme_href_removed() {
-    let result = render_markdown_to_html_with_options("[path](path:with:colons)", &common::default_opts());
+    let result =
+        render_markdown_to_html_with_options("[path](path:with:colons)", &common::default_opts());
     assert!(result.contains("path"));
     assert!(!result.contains(r#"href=""#));
 }
 
 #[test]
 fn javascript_link_href_removed() {
-    let result =
-        render_markdown_to_html_with_options("[Click](javascript:alert(1))", &common::default_opts());
+    let result = render_markdown_to_html_with_options(
+        "[Click](javascript:alert(1))",
+        &common::default_opts(),
+    );
     assert!(result.contains("Click"));
     assert!(!result.contains("javascript:"));
     assert!(!result.contains(r#"href=""#));
@@ -68,15 +74,18 @@ fn javascript_link_href_removed() {
 
 #[test]
 fn ws_link_href_removed() {
-    let result = render_markdown_to_html_with_options("[WS](ws://evil.com)", &common::default_opts());
+    let result =
+        render_markdown_to_html_with_options("[WS](ws://evil.com)", &common::default_opts());
     assert!(result.contains("WS"));
     assert!(!result.contains("ws://"));
 }
 
 #[test]
 fn data_image_src_removed() {
-    let result =
-        render_markdown_to_html_with_options("![img](data:image/png;base64,abc)", &common::default_opts());
+    let result = render_markdown_to_html_with_options(
+        "![img](data:image/png;base64,abc)",
+        &common::default_opts(),
+    );
     assert!(!result.contains("data:"));
 }
 
@@ -136,8 +145,10 @@ fn extracts_relative_urls_with_colons_after_boundaries() {
 
 #[test]
 fn digit_first_scheme_href_removed() {
-    let result =
-        render_markdown_to_html_with_options("[link](1abc://attacker.com)", &common::default_opts());
+    let result = render_markdown_to_html_with_options(
+        "[link](1abc://attacker.com)",
+        &common::default_opts(),
+    );
     assert!(
         !result.contains("href="),
         "digit-first scheme should be rejected"
@@ -146,22 +157,28 @@ fn digit_first_scheme_href_removed() {
 
 #[test]
 fn protocol_relative_link_href_removed() {
-    let result =
-        render_markdown_to_html_with_options("[link](//attacker.com/path)", &common::default_opts());
+    let result = render_markdown_to_html_with_options(
+        "[link](//attacker.com/path)",
+        &common::default_opts(),
+    );
     assert!(
         !result.contains("href="),
         "protocol-relative URL should be rejected"
     );
 
-    let result2 =
-        render_markdown_to_html_with_options("[link](\\attacker.com/path)", &common::default_opts());
+    let result2 = render_markdown_to_html_with_options(
+        "[link](\\attacker.com/path)",
+        &common::default_opts(),
+    );
     assert!(
         !result2.contains("href="),
         "protocol-relative URL starting with \\ should be rejected"
     );
 
-    let result3 =
-        render_markdown_to_html_with_options("[link](/\\attacker.com/path)", &common::default_opts());
+    let result3 = render_markdown_to_html_with_options(
+        "[link](/\\attacker.com/path)",
+        &common::default_opts(),
+    );
     assert!(
         !result3.contains("href="),
         "protocol-relative URL starting with /\\ should be rejected"
@@ -177,22 +194,28 @@ fn protocol_relative_link_href_removed() {
 
 #[test]
 fn protocol_relative_image_src_removed() {
-    let result =
-        render_markdown_to_html_with_options("![img](//attacker.com/img.jpg)", &common::default_opts());
+    let result = render_markdown_to_html_with_options(
+        "![img](//attacker.com/img.jpg)",
+        &common::default_opts(),
+    );
     assert!(
         !result.contains("src="),
         "protocol-relative image URL should be rejected"
     );
 
-    let result2 =
-        render_markdown_to_html_with_options("![img](\\attacker.com/img.jpg)", &common::default_opts());
+    let result2 = render_markdown_to_html_with_options(
+        "![img](\\attacker.com/img.jpg)",
+        &common::default_opts(),
+    );
     assert!(
         !result2.contains("src="),
         "protocol-relative image URL starting with \\ should be rejected"
     );
 
-    let result3 =
-        render_markdown_to_html_with_options("![img](/\\attacker.com/img.jpg)", &common::default_opts());
+    let result3 = render_markdown_to_html_with_options(
+        "![img](/\\attacker.com/img.jpg)",
+        &common::default_opts(),
+    );
     assert!(
         !result3.contains("src="),
         "protocol-relative image URL starting with /\\ should be rejected"
