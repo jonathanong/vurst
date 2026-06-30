@@ -1,4 +1,5 @@
 use super::{
+    has_dangerous_prefix,
     decode_numeric_char_ref, decode_url_html_entities, extract_bare_domains, is_safe_image_url,
     is_safe_link_url,
 };
