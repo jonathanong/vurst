@@ -41,6 +41,10 @@ pub use image_proxy::DEFAULT_IMAGE_PROXY_URL_PREFIX;
 /// single space and trimming leading/trailing whitespace.
 ///
 /// Single-pass, zero-allocation implementation optimized for large text.
+///
+/// # Panics
+///
+/// This function does not panic for valid UTF-8 input.
 pub fn default_length_counter(text: &str) -> usize {
     let mut count = 0usize;
     let mut in_ws = false;
@@ -53,8 +57,8 @@ pub fn default_length_counter(text: &str) -> usize {
 
         // Fast path for ASCII characters (0x00 - 0x7F)
         if b < 128 {
-            let is_ws = b == b' ' || b.is_ascii_whitespace();
-            if is_ws {
+            let is_whitespace = b == b' ' || b.is_ascii_whitespace();
+            if is_whitespace {
                 if started {
                     in_ws = true;
                 }
@@ -71,22 +75,25 @@ pub fn default_length_counter(text: &str) -> usize {
         } else {
             // Non-ASCII character, fallback to full UTF-8 decoding.
             // Using chars().next() on the remaining slice safely decodes one char.
-            let ch = text[i..].chars().next().unwrap();
-            let is_ws = ch.is_whitespace();
-            if is_ws {
-                if started {
-                    in_ws = true;
-                }
-            } else {
-                if in_ws {
-                    count += 2;
-                    in_ws = false;
+            if let Some(ch) = text[i..].chars().next() {
+                let is_whitespace = ch.is_whitespace();
+                if is_whitespace {
+                    if started {
+                        in_ws = true;
+                    }
                 } else {
-                    count += 1;
+                    if in_ws {
+                        count += 2;
+                        in_ws = false;
+                    } else {
+                        count += 1;
+                    }
+                    started = true;
                 }
-                started = true;
+                i += ch.len_utf8();
+            } else {
+                break;
             }
-            i += ch.len_utf8();
         }
     }
     count
@@ -111,6 +118,15 @@ pub fn chunk(text: &str, options: Option<ChunkOptions>) -> Vec<Chunk> {
                 last_chunk.length = default_length_counter(&full_text);
             }
         }
+    }
+
+    for chunk in &mut chunks {
+        let full_text = if chunk.breadcrumb.is_empty() {
+            chunk.text.clone()
+        } else {
+            format!("{}\n\n{}", chunk.breadcrumb, chunk.text)
+        };
+        chunk.length = default_length_counter(&full_text);
     }
 
     chunks
