@@ -96,6 +96,7 @@ fn decode_url_html_entities_covers_borrowed_invalid_and_multiple_refs() {
         decode_url_html_entities("https://example.com").as_ref(),
         "https://example.com"
     );
+    assert_eq!(decode_url_html_entities("a&amp;b").as_ref(), "a&b");
     assert_eq!(decode_url_html_entities("a&#oops").as_ref(), "a&#oops");
     assert_eq!(
         decode_url_html_entities("java&#115cript&#58alert(1)").as_ref(),

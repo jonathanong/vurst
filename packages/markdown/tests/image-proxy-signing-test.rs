@@ -1,4 +1,5 @@
 use data_encoding::BASE64URL_NOPAD;
+use vurst_markdown_node::image_proxy::{is_relative_url, rewrite_image_to_proxy};
 use vurst_markdown_node::markdown_to_html::{
     render_markdown_to_html_with_options, MarkdownRenderOptions,
 };
@@ -162,4 +163,23 @@ fn sig_matches_expected_hmac_sha256() {
     let src = decode_html_entities(&extract_src(&result).expect("should have src attribute"));
 
     assert_eq!(src, expected_src, "signed image proxy URL mismatch");
+}
+
+#[test]
+fn image_proxy_helpers_cover_empty_relative_and_invalid_key_paths() {
+    assert!(!is_relative_url(""));
+    assert!(!is_relative_url("//example.com/image.png"));
+
+    assert_eq!(rewrite_image_to_proxy("", "/proxy/", &[]), "");
+    assert_eq!(
+        rewrite_image_to_proxy("https://example.com/photo.jpg", "", &[]),
+        "https://example.com/photo.jpg"
+    );
+
+    let proxied = rewrite_image_to_proxy(
+        "https://example.com/photo.jpg",
+        "/proxy/",
+        &["not-hex".to_string(), TEST_KEY.to_string()],
+    );
+    assert!(proxied.contains("?sig="), "expected fallback to next valid key: {proxied}");
 }
