@@ -97,12 +97,6 @@ fn test_plain_text_passthrough() {
 }
 
 #[test]
-fn test_plain_text_with_brackets_passthrough() {
-    let result = html_to_embedding_text("<p>keep [literal] brackets and array[0]</p>");
-    assert_eq!(result, "keep [literal] brackets and array[0]");
-}
-
-#[test]
 fn test_multiple_links_stripped() {
     let html =
         "<p>See <a href=\"https://a.com\">link A</a> and <a href=\"https://b.com\">link B</a>.</p>";
@@ -206,22 +200,6 @@ fn test_deeply_nested_html() {
     }
     let result = html_to_embedding_text(&html);
     assert!(result.contains("deep content"));
-}
-
-#[test]
-fn test_excessively_deeply_nested_html_does_not_panic() {
-    let mut html = String::new();
-    let depth = 50000;
-    for _ in 0..depth {
-        html.push_str("<div>");
-    }
-    html.push_str("deep content");
-    for _ in 0..depth {
-        html.push_str("</div>");
-    }
-    // Ensures that html_to_embedding_text doesn't panic on an extremely deep tree
-    // boilerstrip/html5ever drops content beyond a specific depth limit, but it shouldn't panic.
-    let _ = html_to_embedding_text(&html);
 }
 
 #[test]

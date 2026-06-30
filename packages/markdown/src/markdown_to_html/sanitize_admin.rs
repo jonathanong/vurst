@@ -7,74 +7,68 @@ use vurst_shared::image_proxy::{
     DEFAULT_IMAGE_PROXY_URL_PREFIX,
 };
 
-fn is_allowed_admin_tag(tag: &str) -> bool {
-    matches!(
-        tag,
-        "p" | "br"
-            | "a"
-            | "strong"
-            | "em"
-            | "b"
-            | "i"
-            | "u"
-            | "s"
-            | "del"
-            | "h1"
-            | "h2"
-            | "h3"
-            | "h4"
-            | "h5"
-            | "h6"
-            | "ul"
-            | "ol"
-            | "li"
-            | "blockquote"
-            | "pre"
-            | "code"
-            | "table"
-            | "thead"
-            | "tbody"
-            | "tr"
-            | "th"
-            | "td"
-            | "img"
-            | "hr"
-            | "figure"
-            | "figcaption"
-            | "details"
-            | "summary"
-            | "sup"
-            | "sub"
-            | "span"
-            | "div"
-            | "dl"
-            | "dt"
-            | "dd"
-    )
-}
+/// Tags allowed in admin HTML content (permissive allowlist).
+const ALLOWED_ADMIN_TAGS: &[&str] = &[
+    "p",
+    "br",
+    "a",
+    "strong",
+    "em",
+    "b",
+    "i",
+    "u",
+    "s",
+    "del",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "pre",
+    "code",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "img",
+    "hr",
+    "figure",
+    "figcaption",
+    "details",
+    "summary",
+    "sup",
+    "sub",
+    "span",
+    "div",
+    "dl",
+    "dt",
+    "dd",
+];
 
-fn is_dangerous_admin_tag(tag: &str) -> bool {
-    matches!(
-        tag,
-        "script"
-            | "style"
-            | "iframe"
-            | "object"
-            | "embed"
-            | "form"
-            | "input"
-            | "button"
-            | "select"
-            | "textarea"
-            | "meta"
-            | "base"
-            | "svg"
-    )
-}
+/// Tags removed entirely including all descendants.
+const DANGEROUS_ADMIN_TAGS: &[&str] = &[
+    "script", "style", "iframe", "object", "embed", "form", "input", "button", "select",
+    "textarea", "meta", "base", "svg",
+];
 
-fn is_void_admin_tag(tag: &str) -> bool {
-    matches!(tag, "br" | "hr" | "img")
-}
+/// Void tags rendered without closing tags.
+const VOID_ADMIN_TAGS: &[&str] = &["br", "hr", "img"];
+
+/// Attributes allowed on `<a>` tags.
+const ALLOWED_A_ATTRS: &[&str] = &["href", "title"];
+
+/// Attributes allowed on `<img>` tags.
+const ALLOWED_IMG_ATTRS: &[&str] = &["src", "alt", "title", "width", "height"];
+
+/// Attributes allowed on any element.
+const ALLOWED_GLOBAL_ATTRS: &[&str] = &["class", "id"];
 
 pub struct AdminHtmlOptions<'a> {
     pub nofollow_links: bool,
@@ -168,12 +162,15 @@ fn render_children(node: NodeRef<'_, Node>, opts: &AdminHtmlOptions<'_>) -> Stri
 }
 
 fn is_allowed_attr(tag: &str, attr_name: &str) -> bool {
-    if matches!(attr_name, "class" | "id") {
+    if attr_name == "style" || attr_name.starts_with("on") {
+        return false;
+    }
+    if ALLOWED_GLOBAL_ATTRS.contains(&attr_name) {
         return true;
     }
     match tag {
-        "a" => matches!(attr_name, "href" | "title"),
-        "img" => matches!(attr_name, "src" | "alt" | "title" | "width" | "height"),
+        "a" => ALLOWED_A_ATTRS.contains(&attr_name),
+        "img" => ALLOWED_IMG_ATTRS.contains(&attr_name),
         _ => false,
     }
 }
@@ -196,7 +193,7 @@ fn render_element_attrs(
     children: &str,
     opts: &AdminHtmlOptions<'_>,
 ) -> String {
-    let is_void = is_void_admin_tag(tag);
+    let is_void = VOID_ADMIN_TAGS.contains(&tag);
 
     let mut open = format!("<{tag}");
     let mut has_external_href = false;
@@ -256,13 +253,13 @@ fn render_node<'a>(node: NodeRef<'a, Node>, opts: &'a AdminHtmlOptions<'a>) -> C
         Node::Element(elem) => {
             let tag: &str = elem.name.local.as_ref();
 
-            if is_dangerous_admin_tag(tag) {
+            if DANGEROUS_ADMIN_TAGS.contains(&tag) {
                 return Cow::Borrowed("");
             }
 
             let children = render_children(node, opts);
 
-            if !is_allowed_admin_tag(tag) {
+            if !ALLOWED_ADMIN_TAGS.contains(&tag) {
                 return Cow::Owned(children);
             }
 

@@ -138,7 +138,7 @@ fn test_chunking_special_characters_in_headers() {
     let header_chunk = chunks.iter().find(|c| c.level == 1);
     assert!(header_chunk.is_some());
     assert_eq!(
-        header_chunk.unwrap().header.as_deref().unwrap().as_str(),
+        header_chunk.unwrap().header.as_ref().unwrap(),
         "Header with émojis 🚀 and spëcial chârs"
     );
 }
