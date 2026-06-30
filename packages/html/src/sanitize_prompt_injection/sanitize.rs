@@ -461,7 +461,8 @@ pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
 }
 
 #[cfg(test)]
-mod tests { use super::*;
+mod tests {
+    use super::*;
 
     #[test]
     fn html_tag_replacement_for_empty_tag_is_boundary_replacement() {
