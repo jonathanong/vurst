@@ -46,3 +46,27 @@ test('extractMarkdownUrls separates link and image URLs', async () => {
   assert.deepEqual(urls.linkUrls, ['https://example.com'])
   assert.deepEqual(urls.imageUrls, ['https://example.com/a.png'])
 })
+
+test('renderMarkdownToHtml rejects input exceeding size limit', async () => {
+  const largeBuffer = Buffer.alloc(10 * 1024 * 1024 + 1)
+  await assert.rejects(
+    renderMarkdownToHtml(largeBuffer),
+    /Input too large/
+  )
+})
+
+test('renderMarkdownToHtmlBatch rejects input exceeding size limit', async () => {
+  const largeBuffer = Buffer.alloc(10 * 1024 * 1024 + 1)
+  await assert.rejects(
+    renderMarkdownToHtmlBatch([largeBuffer]),
+    /Input too large/
+  )
+})
+
+test('extractMarkdownUrls rejects input exceeding size limit', async () => {
+  const largeBuffer = Buffer.alloc(10 * 1024 * 1024 + 1)
+  await assert.rejects(
+    extractMarkdownUrls(largeBuffer),
+    /Input too large/
+  )
+})
