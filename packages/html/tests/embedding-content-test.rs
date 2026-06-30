@@ -97,6 +97,12 @@ fn test_plain_text_passthrough() {
 }
 
 #[test]
+fn test_plain_text_with_brackets_passthrough() {
+    let result = html_to_embedding_text("<p>keep [literal] brackets and array[0]</p>");
+    assert_eq!(result, "keep [literal] brackets and array[0]");
+}
+
+#[test]
 fn test_multiple_links_stripped() {
     let html =
         "<p>See <a href=\"https://a.com\">link A</a> and <a href=\"https://b.com\">link B</a>.</p>";
