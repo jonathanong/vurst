@@ -12,11 +12,13 @@ fn test_invalid_utf8_in_apply_dom_removals() {
         html_to_remove: vec![],
     };
 
-    let result = rt.block_on(apply_dom_removals_to_html(buffer, removals));
-    match result {
+    match rt.block_on(apply_dom_removals_to_html(buffer, removals)) {
         Ok(_) => panic!("Expected error for invalid UTF-8"),
         Err(err) => {
-            assert!(err.reason.contains("Invalid UTF-8 in HTML"));
+            assert_eq!(
+                err.reason,
+                "Invalid UTF-8 in HTML: invalid utf-8 sequence of 1 bytes from index 0"
+            );
         }
     }
 }
