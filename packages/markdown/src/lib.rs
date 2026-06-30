@@ -236,7 +236,7 @@ impl From<NapiChunkOptions> for ChunkOptions {
             min_length: opts.min_length,
             max_length: opts.max_length,
             phase: opts.phase,
-            title: opts.title,
+            title: opts.title.map(Into::into),
         }
     }
 }
