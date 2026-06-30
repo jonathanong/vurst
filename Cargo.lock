@@ -162,9 +162,9 @@ dependencies = [
 
 [[package]]
 name = "breadchunks"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cd87967c7a5fffed5abea4cc535eb904bdfb33bef87ce206e81374cbbd2319c"
+checksum = "3dbc35b7077bc4d10ea4cb48c3fb572504864f27cc2f0c01b1ef96bf045ca732"
 dependencies = [
  "regex",
 ]
@@ -1284,9 +1284,9 @@ dependencies = [
 
 [[package]]
 name = "napi"
-version = "3.9.2"
+version = "3.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26d3c7dd60231116a47854321c9ac8df6f13435d11aa3a59d8533a76e07a3730"
+checksum = "b41bda2ac390efb5e8d22025d925ccc3f3807d8c1bea6d19b36127247c4b8f83"
 dependencies = [
  "bitflags",
  "ctor",
@@ -1720,9 +1720,9 @@ dependencies = [
 
 [[package]]
 name = "psl"
-version = "2.1.213"
+version = "2.1.215"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04e78830163eebdf905adb55ba26ba9b3ba554b08bd84c2fbe3b643c8addf22c"
+checksum = "caff7403e06671f170c65dc7bf475ed31d6e108c7e0d2440fb4df8ba56cfded6"
 dependencies = [
  "psl-types",
 ]
