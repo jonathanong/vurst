@@ -276,10 +276,7 @@ fn strip_html_markup<'a>(content: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
 
     // Check if there are any tags to strip
     if !bytes.contains(&b'<') {
-        return match sanitized {
-            Cow::Borrowed(_) => content,
-            Cow::Owned(s) => Cow::Owned(s),
-        };
+        return Cow::Owned(sanitized.into_owned());
     }
 
     let mut stripped = String::with_capacity(sanitized.len());
@@ -390,27 +387,8 @@ pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
     let sanitized = normalize_whitespace(sanitized, is_title);
 
     // Step 9: Trim
-    let len = sanitized.len();
-    let trimmed_len = sanitized.trim().len();
-
-    // If the trimmed string is a slice of an Owned Cow, we have to create a new String
-    // if the bounds changed. We can optimize slightly by reusing the memory if possible.
-    match sanitized {
-        Cow::Borrowed(s) => {
-            if s.len() == trimmed_len {
-                s.to_string()
-            } else {
-                s.trim().to_string()
-            }
-        }
-        Cow::Owned(s) => {
-            if len == trimmed_len {
-                s
-            } else {
-                s.trim().to_string()
-            }
-        }
-    }
+    let sanitized = sanitized.trim();
+    sanitized.to_string()
 }
 
 #[cfg(test)]
@@ -424,6 +402,19 @@ mod tests {
             HTML_BOUNDARY_REPLACEMENT,
             "empty HTML tag should map to boundary replacement"
         );
+    }
+
+    #[test]
+    fn strip_html_markup_removes_comment_with_no_tags() {
+        assert_eq!(
+            strip_html_markup("  <!-- injected -->  ").as_ref(),
+            format!("  {}  ", HTML_BOUNDARY_REPLACEMENT).as_str()
+        );
+    }
+
+    #[test]
+    fn sanitize_prompt_injection_trims_surrounding_whitespace() {
+        assert_eq!(sanitize_prompt_injection_sync("  safe input  ", false), "safe input");
     }
 
     #[test]
