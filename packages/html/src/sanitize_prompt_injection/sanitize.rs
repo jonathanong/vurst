@@ -259,7 +259,7 @@ fn strip_html_tag(content: &str, tag_start: usize) -> Option<(usize, &'static st
     None
 }
 
-fn strip_html_markup<'a>(content: &'a str) -> Cow<'a, str> {
+fn strip_html_markup(content: &str) -> Cow<'_, str> {
     // Fast path: if there are no HTML comments or tags, return early
     if !content.contains('<') {
         return Cow::Borrowed(content);
@@ -359,10 +359,8 @@ fn normalize_whitespace(content: &str, is_title: bool) -> Cow<'_, str> {
         }
     }
 
-    if !needs_modification {
-        if !in_horizontal_ws {
-            return Cow::Borrowed(content);
-        }
+    if !needs_modification && !in_horizontal_ws {
+        return Cow::Borrowed(content);
     }
 
     let mut out = String::with_capacity(content.len());
@@ -451,7 +449,7 @@ pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
     let decoded_entities = decode_html_entities(content);
 
     // Step 2: Strip Unicode format/zero-width characters and boundary markers
-    let mut sanitized = strip_zero_width_and_boundaries(&*decoded_entities).into_owned();
+    let mut sanitized = strip_zero_width_and_boundaries(&decoded_entities).into_owned();
 
     // Steps 3-6: Handle injection patterns and HTML markup
     sanitized = apply_injection_passes(sanitized);
