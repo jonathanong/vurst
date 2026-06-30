@@ -8,6 +8,7 @@ const HTML_ENTITY_DECODE_WORK_FACTOR: usize = 64;
 const MIN_HTML_ENTITY_DECODE_FULL_PASSES: usize = 2;
 const MIN_HTML_ENTITY_DECODE_WORK_UNITS: usize = 1_024;
 const MAX_HTML_ENTITY_DECODE_NESTED_WORK_UNITS: usize = 1_000_000;
+const MAX_STACK_ENTITY_NAME_BYTES: usize = 33;
 
 static NAMED_HTML_ENTITIES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     entities::ENTITIES
@@ -101,15 +102,22 @@ fn lookup_named_html_entity(entity: &str) -> Option<&'static str> {
         return Some(replacement);
     }
 
-    let case_folded_entity = entity.to_ascii_lowercase();
-    SECURITY_CRITICAL_CASE_INSENSITIVE_HTML_ENTITY_MAP
-        .get(case_folded_entity.as_str())
-        .copied()
-        .or_else(|| {
-            CASE_INSENSITIVE_NAMED_HTML_ENTITIES
-                .get(case_folded_entity.as_str())
-                .copied()
-        })
+    let lookup = |entity: &str| {
+        SECURITY_CRITICAL_CASE_INSENSITIVE_HTML_ENTITY_MAP
+            .get(entity)
+            .copied()
+            .or_else(|| CASE_INSENSITIVE_NAMED_HTML_ENTITIES.get(entity).copied())
+    };
+
+    if entity.len() <= MAX_STACK_ENTITY_NAME_BYTES {
+        let mut buf = [0u8; MAX_STACK_ENTITY_NAME_BYTES];
+        buf[..entity.len()].copy_from_slice(entity.as_bytes());
+        buf[..entity.len()].make_ascii_lowercase();
+        // SAFE: Input `entity` is valid UTF-8. `make_ascii_lowercase` only mutates ASCII bytes.
+        lookup(unsafe { std::str::from_utf8_unchecked(&buf[..entity.len()]) })
+    } else {
+        lookup(entity.to_ascii_lowercase().as_str())
+    }
 }
 
 fn decode_html_entities_once(text: &str) -> String {
