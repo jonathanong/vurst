@@ -399,10 +399,10 @@ fn apply_final_formatting(mut sanitized: String, is_title: bool) -> String {
 /// `the system: design notes`.
 pub fn sanitize_prompt_injection_sync(content: &str, is_title: bool) -> String {
     // Step 1: Decode HTML entities
-    let mut sanitized = decode_html_entities(content);
+    let mut sanitized = decode_html_entities(content).into_owned();
 
     // Step 2: Strip Unicode format/zero-width characters and boundary markers
-    sanitized = strip_zero_width_and_boundaries(&sanitized);
+    sanitized = strip_zero_width_and_boundaries(&sanitized).into_owned();
 
     // Steps 3-6: Handle injection patterns and HTML markup
     sanitized = apply_injection_passes(sanitized);
