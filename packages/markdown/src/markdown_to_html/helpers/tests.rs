@@ -137,3 +137,47 @@ fn extract_bare_domains_skips_bare_psl_suffix() {
         "bare PSL suffix should not produce a link: {links:?}"
     );
 }
+
+#[test]
+fn extract_bare_domains_finds_valid_patterns() {
+    let mut links = Vec::new();
+    extract_bare_domains("visit example.com for more", &mut links);
+    assert_eq!(links, vec!["example.com"]);
+
+    let mut links = Vec::new();
+    extract_bare_domains("sub.example.com/path?q=1 is cool", &mut links);
+    assert_eq!(links, vec!["sub.example.com/path?q=1"]);
+
+    let mut links = Vec::new();
+    extract_bare_domains("multiple: discord.gg/raid and t.me/x.", &mut links);
+    assert_eq!(links, vec!["discord.gg/raid", "t.me/x"]);
+
+    let mut links = Vec::new();
+    extract_bare_domains(
+        "trailing punctuation like example.com/path! or example.com, etc.",
+        &mut links,
+    );
+    assert_eq!(links, vec!["example.com/path", "example.com"]);
+}
+
+#[test]
+fn extract_bare_domains_ignores_invalid_patterns() {
+    let mut links = Vec::new();
+    // npm scopes and versions (node.js, v1.0)
+    extract_bare_domains(
+        "I like node.js and v1.0 of the software. i.e. test",
+        &mut links,
+    );
+    assert!(
+        links.is_empty(),
+        "should reject non-ICANN/fake TLDs: {links:?}"
+    );
+
+    let mut links = Vec::new();
+    // private PSL entries like github.io
+    extract_bare_domains("my site is on github.io", &mut links);
+    assert!(
+        links.is_empty(),
+        "should reject private PSL entries: {links:?}"
+    );
+}
