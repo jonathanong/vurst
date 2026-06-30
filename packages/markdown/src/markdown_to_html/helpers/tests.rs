@@ -144,6 +144,28 @@ fn test_decode_url_html_entities_exhaustive() {
     );
     assert_eq!(decode_url_html_entities("&#xG;").as_ref(), "&#xG;");
 
+    // Unicode boundary conditions for numeric entities
+    assert_eq!(
+        decode_url_html_entities("&#x10FFFF;").as_ref(),
+        "\u{10FFFF}"
+    );
+    assert_eq!(
+        decode_url_html_entities("&#1114111;").as_ref(),
+        "\u{10FFFF}"
+    );
+    assert_eq!(
+        decode_url_html_entities("&#x110000;").as_ref(),
+        "&#x110000;"
+    );
+    assert_eq!(
+        decode_url_html_entities("&#1114112;").as_ref(),
+        "&#1114112;"
+    );
+
+    // Surrogate code points must remain unchanged
+    assert_eq!(decode_url_html_entities("&#xD800;").as_ref(), "&#xD800;");
+    assert_eq!(decode_url_html_entities("&#xDFFF;").as_ref(), "&#xDFFF;");
+
     // Mixed text
     assert_eq!(
         decode_url_html_entities("java&#115cript&#58alert(1)").as_ref(),
@@ -153,6 +175,16 @@ fn test_decode_url_html_entities_exhaustive() {
         decode_url_html_entities("hello &#119;&#111;&#114;&#108;&#100;!").as_ref(),
         "hello world!"
     );
+
+    // Unchanged invalid refs should remain borrowed (no unnecessary allocation)
+    assert!(matches!(
+        decode_url_html_entities("a&#oops"),
+        std::borrow::Cow::Borrowed(_)
+    ));
+    assert!(matches!(
+        decode_url_html_entities("&#oops"),
+        std::borrow::Cow::Borrowed(_)
+    ));
 }
 
 #[test]
