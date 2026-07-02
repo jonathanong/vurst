@@ -117,9 +117,9 @@ dependencies = [
 
 [[package]]
 name = "boilerstrip"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af24c2fc06ad14a52612750c59ff0e7d38e3919f417eef638bcdd54ae21f3255"
+checksum = "4c696ec0d5eeac00f7d3db370d61bf21c199990893477043e0e6b0f3a3f75d3e"
 dependencies = [
  "ego-tree",
  "lol_html",
@@ -1162,9 +1162,9 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
 name = "lol_html"
-version = "2.9.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00aad58f6ec3990e795943872f13651e7a5fa59dca2c8f31a74faf8a0e0fb652"
+checksum = "2ae574a677ef0443a0bd3c291f0cab9d1e61a3ad85a1515e3cfc0bc720d5a48e"
 dependencies = [
  "bitflags",
  "cfg-if",
