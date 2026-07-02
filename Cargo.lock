@@ -162,10 +162,11 @@ dependencies = [
 
 [[package]]
 name = "breadchunks"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dbc35b7077bc4d10ea4cb48c3fb572504864f27cc2f0c01b1ef96bf045ca732"
+checksum = "d4e18c1a62e0e32746e630a55989d5f80cce38a0437bf0ba5744e52bc9c25bcd"
 dependencies = [
+ "lazy-regex",
  "regex",
 ]
 
@@ -1094,6 +1095,29 @@ dependencies = [
  "futures-util",
  "once_cell",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "lazy-regex"
+version = "3.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bae91019476d3ec7147de9aa291cadb6d870abf2f3015d2da73a90325ac1496"
+dependencies = [
+ "lazy-regex-proc_macros",
+ "once_cell",
+ "regex",
+]
+
+[[package]]
+name = "lazy-regex-proc_macros"
+version = "3.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4de9c1e1439d8b7b3061b2d209809f447ca33241733d9a3c01eabf2dc8d94358"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn",
 ]
 
 [[package]]
