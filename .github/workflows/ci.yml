@@ -21,8 +21,15 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - name: Install workspace dependencies for package validation
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Check package versions
-        run: npm run check:versions
+        run: pnpm run check:versions
+      - name: Check packed package manifests
+        run: pnpm run check:packed-manifests
+      - name: Check release workflow
+        run: pnpm run check:release-workflow
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt, llvm-tools-preview
