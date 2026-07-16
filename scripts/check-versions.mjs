@@ -34,12 +34,6 @@ const entries = [];
 for (const path of npmPackagePaths) {
   const pkg = await readJson(path);
   entries.push([path, pkg.version]);
-
-  for (const [dependency, version] of Object.entries(
-    pkg.optionalDependencies ?? {},
-  )) {
-    entries.push([`${path} optionalDependencies["${dependency}"]`, version]);
-  }
 }
 
 for (const path of cargoPackagePaths) {

@@ -109,17 +109,6 @@ jobs:
               fs.writeFileSync(path, cargo);
             }
           " "$version"
-          node -e "
-            const fs = require('node:fs');
-            const version = process.argv[1];
-            for (const path of ['packages/ai/package.json', 'packages/html/package.json', 'packages/markdown/package.json']) {
-              const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
-              for (const dep of Object.keys(pkg.optionalDependencies ?? {})) {
-                pkg.optionalDependencies[dep] = version;
-              }
-              fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
-            }
-          " "$version"
           npm run check:versions
           cargo update -w
           git add package.json scripts/check-versions.mjs
@@ -402,9 +391,23 @@ jobs:
             gh release create "$tag" --title "$tag" --generate-notes
           fi
 
-      # Per-platform native packages publish first: the meta packages below
-      # declare them as optionalDependencies, so they must already exist on
-      # npm by the time a consumer installs the meta package. `napi
+      # Per-platform native packages publish first: `napi prepublish` writes
+      # `optionalDependencies` (pointing at these packages, pinned to the
+      # current version) into each meta package.json *in this checkout*
+      # before its own meta publish step runs below -- so the published meta
+      # tarball declares them correctly. Those optionalDependencies are
+      # deliberately NOT committed to git: pnpm cannot record a lockfile
+      # entry for an optionalDependency that doesn't resolve (it silently
+      # excludes it), so committing them before these package names exist on
+      # npm makes `pnpm install --frozen-lockfile` fail everywhere, forever
+      # (this broke CI on the PR that introduced this workflow). Once a
+      # per-platform package has been published at least once, pnpm *can*
+      # resolve it -- but re-adding it to source control still isn't
+      # necessary, since `napi prepublish` recomputes it from the current
+      # version on every release.
+      #
+      # The meta packages must already exist on npm by the time a consumer
+      # installs them, so per-platform packages publish first. `napi
       # prepublish` skips packages it finds already published at this
       # version, so these steps are safe to re-run.
       - name: Publish @jongleberry/vurst-html-* (per-platform)

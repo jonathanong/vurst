@@ -43,11 +43,6 @@
     "access": "public",
     "provenance": true
   },
-  "optionalDependencies": {
-    "@jongleberry/vurst-ai-darwin-arm64": "0.2.2",
-    "@jongleberry/vurst-ai-linux-arm64-gnu": "0.2.2",
-    "@jongleberry/vurst-ai-linux-x64-gnu": "0.2.2"
-  },
   "devDependencies": {
     "@napi-rs/cli": "^3.6.2",
     "@types/node": "^24"
