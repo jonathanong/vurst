@@ -44,6 +44,32 @@ try {
     ]);
     const packedManifest = JSON.parse(packedManifestJson);
 
+    const { stdout: packedFileListing } = await execFileAsync("tar", [
+      "-tf",
+      filename,
+    ]);
+    const packedFiles = packedFileListing.split("\n").filter(Boolean);
+
+    const nativeBinaries = packedFiles.filter((file) =>
+      file.endsWith(".node"),
+    );
+    if (nativeBinaries.length > 0) {
+      throw new Error(
+        `${packedManifest.name} packs native binaries, expected only per-platform packages to: ${nativeBinaries.join(", ")}`,
+      );
+    }
+
+    if (packedManifest.name === "@jongleberry/vurst-ai") {
+      const onnxAssets = packedFiles.filter((file) =>
+        file.startsWith("package/onnxruntime/"),
+      );
+      if (onnxAssets.length > 0) {
+        throw new Error(
+          `${packedManifest.name} packs onnxruntime assets, expected only per-platform packages to: ${onnxAssets.join(", ")}`,
+        );
+      }
+    }
+
     for (const dependencyField of dependencyFields) {
       for (const [dependency, specifier] of Object.entries(
         packedManifest[dependencyField] ?? {},

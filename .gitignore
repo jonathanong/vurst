@@ -5,5 +5,7 @@ coverage/
 *.profraw
 package/*.tgz
 package/onnxruntime/
+packages/*/npm/
+packages/ai/onnxruntime/
 .DS_Store
 .jules/

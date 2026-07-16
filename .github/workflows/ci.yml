@@ -177,4 +177,4 @@ jobs:
         working-directory: packages/ai
         run: |
           npm install
-          npx napi build --platform --release --target ${{ matrix.target }}
+          npx napi build --platform --release --target ${{ matrix.target }} --js binding.js --dts binding.d.ts

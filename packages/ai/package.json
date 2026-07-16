@@ -22,9 +22,9 @@
   "files": [
     "index.js",
     "index.d.ts",
-    "README.md",
-    "*.node",
-    "onnxruntime/"
+    "binding.js",
+    "binding.d.ts",
+    "README.md"
   ],
   "napi": {
     "binaryName": "vurst-ai",
@@ -35,10 +35,9 @@
     ]
   },
   "scripts": {
-    "build": "napi build --platform --release",
-    "build:debug": "napi build --platform",
-    "test": "node --test __test__/*.test.mjs",
-    "prepublishOnly": "napi prepublish -t npm"
+    "build": "napi build --platform --release --js binding.js --dts binding.d.ts",
+    "build:debug": "napi build --platform --js binding.js --dts binding.d.ts",
+    "test": "node --test __test__/*.test.mjs"
   },
   "publishConfig": {
     "access": "public",
