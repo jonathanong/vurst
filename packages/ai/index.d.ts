@@ -12,3 +12,5 @@ import type { NapiSlopDetectionResult } from './binding'
 
 export * from './binding'
 export interface SlopDetectionResult extends NapiSlopDetectionResult {}
+
+export declare function detectAiGeneratedText(text: Buffer, confidenceThreshold?: number | undefined | null): Promise<SlopDetectionResult>

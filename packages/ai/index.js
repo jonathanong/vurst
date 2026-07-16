@@ -34,6 +34,9 @@ function resolveOrtDylibPath(key, dylib) {
   // per-platform @jongleberry/vurst-ai-<platform> optionalDependency, not
   // this meta package.
   const platformArchABI = platformArchABIByKey[key]
+  if (!platformArchABI) {
+    return null
+  }
   try {
     const platformPackageJsonPath = require.resolve(
       `@jongleberry/vurst-ai-${platformArchABI}/package.json`,
