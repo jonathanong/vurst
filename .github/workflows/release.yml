@@ -109,6 +109,17 @@ jobs:
               fs.writeFileSync(path, cargo);
             }
           " "$version"
+          node -e "
+            const fs = require('node:fs');
+            const version = process.argv[1];
+            for (const path of ['packages/ai/package.json', 'packages/html/package.json', 'packages/markdown/package.json']) {
+              const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+              for (const dep of Object.keys(pkg.optionalDependencies ?? {})) {
+                pkg.optionalDependencies[dep] = version;
+              }
+              fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+            }
+          " "$version"
           npm run check:versions
           cargo update -w
           git add package.json scripts/check-versions.mjs
@@ -186,7 +197,7 @@ jobs:
         working-directory: packages/ai
         run: |
           npm install
-          npx napi build --platform --release --target ${{ matrix.target }}
+          npx napi build --platform --release --target ${{ matrix.target }} --js binding.js --dts binding.d.ts
 
       - name: Stage onnxruntime dylib for the ai npm package
         shell: bash
@@ -271,6 +282,85 @@ jobs:
       - name: Check packed package manifests
         run: pnpm run check:packed-manifests
 
+      - name: Scaffold per-platform packages (html)
+        working-directory: packages/html
+        run: |
+          set -euo pipefail
+          npx napi create-npm-dirs
+          npx napi artifacts --output-dir .
+
+      - name: Scaffold per-platform packages (markdown)
+        working-directory: packages/markdown
+        run: |
+          set -euo pipefail
+          npx napi create-npm-dirs
+          npx napi artifacts --output-dir .
+
+      - name: Scaffold per-platform packages (ai)
+        working-directory: packages/ai
+        run: |
+          set -euo pipefail
+          npx napi create-npm-dirs
+          npx napi artifacts --output-dir .
+
+      - name: Stage onnxruntime dylibs into per-platform ai packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          declare -A dylib_by_key=(
+            [darwin-arm64]=libonnxruntime.dylib
+            [linux-x64]=libonnxruntime.so
+            [linux-arm64]=libonnxruntime.so
+          )
+          declare -A platform_arch_abi_by_key=(
+            [darwin-arm64]=darwin-arm64
+            [linux-x64]=linux-x64-gnu
+            [linux-arm64]=linux-arm64-gnu
+          )
+          for key in darwin-arm64 linux-x64 linux-arm64; do
+            dylib="${dylib_by_key[$key]}"
+            platform_arch_abi="${platform_arch_abi_by_key[$key]}"
+            dest_dir="packages/ai/npm/$platform_arch_abi/onnxruntime/$key"
+            mkdir -p "$dest_dir"
+            cp "packages/ai/onnxruntime/$key/$dylib" "$dest_dir/$dylib"
+            node -e "
+              const fs = require('node:fs');
+              const path = process.argv[1];
+              const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+              if (!pkg.files.includes('onnxruntime/')) {
+                pkg.files.push('onnxruntime/');
+              }
+              fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+            " "packages/ai/npm/$platform_arch_abi/package.json"
+          done
+
+      - name: List staged per-platform packages
+        run: |
+          find packages/html/npm packages/markdown/npm packages/ai/npm -maxdepth 2 | sort
+
+      - name: Release smoke test (ai, linux-x64-gnu)
+        working-directory: packages/ai
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          smoke_dir="$(mktemp -d)"
+          npm pack --pack-destination "$smoke_dir" >/dev/null
+          npm pack --pack-destination "$smoke_dir" ./npm/linux-x64-gnu >/dev/null
+          consumer_dir="$(mktemp -d)"
+          (cd "$consumer_dir" && npm init -y >/dev/null)
+          npm install --prefix "$consumer_dir" --no-save \
+            "$smoke_dir/jongleberry-vurst-ai-$version.tgz" \
+            "$smoke_dir/jongleberry-vurst-ai-linux-x64-gnu-$version.tgz"
+          node -e "
+            const { detectAiGeneratedText } = require(require('node:path').join(process.argv[1], 'node_modules/@jongleberry/vurst-ai'));
+            detectAiGeneratedText(Buffer.from('Release smoke test sentence.')).then((result) => {
+              if (typeof result.flagged !== 'boolean') {
+                throw new Error('Unexpected result shape: ' + JSON.stringify(result));
+              }
+              console.log('Release smoke test passed:', JSON.stringify(result));
+            });
+          " "$consumer_dir"
+
       - name: Show npm publish state
         shell: bash
         run: |
@@ -279,9 +369,18 @@ jobs:
           for package in \
             "@jongleberry/vurst-runtime" \
             "@jongleberry/vurst-html" \
+            "@jongleberry/vurst-html-darwin-arm64" \
+            "@jongleberry/vurst-html-linux-arm64-gnu" \
+            "@jongleberry/vurst-html-linux-x64-gnu" \
             "@jongleberry/vurst-markdown" \
+            "@jongleberry/vurst-markdown-darwin-arm64" \
+            "@jongleberry/vurst-markdown-linux-arm64-gnu" \
+            "@jongleberry/vurst-markdown-linux-x64-gnu" \
             "@jongleberry/vurst-prompt" \
-            "@jongleberry/vurst-ai"
+            "@jongleberry/vurst-ai" \
+            "@jongleberry/vurst-ai-darwin-arm64" \
+            "@jongleberry/vurst-ai-linux-arm64-gnu" \
+            "@jongleberry/vurst-ai-linux-x64-gnu"
           do
             if npm view "$package@$version" version >/dev/null 2>&1; then
               echo "$package $version is already on npm and will be skipped"
@@ -302,6 +401,35 @@ jobs:
           else
             gh release create "$tag" --title "$tag" --generate-notes
           fi
+
+      # Per-platform native packages publish first: the meta packages below
+      # declare them as optionalDependencies, so they must already exist on
+      # npm by the time a consumer installs the meta package. `napi
+      # prepublish` skips packages it finds already published at this
+      # version, so these steps are safe to re-run.
+      - name: Publish @jongleberry/vurst-html-* (per-platform)
+        working-directory: packages/html
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+        shell: bash
+        run: npx napi prepublish --no-gh-release --npm-dir npm
+
+      - name: Publish @jongleberry/vurst-markdown-* (per-platform)
+        working-directory: packages/markdown
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+        shell: bash
+        run: npx napi prepublish --no-gh-release --npm-dir npm
+
+      - name: Publish @jongleberry/vurst-ai-* (per-platform)
+        working-directory: packages/ai
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+        shell: bash
+        run: npx napi prepublish --no-gh-release --npm-dir npm
 
       - name: Publish @jongleberry/vurst-runtime
         working-directory: packages/runtime

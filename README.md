@@ -31,8 +31,13 @@ Prebuilt binaries ship for:
 - Linux x64 glibc (`x86_64-unknown-linux-gnu`)
 - Linux arm64 glibc (`aarch64-unknown-linux-gnu`)
 
-The ONNX Runtime shared library is bundled inside `@jongleberry/vurst-ai` —
-no system install required. glibc 2.17+ compatible (manylinux2014).
+`@jongleberry/vurst-html`, `@jongleberry/vurst-markdown`, and
+`@jongleberry/vurst-ai` are lightweight meta packages: the native binary for
+each supported platform lives in its own `optionalDependency` package (e.g.
+`@jongleberry/vurst-ai-darwin-arm64`), and your package manager installs only
+the one matching your platform. The ONNX Runtime shared library is bundled
+the same way, inside the matching `@jongleberry/vurst-ai-<platform>` package
+— no system install required. glibc 2.17+ compatible (manylinux2014).
 
 ## `@jongleberry/vurst-html`
 

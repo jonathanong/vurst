@@ -23,8 +23,7 @@
   "files": [
     "index.js",
     "index.d.ts",
-    "README.md",
-    "*.node"
+    "README.md"
   ],
   "napi": {
     "binaryName": "vurst-markdown",
@@ -37,12 +36,16 @@
   "scripts": {
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
-    "test": "node --test __test__/*.test.mjs",
-    "prepublishOnly": "napi prepublish -t npm"
+    "test": "node --test __test__/*.test.mjs"
   },
   "publishConfig": {
     "access": "public",
     "provenance": true
+  },
+  "optionalDependencies": {
+    "@jongleberry/vurst-markdown-darwin-arm64": "0.2.2",
+    "@jongleberry/vurst-markdown-linux-arm64-gnu": "0.2.2",
+    "@jongleberry/vurst-markdown-linux-x64-gnu": "0.2.2"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.6.2",
