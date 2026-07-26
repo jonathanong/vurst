@@ -25,4 +25,22 @@ describe("release workflow", () => {
 
     assert.match(workflow, /pnpm run check:packed-manifests/);
   });
+
+  it("publishes checksummed native assets before npm packages", async () => {
+    const workflow = await readFile(".github/workflows/release.yml", "utf8");
+    const releaseCreate = workflow.indexOf(
+      'gh release create "$tag" dist/* --title "$tag" --generate-notes',
+    );
+    const firstNpmPublish = workflow.indexOf(
+      "pnpm publish --access public --provenance --no-git-checks",
+    );
+
+    assert.match(workflow, /name: release-assets-\$\{\{ matrix\.target \}\}/);
+    assert.match(workflow, /shasum -a 256 "\$artifact"/);
+    assert.match(workflow, /gh release upload "\$tag" dist\/\* --clobber/);
+    assert.match(workflow, /Smoke-test GitHub Release installers/);
+    assert.ok(releaseCreate >= 0);
+    assert.ok(firstNpmPublish > releaseCreate);
+    assert.doesNotMatch(workflow, /pattern: bindings-(?:ai|html|markdown)-\*/);
+  });
 });

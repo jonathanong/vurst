@@ -44,6 +44,8 @@ jobs:
         run: pnpm run check:versions
       - name: Check packed package manifests
         run: pnpm run check:packed-manifests
+      - name: Check native installer
+        run: pnpm run check:native-installer
       - name: Check release workflow
         run: pnpm run check:release-workflow
       - uses: dtolnay/rust-toolchain@stable
@@ -133,16 +135,22 @@ jobs:
             ort_url_suffix: osx-arm64
             ort_lib_name: libonnxruntime.dylib
             platform_arch_key: darwin-arm64
+            napi_suffix: darwin-arm64
+            ort_asset_extension: .dylib
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             ort_url_suffix: linux-x64
             ort_lib_name: libonnxruntime.so
             platform_arch_key: linux-x64
+            napi_suffix: linux-x64-gnu
+            ort_asset_extension: .so
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             ort_url_suffix: linux-aarch64
             ort_lib_name: libonnxruntime.so
             platform_arch_key: linux-arm64
+            napi_suffix: linux-arm64-gnu
+            ort_asset_extension: .so
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     steps:
@@ -173,19 +181,19 @@ jobs:
       - name: Build html package
         working-directory: packages/html
         run: |
-          npm install
+          npm install --ignore-scripts
           npx napi build --platform --release --target ${{ matrix.target }}
 
       - name: Build markdown package
         working-directory: packages/markdown
         run: |
-          npm install
+          npm install --ignore-scripts
           npx napi build --platform --release --target ${{ matrix.target }}
 
       - name: Build ai package
         working-directory: packages/ai
         run: |
-          npm install
+          npm install --ignore-scripts
           npx napi build --platform --release --target ${{ matrix.target }}
 
       - name: Stage onnxruntime dylib for the ai npm package
@@ -196,27 +204,34 @@ jobs:
           mkdir -p "$dest"
           cp "onnxruntime/lib/${{ matrix.ort_lib_name }}" "$dest/"
 
-      - name: Upload html artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: bindings-html-${{ matrix.target }}
-          path: packages/html/*.node
-          if-no-files-found: error
+      - name: Stage GitHub Release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          target="${{ matrix.target }}"
+          mkdir -p release-assets
+          cp \
+            "packages/html/vurst-html.${{ matrix.napi_suffix }}.node" \
+            "release-assets/vurst-html-v${version}-${target}.node"
+          cp \
+            "packages/markdown/vurst-markdown.${{ matrix.napi_suffix }}.node" \
+            "release-assets/vurst-markdown-v${version}-${target}.node"
+          cp \
+            "packages/ai/vurst-ai.${{ matrix.napi_suffix }}.node" \
+            "release-assets/vurst-ai-v${version}-${target}.node"
+          cp \
+            "packages/ai/onnxruntime/${{ matrix.platform_arch_key }}/${{ matrix.ort_lib_name }}" \
+            "release-assets/vurst-ai-onnxruntime-v${version}-${target}${{ matrix.ort_asset_extension }}"
+          for artifact in release-assets/*; do
+            shasum -a 256 "$artifact" > "$artifact.sha256"
+          done
 
-      - name: Upload markdown artifact
+      - name: Upload GitHub Release assets
         uses: actions/upload-artifact@v7
         with:
-          name: bindings-markdown-${{ matrix.target }}
-          path: packages/markdown/*.node
-          if-no-files-found: error
-
-      - name: Upload ai artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: bindings-ai-${{ matrix.target }}
-          path: |
-            packages/ai/*.node
-            packages/ai/onnxruntime/${{ matrix.platform_arch_key }}/${{ matrix.ort_lib_name }}
+          name: release-assets-${{ matrix.target }}
+          path: release-assets/*
           if-no-files-found: error
 
   publish:
@@ -237,39 +252,106 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Download html binaries
+      - name: Download GitHub Release assets
         uses: actions/download-artifact@v8
         with:
-          pattern: bindings-html-*
-          path: packages/html
+          pattern: release-assets-*
+          path: dist
           merge-multiple: true
 
-      - name: Download markdown binaries
-        uses: actions/download-artifact@v8
-        with:
-          pattern: bindings-markdown-*
-          path: packages/markdown
-          merge-multiple: true
-
-      - name: Download ai binaries
-        uses: actions/download-artifact@v8
-        with:
-          pattern: bindings-ai-*
-          path: packages/ai
-          merge-multiple: true
-
-      - name: List staged files
+      - name: List GitHub Release assets
         run: |
-          ls -la packages/html/
-          ls -la packages/markdown/
-          ls -la packages/ai/
-          ls -la packages/ai/onnxruntime/ || true
+          find dist -maxdepth 1 -type f -print | sort
 
       - name: Check package versions
         run: pnpm run check:versions
 
       - name: Check packed package manifests
         run: pnpm run check:packed-manifests
+
+      - name: Smoke-test GitHub Release installers
+        shell: bash
+        run: |
+          set -euo pipefail
+          pack_dir="$(mktemp -d)"
+          consumer_dir="$(mktemp -d)"
+          pnpm --dir packages/html pack --pack-destination "$pack_dir" >/dev/null
+          pnpm --dir packages/markdown pack --pack-destination "$pack_dir" >/dev/null
+          pnpm --dir packages/ai pack --pack-destination "$pack_dir" >/dev/null
+          npm init --prefix "$consumer_dir" -y >/dev/null
+          export VURST_RELEASE_BASE_URL
+          VURST_RELEASE_BASE_URL="$(
+            node -e "console.log(require('node:url').pathToFileURL(process.argv[1]).href)" \
+              "$PWD/dist"
+          )"
+          npm install --prefix "$consumer_dir" --no-save "$pack_dir"/*.tgz
+          node - "$consumer_dir" <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+          const root = process.argv[2]
+          const packageRoot = (name) =>
+            path.join(root, 'node_modules', '@jongleberry', name)
+          const expected = {
+            'vurst-html': 'vurst-html.linux-x64-gnu.node',
+            'vurst-markdown': 'vurst-markdown.linux-x64-gnu.node',
+            'vurst-ai': 'vurst-ai.linux-x64-gnu.node',
+          }
+          for (const [name, binary] of Object.entries(expected)) {
+            const directory = packageRoot(name)
+            if (!fs.existsSync(path.join(directory, binary))) {
+              throw new Error(`${name} did not install ${binary}`)
+            }
+            const nativeFiles = fs
+              .readdirSync(directory)
+              .filter((entry) => entry.endsWith('.node'))
+            if (nativeFiles.length !== 1 || nativeFiles[0] !== binary) {
+              throw new Error(
+                `${name} installed unexpected native files: ${nativeFiles.join(', ')}`,
+              )
+            }
+          }
+          const onnx = path.join(
+            packageRoot('vurst-ai'),
+            'onnxruntime',
+            'linux-x64',
+            'libonnxruntime.so',
+          )
+          if (!fs.existsSync(onnx)) {
+            throw new Error('vurst-ai did not install the Linux x64 ONNX library')
+          }
+
+          async function smoke() {
+            const html = require(packageRoot('vurst-html'))
+            const sanitized = await html.sanitizeRssHtml(
+              Buffer.from('<p>Hello</p><script>bad()</script>'),
+            )
+            if (!sanitized.html.toString('utf8').includes('<p>Hello</p>')) {
+              throw new Error('vurst-html smoke test returned unexpected output')
+            }
+
+            const markdown = require(packageRoot('vurst-markdown'))
+            const rendered = await markdown.renderMarkdownToHtml(
+              Buffer.from('# Hello'),
+            )
+            if (!rendered.toString('utf8').includes('<h1>Hello</h1>')) {
+              throw new Error('vurst-markdown smoke test returned unexpected output')
+            }
+
+            const ai = require(packageRoot('vurst-ai'))
+            const result = await ai.detectAiGeneratedText(
+              Buffer.from('Release smoke test sentence.'),
+            )
+            if (typeof result.flagged !== 'boolean') {
+              throw new Error(
+                `vurst-ai smoke test returned unexpected output: ${JSON.stringify(result)}`,
+              )
+            }
+          }
+          smoke().catch((error) => {
+            console.error(error)
+            process.exitCode = 1
+          })
+          NODE
 
       - name: Show npm publish state
         shell: bash
@@ -298,9 +380,9 @@ jobs:
           set -euo pipefail
           tag="v${{ needs.prepare.outputs.version }}"
           if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists; skipping"
+            gh release upload "$tag" dist/* --clobber
           else
-            gh release create "$tag" --title "$tag" --generate-notes
+            gh release create "$tag" dist/* --title "$tag" --generate-notes
           fi
 
       - name: Publish @jongleberry/vurst-runtime

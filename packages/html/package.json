@@ -24,7 +24,7 @@
     "index.js",
     "index.d.ts",
     "README.md",
-    "*.node"
+    "scripts/"
   ],
   "napi": {
     "binaryName": "vurst-html",
@@ -38,7 +38,7 @@
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
     "test": "node --test __test__/*.test.mjs",
-    "prepublishOnly": "napi prepublish -t npm"
+    "postinstall": "node scripts/install.js"
   },
   "publishConfig": {
     "access": "public",

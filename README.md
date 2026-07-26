@@ -31,8 +31,19 @@ Prebuilt binaries ship for:
 - Linux x64 glibc (`x86_64-unknown-linux-gnu`)
 - Linux arm64 glibc (`aarch64-unknown-linux-gnu`)
 
-The ONNX Runtime shared library is bundled inside `@jongleberry/vurst-ai` —
-no system install required. glibc 2.17+ compatible (manylinux2014).
+`@jongleberry/vurst-html`, `@jongleberry/vurst-markdown`, and
+`@jongleberry/vurst-ai` are lightweight npm packages. During `postinstall`,
+each package downloads only the native binary for the current platform from
+the matching GitHub Release and verifies its SHA-256 checksum. Re-running the
+installer reuses a binary only when its version marker matches the installed
+npm package; missing or stale markers trigger a fresh download.
+
+The matching ONNX Runtime shared library is downloaded with
+`@jongleberry/vurst-ai`, so no system install is required. glibc 2.17+
+compatible (manylinux2014). Package-manager lifecycle scripts and access to
+GitHub Releases are required during a clean install. Source builds can set
+`VURST_SKIP_BINARY_DOWNLOAD=1`; controlled mirrors and installer tests can set
+`VURST_RELEASE_BASE_URL`.
 
 ## `@jongleberry/vurst-html`
 
