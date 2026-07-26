@@ -46,5 +46,8 @@
   "devDependencies": {
     "@napi-rs/cli": "^3.6.2",
     "@types/node": "^24"
+  },
+  "dependencies": {
+    "https-proxy-agent": "^7.0.6"
   }
 }

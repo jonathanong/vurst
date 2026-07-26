@@ -16,6 +16,7 @@ const https = require("node:https");
 const { basename, dirname, join } = require("node:path");
 const { pipeline } = require("node:stream/promises");
 const { fileURLToPath } = require("node:url");
+const { HttpsProxyAgent } = require("https-proxy-agent");
 
 const REPOSITORY = "jonathanong/vurst";
 const DOWNLOAD_TIMEOUT_MS = 30_000;
@@ -172,11 +173,75 @@ function validateDownloadUrl(value, baseUrl) {
   }
 }
 
+function shouldBypassProxy(url, environment = process.env) {
+  const noProxy =
+    environment.npm_config_noproxy ||
+    environment.NO_PROXY ||
+    environment.no_proxy;
+  if (!noProxy) {
+    return false;
+  }
+  const hostname = url.hostname.toLowerCase();
+  const port = url.port || (url.protocol === "https:" ? "443" : "80");
+  return noProxy.split(",").some((rawEntry) => {
+    const entry = rawEntry.trim().toLowerCase();
+    if (!entry) {
+      return false;
+    }
+    if (entry === "*") {
+      return true;
+    }
+    const separator = entry.lastIndexOf(":");
+    const hasPort = separator > 0 && /^\d+$/.test(entry.slice(separator + 1));
+    const entryPort = hasPort ? entry.slice(separator + 1) : null;
+    const entryHost = (hasPort ? entry.slice(0, separator) : entry).replace(
+      /^\./,
+      "",
+    );
+    if (entryPort && entryPort !== port) {
+      return false;
+    }
+    return hostname === entryHost || hostname.endsWith(`.${entryHost}`);
+  });
+}
+
+function proxyUrlFor(value, environment = process.env) {
+  const url = new URL(value);
+  if (url.protocol === "file:" || shouldBypassProxy(url, environment)) {
+    return null;
+  }
+  if (url.protocol === "https:") {
+    return (
+      environment.npm_config_https_proxy ||
+      environment.HTTPS_PROXY ||
+      environment.https_proxy ||
+      environment.npm_config_proxy ||
+      environment.HTTP_PROXY ||
+      environment.http_proxy ||
+      environment.ALL_PROXY ||
+      environment.all_proxy ||
+      null
+    );
+  }
+  return (
+    environment.npm_config_proxy ||
+    environment.HTTP_PROXY ||
+    environment.http_proxy ||
+    environment.ALL_PROXY ||
+    environment.all_proxy ||
+    null
+  );
+}
+
 function request(url, handleResponse, baseUrl, redirects = 0) {
   validateDownloadUrl(url, baseUrl);
   return new Promise((resolve, reject) => {
     const client = url.startsWith("http://") ? http : https;
-    const req = client.get(url, (response) => {
+    const proxyUrl = proxyUrlFor(url);
+    const requestOptions = proxyUrl
+      ? { agent: new HttpsProxyAgent(proxyUrl) }
+      : undefined;
+    const req = client.get(url, requestOptions, (response) => {
       if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
         response.resume();
         if (redirects >= MAX_REDIRECTS) {
@@ -336,6 +401,10 @@ async function installNative(options = {}) {
   const packageRoot = options.packageRoot || join(__dirname, "..");
   const pkg = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
   const kind = packageKind(pkg.name);
+  if (process.env.VURST_SKIP_BINARY_DOWNLOAD === "1") {
+    console.log(`Skipping ${pkg.name} native download`);
+    return [];
+  }
   const target =
     options.target ||
     platformTarget(options.platform, options.arch, options.musl);
@@ -345,10 +414,6 @@ async function installNative(options = {}) {
         `${options.arch || process.arch}; vurst provides macOS arm64 and ` +
         "Linux x64/arm64 glibc binaries",
     );
-  }
-  if (process.env.VURST_SKIP_BINARY_DOWNLOAD === "1") {
-    console.log(`Skipping ${pkg.name} native download`);
-    return [];
   }
 
   const marker = join(packageRoot, ".vurst-native-version");
@@ -418,7 +483,9 @@ module.exports = {
   packageKind,
   parseChecksum,
   platformTarget,
+  proxyUrlFor,
   requiredAssets,
   sha256,
+  shouldBypassProxy,
   validateBaseUrl,
 };

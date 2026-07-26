@@ -251,6 +251,37 @@ test("rejects unsafe release URLs", () => {
   );
 });
 
+test("uses standard npm and HTTPS proxy settings with NO_PROXY support", () => {
+  const url =
+    "https://github.com/jonathanong/vurst/releases/download/v9.8.7/asset.node";
+  assert.equal(
+    installer.proxyUrlFor(url, {
+      HTTPS_PROXY: "http://proxy.example:8080",
+    }),
+    "http://proxy.example:8080",
+  );
+  assert.equal(
+    installer.proxyUrlFor(url, {
+      HTTPS_PROXY: "http://fallback.example:8080",
+      npm_config_https_proxy: "http://npm-proxy.example:8080",
+    }),
+    "http://npm-proxy.example:8080",
+  );
+  assert.equal(
+    installer.proxyUrlFor(url, {
+      HTTPS_PROXY: "http://proxy.example:8080",
+      NO_PROXY: ".github.com",
+    }),
+    null,
+  );
+  assert.equal(
+    installer.proxyUrlFor("file:///tmp/release/asset.node", {
+      HTTPS_PROXY: "http://proxy.example:8080",
+    }),
+    null,
+  );
+});
+
 test("allows source builds to skip release downloads explicitly", async () => {
   const root = await mkdtemp(join(tmpdir(), "vurst-native-skip-"));
   const previous = process.env.VURST_SKIP_BINARY_DOWNLOAD;
@@ -260,7 +291,8 @@ test("allows source builds to skip release downloads explicitly", async () => {
     assert.deepEqual(
       await installer.installNative({
         packageRoot,
-        target,
+        platform: "win32",
+        arch: "x64",
         baseUrl: "https://example.invalid/should-not-be-used",
       }),
       [],
