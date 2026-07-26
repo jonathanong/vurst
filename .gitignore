@@ -5,5 +5,10 @@ coverage/
 *.profraw
 package/*.tgz
 package/onnxruntime/
+packages/*/.vurst-native-version
+packages/*/*.node.version
+packages/*/.vurst-native-version.tmp-*
+packages/*/*.node.tmp-*
+packages/ai/onnxruntime/
 .DS_Store
 .jules/

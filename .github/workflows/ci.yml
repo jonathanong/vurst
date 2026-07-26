@@ -28,6 +28,8 @@ jobs:
         run: pnpm run check:versions
       - name: Check packed package manifests
         run: pnpm run check:packed-manifests
+      - name: Check native installer
+        run: pnpm run check:native-installer
       - name: Check release workflow
         run: pnpm run check:release-workflow
       - uses: dtolnay/rust-toolchain@stable
@@ -87,7 +89,7 @@ jobs:
 
       - name: Install node deps (html)
         working-directory: packages/html
-        run: npm install
+        run: npm install --ignore-scripts
 
       - name: Build native module (html, debug)
         working-directory: packages/html
@@ -99,7 +101,7 @@ jobs:
 
       - name: Install node deps (markdown)
         working-directory: packages/markdown
-        run: npm install
+        run: npm install --ignore-scripts
 
       - name: Build native module (markdown, debug)
         working-directory: packages/markdown
@@ -111,7 +113,7 @@ jobs:
 
       - name: Install node deps (ai)
         working-directory: packages/ai
-        run: npm install
+        run: npm install --ignore-scripts
 
       - name: Build native module (ai, debug)
         working-directory: packages/ai
@@ -164,17 +166,17 @@ jobs:
       - name: Install node deps and build (html)
         working-directory: packages/html
         run: |
-          npm install
+          npm install --ignore-scripts
           npx napi build --platform --release --target ${{ matrix.target }}
 
       - name: Install node deps and build (markdown)
         working-directory: packages/markdown
         run: |
-          npm install
+          npm install --ignore-scripts
           npx napi build --platform --release --target ${{ matrix.target }}
 
       - name: Install node deps and build (ai)
         working-directory: packages/ai
         run: |
-          npm install
+          npm install --ignore-scripts
           npx napi build --platform --release --target ${{ matrix.target }}

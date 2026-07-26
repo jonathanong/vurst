@@ -23,8 +23,7 @@
     "index.js",
     "index.d.ts",
     "README.md",
-    "*.node",
-    "onnxruntime/"
+    "scripts/"
   ],
   "napi": {
     "binaryName": "vurst-ai",
@@ -38,7 +37,7 @@
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
     "test": "node --test __test__/*.test.mjs",
-    "prepublishOnly": "napi prepublish -t npm"
+    "postinstall": "node scripts/install.js"
   },
   "publishConfig": {
     "access": "public",
@@ -47,5 +46,8 @@
   "devDependencies": {
     "@napi-rs/cli": "^3.6.2",
     "@types/node": "^24"
+  },
+  "dependencies": {
+    "https-proxy-agent": "^7.0.6"
   }
 }

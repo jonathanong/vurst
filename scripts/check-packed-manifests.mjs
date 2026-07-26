@@ -43,6 +43,10 @@ try {
       "package/package.json",
     ]);
     const packedManifest = JSON.parse(packedManifestJson);
+    const { stdout: packedEntries } = await execFileAsync("tar", [
+      "-tzf",
+      filename,
+    ]);
 
     for (const dependencyField of dependencyFields) {
       for (const [dependency, specifier] of Object.entries(
@@ -64,6 +68,29 @@ try {
         throw new Error(
           `${packedManifest.name} must pack @jongleberry/vurst-html as ${expectedHtmlRange}, got ${actualHtmlRange}`,
         );
+      }
+    }
+
+    if (
+      [
+        "@jongleberry/vurst-ai",
+        "@jongleberry/vurst-html",
+        "@jongleberry/vurst-markdown",
+      ].includes(packedManifest.name)
+    ) {
+      if (packedManifest.scripts?.postinstall !== "node scripts/install.js") {
+        throw new Error(
+          `${packedManifest.name} must run the GitHub Release installer during postinstall`,
+        );
+      }
+      if (!packedEntries.split("\n").includes("package/scripts/install.js")) {
+        throw new Error(`${packedManifest.name} does not pack scripts/install.js`);
+      }
+      if (/(^|\/)[^/]+\.node$/m.test(packedEntries)) {
+        throw new Error(`${packedManifest.name} packs a native .node binary`);
+      }
+      if (/(^|\/)onnxruntime\//m.test(packedEntries)) {
+        throw new Error(`${packedManifest.name} packs ONNX Runtime assets`);
       }
     }
   }
