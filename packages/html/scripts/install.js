@@ -238,10 +238,7 @@ function request(url, handleResponse, baseUrl, redirects = 0) {
   return new Promise((resolve, reject) => {
     const client = url.startsWith("http://") ? http : https;
     const proxyUrl = proxyUrlFor(url);
-    const requestOptions = proxyUrl
-      ? { agent: new HttpsProxyAgent(proxyUrl) }
-      : undefined;
-    const req = client.get(url, requestOptions, (response) => {
+    const onResponse = (response) => {
       if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
         response.resume();
         if (redirects >= MAX_REDIRECTS) {
@@ -265,7 +262,10 @@ function request(url, handleResponse, baseUrl, redirects = 0) {
         return;
       }
       Promise.resolve(handleResponse(response)).then(resolve, reject);
-    });
+    };
+    const req = proxyUrl
+      ? client.get(url, { agent: new HttpsProxyAgent(proxyUrl) }, onResponse)
+      : client.get(url, onResponse);
     req.setTimeout(DOWNLOAD_TIMEOUT_MS, () => {
       const error = new Error(`Download timed out after ${DOWNLOAD_TIMEOUT_MS}ms`);
       error.retryable = true;

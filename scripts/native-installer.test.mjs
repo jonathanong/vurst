@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { createServer, get as getHttp } from "node:http";
 import {
   mkdir,
   mkdtemp,
@@ -55,6 +56,60 @@ function releaseUrl(path) {
   return pathToFileURL(path).href;
 }
 
+async function createHttpReleaseServer(kind, packageRoot) {
+  const assets = installer.requiredAssets(kind, version, target, packageRoot);
+  const responses = new Map();
+  for (const asset of assets) {
+    const content = Buffer.from(`HTTP release bytes for ${asset.name}\n`);
+    const checksum = createHash("sha256").update(content).digest("hex");
+    responses.set(`/${asset.name}`, content);
+    responses.set(
+      `/${asset.name}.sha256`,
+      Buffer.from(`${checksum}  ${asset.name}\n`),
+    );
+  }
+  const server = createServer((request, response) => {
+    const body = responses.get(new URL(request.url, "http://localhost").pathname);
+    if (!body) {
+      response.writeHead(404);
+      response.end();
+      return;
+    }
+    response.writeHead(200, { "content-length": body.length });
+    response.end(body);
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+  return {
+    assets,
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    httpsBaseUrl: `https://localhost:${address.port}`,
+    close: () =>
+      new Promise((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      ),
+  };
+}
+
+async function completesWithin(operation, milliseconds) {
+  let timeout;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error(`Native installation exceeded ${milliseconds}ms`)),
+          milliseconds,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 test("published native packages contain identical self-contained installers", async () => {
   const paths = [
     "packages/ai/scripts/install.js",
@@ -104,6 +159,86 @@ test("uses versioned GitHub Release names and loader destinations", () => {
     ai[1].destination,
     "/package/onnxruntime/linux-x64/libonnxruntime.so",
   );
+});
+
+test("installs AI assets over localhost HTTPS without proxy configuration", async () => {
+  const root = await mkdtemp(join(tmpdir(), "vurst-native-http-"));
+  const proxyVariables = [
+    "npm_config_noproxy",
+    "NO_PROXY",
+    "no_proxy",
+    "npm_config_https_proxy",
+    "HTTPS_PROXY",
+    "https_proxy",
+    "npm_config_proxy",
+    "HTTP_PROXY",
+    "http_proxy",
+    "ALL_PROXY",
+    "all_proxy",
+  ];
+  const previousProxyVariables = new Map(
+    proxyVariables.map((name) => [name, process.env[name]]),
+  );
+  const https = require("node:https");
+  const originalHttpsGet = https.get;
+  let release;
+  try {
+    const packageRoot = await createPackage(root, "ai");
+    release = await createHttpReleaseServer("ai", packageRoot);
+    https.get = function getLocalHttpsRelease(...arguments_) {
+      assert.equal(arguments_.length, 2);
+      const [url, onResponse] = arguments_;
+      assert.equal(typeof url, "string");
+      assert.match(url, /^https:\/\/localhost:/);
+      assert.equal(typeof onResponse, "function");
+      const localUrl = new URL(url);
+      localUrl.protocol = "http:";
+      localUrl.hostname = "127.0.0.1";
+      localUrl.port = String(new URL(release.baseUrl).port);
+      return getHttp(localUrl, onResponse);
+    };
+    for (const name of proxyVariables) {
+      delete process.env[name];
+    }
+
+    const installed = await completesWithin(
+      installer.installNative({
+        packageRoot,
+        target,
+        baseUrl: release.httpsBaseUrl,
+      }),
+      1_000,
+    );
+    assert.deepEqual(
+      installed,
+      release.assets.map(({ destination }) => destination),
+    );
+    assert.equal(release.assets.length, 2);
+    const [binary, onnxLibrary] = release.assets;
+    assert.equal(
+      await readFile(binary.destination, "utf8"),
+      `HTTP release bytes for ${binary.name}\n`,
+    );
+    assert.equal(
+      await readFile(onnxLibrary.destination, "utf8"),
+      `HTTP release bytes for ${onnxLibrary.name}\n`,
+    );
+    assert.equal(
+      await readFile(join(packageRoot, ".vurst-native-version"), "utf8"),
+      `${version}\n`,
+    );
+  } finally {
+    https.get = originalHttpsGet;
+    for (const [name, value] of previousProxyVariables) {
+      if (value === undefined) {
+        delete process.env[name];
+      } else {
+        process.env[name] = value;
+      }
+    }
+    await release?.close();
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("skips only when every native asset has the current version marker", async () => {
