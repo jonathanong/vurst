@@ -23,6 +23,7 @@ use napi_derive::napi;
 
 use vurst_runtime_rs as runtime;
 
+pub mod decode_html;
 pub mod embedding_content;
 pub mod image_proxy {
     pub use vurst_shared::image_proxy::*;
@@ -42,6 +43,12 @@ use boilerstrip::{apply_removals, convert, learn, ConvertOptions, LearnOptions, 
 /// total bytes across all inputs. This bounds blocking-pool exposure to large
 /// or adversarial inputs.
 const SANITIZE_MAX_INPUT_BYTES: usize = 10 * 1024 * 1024;
+
+/// Decode raw HTML bytes according to the HTML charset precedence rules.
+#[napi(js_name = "decodeHtml")]
+pub fn decode_html(html: Buffer, content_type: Option<String>) -> String {
+    decode_html::decode_html_bytes(&html, content_type.as_deref())
+}
 
 /// Serialize a parsed HTML fragment's body without `<html>` wrapper tags.
 /// `Html::parse_fragment` wraps content in `<html>...</html>` — this strips those wrappers.

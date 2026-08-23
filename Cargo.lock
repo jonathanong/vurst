@@ -2466,6 +2466,7 @@ dependencies = [
  "anyhow",
  "boilerstrip",
  "ego-tree",
+ "encoding_rs",
  "entities",
  "html-escape",
  "napi",
