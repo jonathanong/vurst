@@ -56,6 +56,7 @@ import {
   applyDomRemovalsToHtml,
   getContentFromHtml,
   sanitizePromptInjection,
+  decodeHtml,
 } from '@jongleberry/vurst-html'
 ```
 
@@ -68,6 +69,7 @@ import {
 | `applyDomRemovalsToHtml(html, removals)` | Apply learned removals. Wraps `boilerstrip::apply_removals`. |
 | `getContentFromHtml(html, opts)` | Extract article content from HTML. Wraps `boilerstrip::convert`. |
 | `sanitizePromptInjection(content, isTitle?)` | Strip prompt-injection patterns from text. |
+| `decodeHtml(html, contentType?)` | Decode raw HTML bytes using BOM, HTTP charset, early HTML meta charset, UTF-8, then Windows-1252 precedence. |
 
 ## `@jongleberry/vurst-prompt`
 
