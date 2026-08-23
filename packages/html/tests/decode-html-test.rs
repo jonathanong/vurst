@@ -30,7 +30,7 @@ fn prescan_detects_a_meta_charset_in_the_first_1024_bytes() {
 #[test]
 fn prescan_ignores_meta_text_in_comments_and_raw_text_elements() {
     let mut bytes =
-        b"<!-- <meta charset=windows-1252> --><script><meta charset=windows-1252></script><p>\""
+        b"<!-- <meta charset=iso-8859-7> --><script><meta charset=iso-8859-7></script><p>\""
             .to_vec();
     bytes.push(0x93);
     assert!(decode_html_bytes(&bytes, None).contains('“'));
@@ -39,14 +39,14 @@ fn prescan_ignores_meta_text_in_comments_and_raw_text_elements() {
 #[test]
 fn prescan_stops_at_1024_bytes() {
     let mut bytes = vec![b' '; 1024];
-    bytes.extend_from_slice(b"<meta charset=windows-1252>");
+    bytes.extend_from_slice(b"<meta charset=iso-8859-7>");
     bytes.push(0x93);
     assert!(decode_html_bytes(&bytes, None).contains('“'));
 }
 
 #[test]
 fn prescan_ignores_meta_lookalikes_in_attributes_and_raw_text_end_prefixes() {
-    let mut bytes = b"<div data-note='<meta charset=windows-1252>'><script>\"</scriptx><meta charset=windows-1252></script><p>\"".to_vec();
+    let mut bytes = b"<div data-note='<meta charset=iso-8859-7>'><script>\"</scriptx><meta charset=iso-8859-7></script><p>\"".to_vec();
     bytes.push(0x93);
     assert!(decode_html_bytes(&bytes, None).contains('“'));
 }
