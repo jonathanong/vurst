@@ -386,17 +386,55 @@ fn find_raw_text_end(bytes: &[u8], prefix: &[u8], mut from: usize) -> Option<usi
 }
 
 fn find_tag_end(bytes: &[u8], from: usize) -> Option<usize> {
-    let mut quote = None;
+    #[derive(Clone, Copy)]
+    enum State {
+        BeforeAttribute,
+        AttributeName,
+        AfterAttributeName,
+        BeforeValue,
+        UnquotedValue,
+        QuotedValue(u8),
+    }
+
+    let mut state = State::BeforeAttribute;
     for (index, byte) in bytes.iter().copied().enumerate().skip(from) {
-        if let Some(open) = quote {
-            if byte == open {
-                quote = None;
+        state = match state {
+            State::QuotedValue(quote) => {
+                if byte == quote {
+                    State::AfterAttributeName
+                } else {
+                    state
+                }
             }
-        } else if byte == b'\'' || byte == b'"' {
-            quote = Some(byte);
-        } else if byte == b'>' {
-            return Some(index);
-        }
+            State::BeforeAttribute => match byte {
+                b'>' => return Some(index),
+                byte if byte.is_ascii_whitespace() || byte == b'/' => state,
+                _ => State::AttributeName,
+            },
+            State::AttributeName => match byte {
+                b'>' => return Some(index),
+                b'=' => State::BeforeValue,
+                byte if byte.is_ascii_whitespace() || byte == b'/' => State::AfterAttributeName,
+                _ => state,
+            },
+            State::AfterAttributeName => match byte {
+                b'>' => return Some(index),
+                b'=' => State::BeforeValue,
+                byte if byte.is_ascii_whitespace() || byte == b'/' => state,
+                _ => State::AttributeName,
+            },
+            State::BeforeValue => match byte {
+                b'>' => return Some(index),
+                b'\'' | b'"' => State::QuotedValue(byte),
+                byte if byte.is_ascii_whitespace() => state,
+                _ => State::UnquotedValue,
+            },
+            State::UnquotedValue => match byte {
+                b'>' => return Some(index),
+                byte if byte.is_ascii_whitespace() => State::BeforeAttribute,
+                _ => state,
+            },
+        };
     }
     None
 }
@@ -546,6 +584,16 @@ mod tests {
             prescan_encoding(b"<<script><meta charset=windows-1252></script>"),
             None
         );
+        assert_eq!(
+            name(prescan_encoding(b"<div class=x\"><meta charset=shift_jis>")),
+            Some("Shift_JIS")
+        );
+        assert_eq!(
+            name(prescan_encoding(
+                b"<div data = '><meta charset=shift_jis>'><meta charset=windows-1252>"
+            )),
+            Some("windows-1252")
+        );
     }
 
     #[test]
@@ -615,6 +663,7 @@ mod tests {
     fn handles_incomplete_tags_and_attributes_without_hiding_following_metadata() {
         assert_eq!(prescan_encoding(b"<meta"), None);
         assert_eq!(prescan_encoding(b"<style"), None);
+        assert_eq!(prescan_encoding(b"<meta charset=>"), None);
         assert_eq!(find_tag_end(b"<meta charset=windows-1252", 1), None);
         assert_eq!(
             parse_attributes(b" =x"),

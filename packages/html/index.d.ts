@@ -22,7 +22,7 @@ export interface CrawlerHtmlToMarkdownResult {
 }
 
 /** Decode raw HTML bytes according to the HTML charset precedence rules. */
-export declare function decodeHtml(html: Buffer, contentType?: string | undefined | null): string
+export declare function decodeHtml(html: Buffer, contentType?: string | undefined | null): Promise<string>
 
 export declare function extractDomRemovals(htmlPages: Array<Buffer>, options?: ExtractDomRemovalsOptions | undefined | null): Promise<ExtractDomRemovalsResult>
 

@@ -46,8 +46,18 @@ const SANITIZE_MAX_INPUT_BYTES: usize = 10 * 1024 * 1024;
 
 /// Decode raw HTML bytes according to the HTML charset precedence rules.
 #[napi(js_name = "decodeHtml")]
-pub fn decode_html(html: Buffer, content_type: Option<String>) -> String {
-    decode_html::decode_html_bytes(&html, content_type.as_deref())
+pub async fn decode_html(html: Buffer, content_type: Option<String>) -> Result<String> {
+    if html.len() > SANITIZE_MAX_INPUT_BYTES {
+        return Err(Error::from_reason(format!(
+            "Input too large: {} bytes (max {SANITIZE_MAX_INPUT_BYTES} bytes)",
+            html.len()
+        )));
+    }
+
+    runtime::await_blocking(runtime::spawn_blocking(move || {
+        decode_html::decode_html_bytes(&html, content_type.as_deref())
+    }))
+    .await
 }
 
 /// Serialize a parsed HTML fragment's body without `<html>` wrapper tags.
