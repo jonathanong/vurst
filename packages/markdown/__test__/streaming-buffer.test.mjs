@@ -129,6 +129,16 @@ test('treats complete code spans as opaque to bracket and HTML scans', () => {
   assertPushes(buffer, [
     ['`[foo`', ['`[foo`']],
     ['`<tag`', ['`<tag`']],
+    ['[code `[label]`](url)', ['[code `[label]`](url)']],
+  ])
+})
+
+test('treats backticks as literal content inside complete links and HTML tags', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['[foo](`bar)', ['[foo](`bar)']],
+    ['<a data-code="`">', ['<a data-code="`">']],
   ])
 })
 

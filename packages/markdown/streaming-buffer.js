@@ -36,12 +36,13 @@ function findBalancedEnd(text, start, open, close, codeSpans) {
   return -1
 }
 
-function findFirstUnsafeBracket(text, codeSpans) {
+function findLinkRanges(text, codeSpans) {
+  const complete = []
   let searchStart = 0
   let codeSpanIndex = 0
   while (searchStart < text.length) {
     const index = text.indexOf('[', searchStart)
-    if (index === -1) return -1
+    if (index === -1) return { complete, firstUnsafe: -1 }
 
     while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= index) {
       codeSpanIndex += 1
@@ -62,18 +63,21 @@ function findFirstUnsafeBracket(text, codeSpans) {
       index > 0 && text[index - 1] === '!' && !isEscaped(text, index - 1)
         ? index - 1
         : index
-    if (labelEnd === -1 || labelEnd === text.length - 1) return opener
+    if (labelEnd === -1 || labelEnd === text.length - 1) {
+      return { complete, firstUnsafe: opener }
+    }
 
     if (text[labelEnd + 1] !== '(') {
       searchStart = labelEnd + 1
       continue
     }
 
-    const destinationEnd = findBalancedEnd(text, labelEnd + 1, '(', ')', codeSpans)
-    if (destinationEnd === -1) return opener
+    const destinationEnd = findBalancedEnd(text, labelEnd + 1, '(', ')', [])
+    if (destinationEnd === -1) return { complete, firstUnsafe: opener }
+    complete.push({ start: opener, end: destinationEnd + 1 })
     searchStart = destinationEnd + 1
   }
-  return -1
+  return { complete, firstUnsafe: -1 }
 }
 
 function findBacktickRun(text, searchStart) {
@@ -117,10 +121,14 @@ function findCodeSpans(text) {
   return { complete, unclosedStart: -1 }
 }
 
-function findFirstUnclosedLt(text, codeSpans) {
+function findHtmlTagRanges(text, codeSpans) {
+  const complete = []
   let codeSpanIndex = 0
   let index = 0
   while (index < text.length) {
+    while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= index) {
+      codeSpanIndex += 1
+    }
     const codeSpan = codeSpans[codeSpanIndex]
     if (codeSpan !== undefined && index === codeSpan.start) {
       index = codeSpan.end
@@ -135,31 +143,36 @@ function findFirstUnclosedLt(text, codeSpans) {
     const opener = index
     index += 1
     while (index < text.length) {
-      const nestedCodeSpan = codeSpans[codeSpanIndex]
-      if (nestedCodeSpan !== undefined && index === nestedCodeSpan.start) {
-        index = nestedCodeSpan.end
-        codeSpanIndex += 1
-        continue
-      }
       if (text[index] === '>') break
-      if (text[index] === '<') return opener
+      if (text[index] === '<') return { complete, firstUnsafe: opener }
       index += 1
     }
-    if (index === text.length) return opener
+    if (index === text.length) return { complete, firstUnsafe: opener }
+    complete.push({ start: opener, end: index + 1 })
     index += 1
   }
-  return -1
+  return { complete, firstUnsafe: -1 }
+}
+
+function isInsideCompleteRange(index, ranges) {
+  return ranges.some((range) => range.start <= index && index < range.end)
 }
 
 function findSafeBoundary(text) {
   const codeSpans = findCodeSpans(text)
-  const firstUnclosedBracket = findFirstUnsafeBracket(text, codeSpans.complete)
-  const firstUnclosedLt = findFirstUnclosedLt(text, codeSpans.complete)
+  const links = findLinkRanges(text, codeSpans.complete)
+  const htmlTags = findHtmlTagRanges(text, codeSpans.complete)
+  const completeOuterRanges = [...links.complete, ...htmlTags.complete]
+  const unclosedCodeIsNested =
+    codeSpans.unclosedStart >= 0 &&
+    isInsideCompleteRange(codeSpans.unclosedStart, completeOuterRanges)
 
   let boundary = text.length
-  if (firstUnclosedBracket >= 0) boundary = Math.min(boundary, firstUnclosedBracket)
-  if (codeSpans.unclosedStart >= 0) boundary = Math.min(boundary, codeSpans.unclosedStart)
-  if (firstUnclosedLt >= 0) boundary = Math.min(boundary, firstUnclosedLt)
+  if (links.firstUnsafe >= 0) boundary = Math.min(boundary, links.firstUnsafe)
+  if (codeSpans.unclosedStart >= 0 && !unclosedCodeIsNested) {
+    boundary = Math.min(boundary, codeSpans.unclosedStart)
+  }
+  if (htmlTags.firstUnsafe >= 0) boundary = Math.min(boundary, htmlTags.firstUnsafe)
   if (boundary < text.length) return boundary
 
   if (text.endsWith('\\')) return text.length - 1
