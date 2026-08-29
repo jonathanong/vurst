@@ -26,8 +26,14 @@ function findBalancedEnd(text, start, open, close) {
 }
 
 function findFirstUnsafeBracket(text) {
-  for (let index = 0; index < text.length; index += 1) {
-    if (text[index] !== '[' || isEscaped(text, index)) continue
+  let searchStart = 0
+  while (searchStart < text.length) {
+    const index = text.indexOf('[', searchStart)
+    if (index === -1) return -1
+    if (isEscaped(text, index)) {
+      searchStart = index + 1
+      continue
+    }
 
     const labelEnd = findBalancedEnd(text, index, '[', ']')
     const opener =
@@ -37,13 +43,13 @@ function findFirstUnsafeBracket(text) {
     if (labelEnd === -1 || labelEnd === text.length - 1) return opener
 
     if (text[labelEnd + 1] !== '(') {
-      index = labelEnd
+      searchStart = labelEnd + 1
       continue
     }
 
     const destinationEnd = findBalancedEnd(text, labelEnd + 1, '(', ')')
     if (destinationEnd === -1) return opener
-    index = destinationEnd
+    searchStart = destinationEnd + 1
   }
   return -1
 }
@@ -52,16 +58,18 @@ function findSafeBoundary(text) {
   const firstUnclosedBracket = findFirstUnsafeBracket(text)
 
   let firstUnclosedLt = -1
-  for (let index = 0; index < text.length; index += 1) {
-    if (text[index] === '<') {
-      const nextGt = text.indexOf('>', index)
-      const nextLt = text.indexOf('<', index + 1)
-      if (nextGt >= 0 && (nextLt === -1 || nextGt < nextLt)) {
-        index = nextGt
-      } else {
-        firstUnclosedLt = index
-        break
-      }
+  let searchStart = 0
+  while (searchStart < text.length) {
+    const index = text.indexOf('<', searchStart)
+    if (index === -1) break
+
+    const nextGt = text.indexOf('>', index)
+    const nextLt = text.indexOf('<', index + 1)
+    if (nextGt >= 0 && (nextLt === -1 || nextGt < nextLt)) {
+      searchStart = nextGt + 1
+    } else {
+      firstUnclosedLt = index
+      break
     }
   }
 
@@ -72,10 +80,16 @@ function findSafeBoundary(text) {
 
   if (text.endsWith('\\')) return text.length - 1
 
-  const trailingBackticks = text.match(/`+$/)
-  if (trailingBackticks) {
-    const totalBackticks = (text.match(/`/g) ?? []).length
-    if (totalBackticks % 2 !== 0) return text.length - trailingBackticks[0].length
+  let totalBackticks = 0
+  let trailingBackticks = 0
+  for (let index = text.length - 1; index >= 0; index -= 1) {
+    if (text[index] === '`') {
+      totalBackticks += 1
+      if (trailingBackticks === text.length - 1 - index) trailingBackticks += 1
+    }
+  }
+  if (trailingBackticks > 0 && totalBackticks % 2 !== 0) {
+    return text.length - trailingBackticks
   }
 
   return text.length
@@ -97,6 +111,13 @@ function createMarkdownStreamBuffer(options = {}) {
   let pending = ''
   let heldSince = null
 
+  function drain() {
+    const output = pending
+    pending = ''
+    heldSince = null
+    return output
+  }
+
   return {
     push(text) {
       if (typeof text !== 'string') {
@@ -108,10 +129,7 @@ function createMarkdownStreamBuffer(options = {}) {
       if (boundary === 0) {
         if (heldSince === null) heldSince = now()
         if (now() - heldSince >= maxHoldMs) {
-          const output = pending
-          pending = ''
-          heldSince = null
-          return [output]
+          return [drain()]
         }
         return []
       }
@@ -122,10 +140,7 @@ function createMarkdownStreamBuffer(options = {}) {
       return output ? [output] : []
     },
     flush() {
-      const output = pending
-      pending = ''
-      heldSince = null
-      return output
+      return drain()
     },
   }
 }
