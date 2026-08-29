@@ -101,10 +101,11 @@ test('holds an unmatched opener even when ordinary text follows it', () => {
   assert.equal(buffer.flush(), '`code')
 })
 
-test('treats escaped backticks as literal text', () => {
+test('holds only the unescaped opener after an escaped backtick', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assertPushes(buffer, [['\\`code\\`', ['\\`code\\`']]])
+  assertPushes(buffer, [['\\`code`', ['\\`code']]])
+  assert.equal(buffer.flush(), '`')
 })
 
 test('waits for an equal-length backtick delimiter run', () => {
@@ -113,6 +114,21 @@ test('waits for an equal-length backtick delimiter run', () => {
   assertPushes(buffer, [
     ['``code`', []],
     ['`', ['``code``']],
+  ])
+})
+
+test('allows a code span to close with a backtick preceded by a backslash', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['`code\\`', ['`code\\`']]])
+})
+
+test('treats complete code spans as opaque to bracket and HTML scans', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['`[foo`', ['`[foo`']],
+    ['`<tag`', ['`<tag`']],
   ])
 })
 

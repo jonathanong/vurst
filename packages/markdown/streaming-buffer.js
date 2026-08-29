@@ -8,9 +8,20 @@ function isEscaped(text, index) {
   return backslashes % 2 === 1
 }
 
-function findBalancedEnd(text, start, open, close) {
+function findBalancedEnd(text, start, open, close, codeSpans) {
   let depth = 0
+  let codeSpanIndex = 0
+  while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= start) {
+    codeSpanIndex += 1
+  }
+
   for (let index = start; index < text.length; index += 1) {
+    const codeSpan = codeSpans[codeSpanIndex]
+    if (codeSpan !== undefined && index === codeSpan.start) {
+      index = codeSpan.end - 1
+      codeSpanIndex += 1
+      continue
+    }
     if (text[index] === '\\') {
       index += 1
       continue
@@ -25,17 +36,28 @@ function findBalancedEnd(text, start, open, close) {
   return -1
 }
 
-function findFirstUnsafeBracket(text) {
+function findFirstUnsafeBracket(text, codeSpans) {
   let searchStart = 0
+  let codeSpanIndex = 0
   while (searchStart < text.length) {
     const index = text.indexOf('[', searchStart)
     if (index === -1) return -1
+
+    while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= index) {
+      codeSpanIndex += 1
+    }
+    const codeSpan = codeSpans[codeSpanIndex]
+    if (codeSpan !== undefined && codeSpan.start < index) {
+      searchStart = codeSpan.end
+      codeSpanIndex += 1
+      continue
+    }
     if (isEscaped(text, index)) {
       searchStart = index + 1
       continue
     }
 
-    const labelEnd = findBalancedEnd(text, index, '[', ']')
+    const labelEnd = findBalancedEnd(text, index, '[', ']', codeSpans)
     const opener =
       index > 0 && text[index - 1] === '!' && !isEscaped(text, index - 1)
         ? index - 1
@@ -47,73 +69,96 @@ function findFirstUnsafeBracket(text) {
       continue
     }
 
-    const destinationEnd = findBalancedEnd(text, labelEnd + 1, '(', ')')
+    const destinationEnd = findBalancedEnd(text, labelEnd + 1, '(', ')', codeSpans)
     if (destinationEnd === -1) return opener
     searchStart = destinationEnd + 1
   }
   return -1
 }
 
-function findUnescapedBacktickRun(text, searchStart) {
-  let index = searchStart
-  while (index < text.length) {
-    if (text[index] !== '`' || isEscaped(text, index)) {
-      index += 1
-      continue
-    }
+function findBacktickRun(text, searchStart) {
+  const start = text.indexOf('`', searchStart)
+  if (start === -1) return null
 
-    let end = index + 1
-    while (text[end] === '`') end += 1
-    return { start: index, end, length: end - index }
-  }
-  return null
+  let end = start + 1
+  while (text[end] === '`') end += 1
+  return { start, end, length: end - start }
 }
 
-function findFirstUnclosedBacktick(text) {
+function findUnescapedBacktickRun(text, searchStart) {
+  let run = findBacktickRun(text, searchStart)
+  while (run !== null && isEscaped(text, run.start)) {
+    run = findBacktickRun(text, run.end)
+  }
+  return run
+}
+
+function findCodeSpans(text) {
+  const complete = []
   let searchStart = 0
   while (searchStart < text.length) {
     const opener = findUnescapedBacktickRun(text, searchStart)
-    if (opener === null) return -1
+    if (opener === null) return { complete, unclosedStart: -1 }
 
     let closingSearchStart = opener.end
     while (closingSearchStart < text.length) {
-      const closer = findUnescapedBacktickRun(text, closingSearchStart)
-      if (closer === null) return opener.start
+      const closer = findBacktickRun(text, closingSearchStart)
+      if (closer === null) return { complete, unclosedStart: opener.start }
       if (closer.length === opener.length) {
+        complete.push({ start: opener.start, end: closer.end })
         searchStart = closer.end
         break
       }
       closingSearchStart = closer.end
     }
 
-    if (closingSearchStart >= text.length) return opener.start
+    if (closingSearchStart >= text.length) return { complete, unclosedStart: opener.start }
+  }
+  return { complete, unclosedStart: -1 }
+}
+
+function findFirstUnclosedLt(text, codeSpans) {
+  let codeSpanIndex = 0
+  let index = 0
+  while (index < text.length) {
+    const codeSpan = codeSpans[codeSpanIndex]
+    if (codeSpan !== undefined && index === codeSpan.start) {
+      index = codeSpan.end
+      codeSpanIndex += 1
+      continue
+    }
+    if (text[index] !== '<') {
+      index += 1
+      continue
+    }
+
+    const opener = index
+    index += 1
+    while (index < text.length) {
+      const nestedCodeSpan = codeSpans[codeSpanIndex]
+      if (nestedCodeSpan !== undefined && index === nestedCodeSpan.start) {
+        index = nestedCodeSpan.end
+        codeSpanIndex += 1
+        continue
+      }
+      if (text[index] === '>') break
+      if (text[index] === '<') return opener
+      index += 1
+    }
+    if (index === text.length) return opener
+    index += 1
   }
   return -1
 }
 
 function findSafeBoundary(text) {
-  const firstUnclosedBracket = findFirstUnsafeBracket(text)
-  const firstUnclosedBacktick = findFirstUnclosedBacktick(text)
-
-  let firstUnclosedLt = -1
-  let searchStart = 0
-  while (searchStart < text.length) {
-    const index = text.indexOf('<', searchStart)
-    if (index === -1) break
-
-    const nextGt = text.indexOf('>', index)
-    const nextLt = text.indexOf('<', index + 1)
-    if (nextGt >= 0 && (nextLt === -1 || nextGt < nextLt)) {
-      searchStart = nextGt + 1
-    } else {
-      firstUnclosedLt = index
-      break
-    }
-  }
+  const codeSpans = findCodeSpans(text)
+  const firstUnclosedBracket = findFirstUnsafeBracket(text, codeSpans.complete)
+  const firstUnclosedLt = findFirstUnclosedLt(text, codeSpans.complete)
 
   let boundary = text.length
   if (firstUnclosedBracket >= 0) boundary = Math.min(boundary, firstUnclosedBracket)
-  if (firstUnclosedBacktick >= 0) boundary = Math.min(boundary, firstUnclosedBacktick)
+  if (codeSpans.unclosedStart >= 0) boundary = Math.min(boundary, codeSpans.unclosedStart)
   if (firstUnclosedLt >= 0) boundary = Math.min(boundary, firstUnclosedLt)
   if (boundary < text.length) return boundary
 
