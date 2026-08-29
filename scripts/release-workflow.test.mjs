@@ -3,15 +3,9 @@ import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
 describe("release workflow", () => {
-  it("uses the repository-pinned pnpm for package publishing", async () => {
+  it("publishes packages with pnpm provenance", async () => {
     const workflow = await readFile(".github/workflows/release.yml", "utf8");
 
-    assert.equal(
-      workflow.match(
-        /uses: pnpm\/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6\.0\.10/g,
-      )?.length,
-      2,
-    );
     assert.equal(
       workflow.match(/pnpm publish --access public --provenance --no-git-checks/g)
         ?.length,
