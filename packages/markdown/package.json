@@ -14,7 +14,8 @@
       "types": "./streaming-buffer.d.ts",
       "require": "./streaming-buffer.js",
       "default": "./streaming-buffer.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "license": "MIT",
   "engines": {

@@ -108,9 +108,9 @@ import { createMarkdownStreamBuffer } from '@jongleberry/vurst-markdown/streamin
 | `extractMarkdownUrls(text)` | Extract link and image URLs from Markdown. |
 | `createMarkdownStreamBuffer(opts?)` | Pure-JavaScript streaming buffer that holds incomplete Markdown constructs before emitting text. `maxHoldMs` defaults to 50; inject `now` for deterministic expiry. |
 
-`@jongleberry/vurst-markdown/streaming-buffer` is independent of the native binding and can be
-loaded where native binaries are unavailable. It returns a buffer with `push(text): string[]` and
-`flush(): string`.
+`@jongleberry/vurst-markdown/streaming-buffer` does not load the native binding at runtime, so it
+can run where native binaries are unavailable. It remains part of the package's normal install
+lifecycle. It returns a buffer with `push(text): string[]` and `flush(): string`.
 
 ## `@jongleberry/vurst-ai`
 

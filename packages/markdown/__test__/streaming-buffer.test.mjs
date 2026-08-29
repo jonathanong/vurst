@@ -87,6 +87,35 @@ test('holds and flushes text before a single unmatched backtick', () => {
   assert.equal(buffer.flush(), '`')
 })
 
+test('holds an opener when its closing backtick arrives in a later chunk', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['`code', []]])
+  assert.equal(buffer.flush(), '`code')
+})
+
+test('holds an unmatched opener even when ordinary text follows it', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['safe `code', ['safe ']]])
+  assert.equal(buffer.flush(), '`code')
+})
+
+test('treats escaped backticks as literal text', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['\\`code\\`', ['\\`code\\`']]])
+})
+
+test('waits for an equal-length backtick delimiter run', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['``code`', []],
+    ['`', ['``code``']],
+  ])
+})
+
 test('emits complete links surrounded by safe text', () => {
   const buffer = createMarkdownStreamBuffer()
 
@@ -142,7 +171,7 @@ test('validates public inputs and options', () => {
   assert.throws(() => buffer.push(Buffer.from('text')), TypeError)
 })
 
-test('the streaming-buffer subpath loads without the native binding in ESM and CommonJS', () => {
+test('streaming-buffer and package metadata exports load without the native binding', () => {
   const commands = [
     [
       '--input-type=module',
@@ -152,6 +181,10 @@ test('the streaming-buffer subpath loads without the native binding in ESM and C
     [
       '--eval',
       "const { createMarkdownStreamBuffer } = require('@jongleberry/vurst-markdown/streaming-buffer'); const buffer = createMarkdownStreamBuffer(); if (buffer.push('safe')[0] !== 'safe') process.exit(1)",
+    ],
+    [
+      '--eval',
+      "const manifest = require('@jongleberry/vurst-markdown/package.json'); if (manifest.name !== '@jongleberry/vurst-markdown') process.exit(1)",
     ],
   ]
 

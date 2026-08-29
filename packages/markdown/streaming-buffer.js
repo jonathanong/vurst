@@ -54,8 +54,46 @@ function findFirstUnsafeBracket(text) {
   return -1
 }
 
+function findUnescapedBacktickRun(text, searchStart) {
+  let index = searchStart
+  while (index < text.length) {
+    if (text[index] !== '`' || isEscaped(text, index)) {
+      index += 1
+      continue
+    }
+
+    let end = index + 1
+    while (text[end] === '`') end += 1
+    return { start: index, end, length: end - index }
+  }
+  return null
+}
+
+function findFirstUnclosedBacktick(text) {
+  let searchStart = 0
+  while (searchStart < text.length) {
+    const opener = findUnescapedBacktickRun(text, searchStart)
+    if (opener === null) return -1
+
+    let closingSearchStart = opener.end
+    while (closingSearchStart < text.length) {
+      const closer = findUnescapedBacktickRun(text, closingSearchStart)
+      if (closer === null) return opener.start
+      if (closer.length === opener.length) {
+        searchStart = closer.end
+        break
+      }
+      closingSearchStart = closer.end
+    }
+
+    if (closingSearchStart >= text.length) return opener.start
+  }
+  return -1
+}
+
 function findSafeBoundary(text) {
   const firstUnclosedBracket = findFirstUnsafeBracket(text)
+  const firstUnclosedBacktick = findFirstUnclosedBacktick(text)
 
   let firstUnclosedLt = -1
   let searchStart = 0
@@ -75,22 +113,11 @@ function findSafeBoundary(text) {
 
   let boundary = text.length
   if (firstUnclosedBracket >= 0) boundary = Math.min(boundary, firstUnclosedBracket)
+  if (firstUnclosedBacktick >= 0) boundary = Math.min(boundary, firstUnclosedBacktick)
   if (firstUnclosedLt >= 0) boundary = Math.min(boundary, firstUnclosedLt)
   if (boundary < text.length) return boundary
 
   if (text.endsWith('\\')) return text.length - 1
-
-  let totalBackticks = 0
-  let trailingBackticks = 0
-  for (let index = text.length - 1; index >= 0; index -= 1) {
-    if (text[index] === '`') {
-      totalBackticks += 1
-      if (trailingBackticks === text.length - 1 - index) trailingBackticks += 1
-    }
-  }
-  if (trailingBackticks > 0 && totalBackticks % 2 !== 0) {
-    return text.length - trailingBackticks
-  }
 
   return text.length
 }
