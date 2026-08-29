@@ -8,7 +8,7 @@ describe("release workflow", () => {
 
     assert.equal(
       workflow.match(
-        /uses: pnpm\/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6\.0\.9/g,
+        /uses: pnpm\/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6\.0\.10/g,
       )?.length,
       2,
     );
