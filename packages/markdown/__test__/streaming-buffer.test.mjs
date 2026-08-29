@@ -3,92 +3,110 @@ import { spawnSync } from 'node:child_process'
 import { test } from 'node:test'
 import { createMarkdownStreamBuffer } from '../streaming-buffer.js'
 
+function assertPushes(buffer, chunks) {
+  for (const [input, output] of chunks) {
+    assert.deepEqual(buffer.push(input), output)
+  }
+}
+
 test('flushes safe text and complete Markdown constructs immediately', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('Hello world'), ['Hello world'])
-  assert.deepEqual(buffer.push('[link](url)'), ['[link](url)'])
-  assert.deepEqual(buffer.push('<div>'), ['<div>'])
-  assert.deepEqual(buffer.push('`code`'), ['`code`'])
+  assertPushes(buffer, [
+    ['Hello world', ['Hello world']],
+    ['[link](url)', ['[link](url)']],
+    ['<div>', ['<div>']],
+    ['`code`', ['`code`']],
+  ])
 })
 
 test('returns no output for an empty push and preserves Unicode text', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push(''), [])
-  assert.deepEqual(buffer.push('Hello 🌍!'), ['Hello 🌍!'])
+  assertPushes(buffer, [
+    ['', []],
+    ['Hello 🌍!', ['Hello 🌍!']],
+  ])
 })
 
 test('holds incomplete Markdown constructs and emits a safe prefix', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('Some text [link'), ['Some text '])
-  assert.deepEqual(buffer.push(' text'), [])
-  assert.deepEqual(buffer.push('](url)'), ['[link text](url)'])
-  assert.deepEqual(buffer.push('<div'), [])
+  assertPushes(buffer, [
+    ['Some text [link', ['Some text ']],
+    [' text', []],
+    ['](url)', ['[link text](url)']],
+    ['<div', []],
+  ])
   assert.equal(buffer.flush(), '<div')
 })
 
 test('holds incomplete images, trailing escapes, and unmatched trailing backticks', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('![alt](https://example.com'), [])
+  assertPushes(buffer, [['![alt](https://example.com', []]])
   assert.equal(buffer.flush(), '![alt](https://example.com')
-  assert.deepEqual(buffer.push('text\\'), ['text'])
+  assertPushes(buffer, [['text\\', ['text']]])
   assert.equal(buffer.flush(), '\\')
-  assert.deepEqual(buffer.push('code```'), ['code'])
+  assertPushes(buffer, [['code```', ['code']]])
   assert.equal(buffer.flush(), '```')
 })
 
 test('emits escaped literal brackets and complete nested-label links', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('\\[literal]'), ['\\[literal]'])
-  assert.deepEqual(buffer.push('[outer [inner]](url)'), ['[outer [inner]](url)'])
+  assertPushes(buffer, [
+    ['\\[literal]', ['\\[literal]']],
+    ['[outer [inner]](url)', ['[outer [inner]](url)']],
+  ])
 })
 
 test('holds a complete label until the next chunk establishes whether it starts a destination', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('[label]'), [])
-  assert.deepEqual(buffer.push(' ordinary text'), ['[label] ordinary text'])
+  assertPushes(buffer, [
+    ['[label]', []],
+    [' ordinary text', ['[label] ordinary text']],
+  ])
 })
 
 test('holds nested and escaped destination parentheses until the outer destination closes', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('[link](https://example.com/a_(b'), [])
-  assert.deepEqual(buffer.push('))'), ['[link](https://example.com/a_(b))'])
-  assert.deepEqual(buffer.push('[link](url\\)still)'), ['[link](url\\)still)'])
+  assertPushes(buffer, [
+    ['[link](https://example.com/a_(b', []],
+    ['))', ['[link](https://example.com/a_(b))']],
+    ['[link](url\\)still)', ['[link](url\\)still)']],
+  ])
 })
 
 test('holds and flushes text before a single unmatched backtick', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('text`'), ['text'])
+  assertPushes(buffer, [['text`', ['text']]])
   assert.equal(buffer.flush(), '`')
 })
 
 test('emits complete links surrounded by safe text', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('see [link](url) here'), ['see [link](url) here'])
+  assertPushes(buffer, [['see [link](url) here', ['see [link](url) here']]])
 })
 
 test('holds from the first unclosed bracket even when a later link is complete', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('[unclosed and [closed](url)'), [])
+  assertPushes(buffer, [['[unclosed and [closed](url)', []]])
   assert.equal(buffer.flush(), '[unclosed and [closed](url)')
 })
 
 test('flush returns pending content and resets state', () => {
   const buffer = createMarkdownStreamBuffer()
 
-  assert.deepEqual(buffer.push('[incomplete'), [])
+  assertPushes(buffer, [['[incomplete', []]])
   assert.equal(buffer.flush(), '[incomplete')
   assert.equal(buffer.flush(), '')
-  assert.deepEqual(buffer.push('safe'), ['safe'])
+  assertPushes(buffer, [['safe', ['safe']]])
 })
 
 test('expires held content using the injected clock without sleeping', () => {
@@ -98,18 +116,20 @@ test('expires held content using the injected clock without sleeping', () => {
     now: () => currentTime,
   })
 
-  assert.deepEqual(buffer.push('[incomplete'), [])
+  assertPushes(buffer, [['[incomplete', []]])
   currentTime += 49
-  assert.deepEqual(buffer.push(''), [])
+  assertPushes(buffer, [['', []]])
   currentTime += 1
-  assert.deepEqual(buffer.push(''), ['[incomplete'])
-  assert.deepEqual(buffer.push('safe'), ['safe'])
+  assertPushes(buffer, [
+    ['', ['[incomplete']],
+    ['safe', ['safe']],
+  ])
 })
 
 test('a zero hold duration flushes incomplete content immediately', () => {
   const buffer = createMarkdownStreamBuffer({ maxHoldMs: 0, now: () => 0 })
 
-  assert.deepEqual(buffer.push('[incomplete'), ['[incomplete'])
+  assertPushes(buffer, [['[incomplete', ['[incomplete']]])
 })
 
 test('validates public inputs and options', () => {
