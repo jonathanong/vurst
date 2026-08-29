@@ -142,6 +142,33 @@ test('treats backticks as literal content inside complete links and HTML tags', 
   ])
 })
 
+test('holds an enclosing link when an unclosed code span crosses its label', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['[foo `bar] tail](url)', []]])
+  assert.equal(buffer.flush(), '[foo `bar] tail](url)')
+})
+
+test('does not split complete outer ranges for nested other-grammar text', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['<a [foo>', ['<a [foo>']],
+    ['<a href="[foo">', ['<a href="[foo">']],
+    ['[foo](<bar)', ['[foo](<bar)']],
+  ])
+})
+
+test('continues past nested unsafe candidates to hold later top-level constructs', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['<a [foo> [bar', ['<a [foo> ']],
+    ['](url) [foo](<bar) <baz', ['[bar](url) [foo](<bar) ']],
+  ])
+  assert.equal(buffer.flush(), '<baz')
+})
+
 test('emits complete links surrounded by safe text', () => {
   const buffer = createMarkdownStreamBuffer()
 

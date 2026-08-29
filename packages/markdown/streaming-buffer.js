@@ -38,11 +38,12 @@ function findBalancedEnd(text, start, open, close, codeSpans) {
 
 function findLinkRanges(text, codeSpans) {
   const complete = []
+  const unsafe = []
   let searchStart = 0
   let codeSpanIndex = 0
   while (searchStart < text.length) {
     const index = text.indexOf('[', searchStart)
-    if (index === -1) return { complete, firstUnsafe: -1 }
+    if (index === -1) break
 
     while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= index) {
       codeSpanIndex += 1
@@ -64,7 +65,9 @@ function findLinkRanges(text, codeSpans) {
         ? index - 1
         : index
     if (labelEnd === -1 || labelEnd === text.length - 1) {
-      return { complete, firstUnsafe: opener }
+      unsafe.push(opener)
+      searchStart = index + 1
+      continue
     }
 
     if (text[labelEnd + 1] !== '(') {
@@ -73,11 +76,15 @@ function findLinkRanges(text, codeSpans) {
     }
 
     const destinationEnd = findBalancedEnd(text, labelEnd + 1, '(', ')', [])
-    if (destinationEnd === -1) return { complete, firstUnsafe: opener }
+    if (destinationEnd === -1) {
+      unsafe.push(opener)
+      searchStart = labelEnd + 1
+      continue
+    }
     complete.push({ start: opener, end: destinationEnd + 1 })
     searchStart = destinationEnd + 1
   }
-  return { complete, firstUnsafe: -1 }
+  return { complete, unsafe }
 }
 
 function findBacktickRun(text, searchStart) {
@@ -123,6 +130,7 @@ function findCodeSpans(text) {
 
 function findHtmlTagRanges(text, codeSpans) {
   const complete = []
+  const unsafe = []
   let codeSpanIndex = 0
   let index = 0
   while (index < text.length) {
@@ -142,37 +150,66 @@ function findHtmlTagRanges(text, codeSpans) {
 
     const opener = index
     index += 1
+    let tagClosed = false
     while (index < text.length) {
-      if (text[index] === '>') break
-      if (text[index] === '<') return { complete, firstUnsafe: opener }
+      if (text[index] === '>') {
+        complete.push({ start: opener, end: index + 1 })
+        index += 1
+        tagClosed = true
+        break
+      }
+      if (text[index] === '<') {
+        unsafe.push(opener)
+        break
+      }
       index += 1
     }
-    if (index === text.length) return { complete, firstUnsafe: opener }
-    complete.push({ start: opener, end: index + 1 })
-    index += 1
+    if (!tagClosed && index === text.length) unsafe.push(opener)
   }
-  return { complete, firstUnsafe: -1 }
+  return { complete, unsafe }
 }
 
 function isInsideCompleteRange(index, ranges) {
   return ranges.some((range) => range.start <= index && index < range.end)
 }
 
+function findFirstTopLevelUnsafe(candidates, enclosingRanges) {
+  let rangeIndex = 0
+  for (const candidate of candidates) {
+    while (
+      rangeIndex < enclosingRanges.length &&
+      enclosingRanges[rangeIndex].end <= candidate
+    ) {
+      rangeIndex += 1
+    }
+    const range = enclosingRanges[rangeIndex]
+    if (range === undefined || candidate < range.start) return candidate
+  }
+  return -1
+}
+
 function findSafeBoundary(text) {
   const codeSpans = findCodeSpans(text)
-  const links = findLinkRanges(text, codeSpans.complete)
-  const htmlTags = findHtmlTagRanges(text, codeSpans.complete)
+  const opaqueCodeSpans = [...codeSpans.complete]
+  if (codeSpans.unclosedStart >= 0) {
+    opaqueCodeSpans.push({ start: codeSpans.unclosedStart, end: text.length })
+  }
+
+  const links = findLinkRanges(text, opaqueCodeSpans)
+  const htmlTags = findHtmlTagRanges(text, opaqueCodeSpans)
   const completeOuterRanges = [...links.complete, ...htmlTags.complete]
   const unclosedCodeIsNested =
     codeSpans.unclosedStart >= 0 &&
     isInsideCompleteRange(codeSpans.unclosedStart, completeOuterRanges)
+  const firstUnsafeLink = findFirstTopLevelUnsafe(links.unsafe, htmlTags.complete)
+  const firstUnsafeHtmlTag = findFirstTopLevelUnsafe(htmlTags.unsafe, links.complete)
 
   let boundary = text.length
-  if (links.firstUnsafe >= 0) boundary = Math.min(boundary, links.firstUnsafe)
+  if (firstUnsafeLink >= 0) boundary = Math.min(boundary, firstUnsafeLink)
   if (codeSpans.unclosedStart >= 0 && !unclosedCodeIsNested) {
     boundary = Math.min(boundary, codeSpans.unclosedStart)
   }
-  if (htmlTags.firstUnsafe >= 0) boundary = Math.min(boundary, htmlTags.firstUnsafe)
+  if (firstUnsafeHtmlTag >= 0) boundary = Math.min(boundary, firstUnsafeHtmlTag)
   if (boundary < text.length) return boundary
 
   if (text.endsWith('\\')) return text.length - 1
