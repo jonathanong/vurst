@@ -80,6 +80,24 @@ test('holds nested and escaped destination parentheses until the outer destinati
   ])
 })
 
+test('holds inline links with an unterminated quoted title despite title parentheses', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['[x](url "a)b', []],
+    ['")', ['[x](url "a)b")']],
+  ])
+})
+
+test('allows apostrophes and quotes in bare link destinations', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ["[x](https://example.com/it's)", ["[x](https://example.com/it's)"]],
+    ['[x](foo"bar)', ['[x](foo"bar)']],
+  ])
+})
+
 test('holds and flushes text before a single unmatched backtick', () => {
   const buffer = createMarkdownStreamBuffer()
 
@@ -140,6 +158,30 @@ test('treats backticks as literal content inside complete links and HTML tags', 
     ['[foo](`bar)', ['[foo](`bar)']],
     ['<a data-code="`">', ['<a data-code="`">']],
   ])
+})
+
+test('treats angle brackets inside quoted HTML attributes as literal text', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['<a data-value="<tag>">', ['<a data-value="<tag>">']]])
+})
+
+test('holds HTML tags with an unterminated quoted attribute despite an angle bracket', () => {
+  for (const chunk of ['<a title="1 >', '<a title=\'1 >']) {
+    const buffer = createMarkdownStreamBuffer()
+    assertPushes(buffer, [[chunk, []]])
+    assert.equal(buffer.flush(), chunk)
+  }
+})
+
+test('lets a later HTML opener supersede an earlier incomplete one', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['<a <b>', ['<a <b>']],
+    ['<a <b', ['<a ']],
+  ])
+  assert.equal(buffer.flush(), '<b')
 })
 
 test('holds an enclosing link when an unclosed code span crosses its label', () => {
@@ -212,6 +254,25 @@ test('a zero hold duration flushes incomplete content immediately', () => {
   const buffer = createMarkdownStreamBuffer({ maxHoldMs: 0, now: () => 0 })
 
   assertPushes(buffer, [['[incomplete', ['[incomplete']]])
+})
+
+test('a zero hold duration releases an unsafe suffix after a safe prefix', () => {
+  const buffer = createMarkdownStreamBuffer({ maxHoldMs: 0, now: () => 0 })
+
+  assertPushes(buffer, [['safe [incomplete', ['safe ', '[incomplete']]])
+})
+
+test('an empty push without pending content does not start the hold clock', () => {
+  let calls = 0
+  const buffer = createMarkdownStreamBuffer({
+    now: () => {
+      calls += 1
+      return 0
+    },
+  })
+
+  assertPushes(buffer, [['', []]])
+  assert.equal(calls, 0)
 })
 
 test('validates public inputs and options', () => {

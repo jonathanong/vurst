@@ -38,6 +38,44 @@ function findBalancedEnd(text, start, open, close, codeSpans) {
   return -1
 }
 
+function findLinkDestinationEnd(text, start) {
+  let depth = 0
+  let quote = null
+  let titleMayStart = false
+  let index = start
+  while (index < text.length) {
+    const character = text[index]
+    if (character === '\\') {
+      index += 2
+      continue
+    }
+    if (quote !== null) {
+      if (character === quote) quote = null
+      index += 1
+      continue
+    }
+    if (character === ' ' || character === '\t' || character === '\n') {
+      titleMayStart = true
+      index += 1
+      continue
+    }
+    if (titleMayStart && (character === '"' || character === "'")) {
+      quote = character
+      titleMayStart = false
+    } else if (character === '(') {
+      titleMayStart = false
+      depth += 1
+    } else if (character === ')') {
+      depth -= 1
+      if (depth === 0) return index
+    } else {
+      titleMayStart = false
+    }
+    index += 1
+  }
+  return -1
+}
+
 function advanceCodeSpanIndex(codeSpans, codeSpanIndex, index) {
   while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= index) {
     codeSpanIndex += 1
@@ -56,7 +94,7 @@ function inspectLink(text, index, codeSpans) {
     return { opener: null, end: -1, nextSearchStart: labelEnd + 1 }
   }
 
-  const destinationEnd = findBalancedEnd(text, labelEnd + 1, '(', ')', [])
+  const destinationEnd = findLinkDestinationEnd(text, labelEnd + 1)
   return {
     opener,
     end: destinationEnd === -1 ? -1 : destinationEnd + 1,
@@ -135,10 +173,22 @@ function findCodeSpans(text) {
 }
 
 function findHtmlTagEnd(text, opener) {
+  let quote = null
   let index = opener + 1
   while (index < text.length) {
-    if (text[index] === '>') return index
-    if (text[index] === '<') return -1
+    const character = text[index]
+    if (quote !== null) {
+      if (character === quote) quote = null
+      index += 1
+      continue
+    }
+    if (character === '"' || character === "'") {
+      quote = character
+    } else if (character === '>') {
+      return index
+    } else if (character === '<') {
+      return -1
+    }
     index += 1
   }
   return null
@@ -167,7 +217,6 @@ function findHtmlTagRanges(text, codeSpans) {
       break
     }
     if (tagEnd === -1) {
-      unsafe.push(index)
       searchStart = index + 1
       continue
     }
@@ -248,6 +297,16 @@ function createMarkdownStreamBuffer(options = {}) {
     return output
   }
 
+  function emitSafePrefix(output) {
+    if (pending.length === 0) {
+      heldSince = null
+      return [output]
+    }
+    if (heldSince === null) heldSince = now()
+    if (now() - heldSince >= maxHoldMs) return [output, drain()]
+    return [output]
+  }
+
   return {
     push(text) {
       if (typeof text !== 'string') {
@@ -255,6 +314,7 @@ function createMarkdownStreamBuffer(options = {}) {
       }
 
       pending += text
+      if (pending.length === 0) return []
       const boundary = findSafeBoundary(pending)
       if (boundary === 0) {
         if (heldSince === null) heldSince = now()
@@ -266,8 +326,7 @@ function createMarkdownStreamBuffer(options = {}) {
 
       const output = pending.slice(0, boundary)
       pending = pending.slice(boundary)
-      heldSince = pending.length > 0 ? (heldSince ?? now()) : null
-      return output ? [output] : []
+      return emitSafePrefix(output)
     },
     flush() {
       return drain()
