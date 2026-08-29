@@ -1,0 +1,312 @@
+import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { test } from 'node:test'
+import { createMarkdownStreamBuffer } from '../streaming-buffer.js'
+
+function assertPushes(buffer, chunks) {
+  for (const [input, output] of chunks) {
+    assert.deepEqual(buffer.push(input), output)
+  }
+}
+
+test('flushes safe text and complete Markdown constructs immediately', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['Hello world', ['Hello world']],
+    ['[link](url)', ['[link](url)']],
+    ['<div>', ['<div>']],
+    ['`code`', ['`code`']],
+  ])
+})
+
+test('returns no output for an empty push and preserves Unicode text', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['', []],
+    ['Hello 🌍!', ['Hello 🌍!']],
+  ])
+})
+
+test('holds incomplete Markdown constructs and emits a safe prefix', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['Some text [link', ['Some text ']],
+    [' text', []],
+    ['](url)', ['[link text](url)']],
+    ['<div', []],
+  ])
+  assert.equal(buffer.flush(), '<div')
+})
+
+test('holds incomplete images, trailing escapes, and unmatched trailing backticks', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['![alt](https://example.com', []]])
+  assert.equal(buffer.flush(), '![alt](https://example.com')
+  assertPushes(buffer, [['text\\', ['text']]])
+  assert.equal(buffer.flush(), '\\')
+  assertPushes(buffer, [['code```', ['code']]])
+  assert.equal(buffer.flush(), '```')
+})
+
+test('emits escaped literal brackets and complete nested-label links', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['\\[literal]', ['\\[literal]']],
+    ['[outer [inner]](url)', ['[outer [inner]](url)']],
+  ])
+})
+
+test('holds a complete label until the next chunk establishes whether it starts a destination', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['[label]', []],
+    [' ordinary text', ['[label] ordinary text']],
+  ])
+})
+
+test('holds nested and escaped destination parentheses until the outer destination closes', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['[link](https://example.com/a_(b', []],
+    ['))', ['[link](https://example.com/a_(b))']],
+    ['[link](url\\)still)', ['[link](url\\)still)']],
+  ])
+})
+
+test('holds inline links with an unterminated quoted title despite title parentheses', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['[x](url "a)b', []],
+    ['")', ['[x](url "a)b")']],
+  ])
+})
+
+test('allows apostrophes and quotes in bare link destinations', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ["[x](https://example.com/it's)", ["[x](https://example.com/it's)"]],
+    ['[x](foo"bar)', ['[x](foo"bar)']],
+  ])
+})
+
+test('holds and flushes text before a single unmatched backtick', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['text`', ['text']]])
+  assert.equal(buffer.flush(), '`')
+})
+
+test('holds an opener when its closing backtick arrives in a later chunk', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['`code', []]])
+  assert.equal(buffer.flush(), '`code')
+})
+
+test('holds an unmatched opener even when ordinary text follows it', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['safe `code', ['safe ']]])
+  assert.equal(buffer.flush(), '`code')
+})
+
+test('holds only the unescaped opener after an escaped backtick', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['\\`code`', ['\\`code']]])
+  assert.equal(buffer.flush(), '`')
+})
+
+test('waits for an equal-length backtick delimiter run', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['``code`', []],
+    ['`', ['``code``']],
+  ])
+})
+
+test('allows a code span to close with a backtick preceded by a backslash', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['`code\\`', ['`code\\`']]])
+})
+
+test('treats complete code spans as opaque to bracket and HTML scans', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['`[foo`', ['`[foo`']],
+    ['`<tag`', ['`<tag`']],
+    ['[code `[label]`](url)', ['[code `[label]`](url)']],
+  ])
+})
+
+test('treats backticks as literal content inside complete links and HTML tags', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['[foo](`bar)', ['[foo](`bar)']],
+    ['<a data-code="`">', ['<a data-code="`">']],
+  ])
+})
+
+test('treats angle brackets inside quoted HTML attributes as literal text', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['<a data-value="<tag>">', ['<a data-value="<tag>">']]])
+})
+
+test('holds HTML tags with an unterminated quoted attribute despite an angle bracket', () => {
+  for (const chunk of ['<a title="1 >', '<a title=\'1 >']) {
+    const buffer = createMarkdownStreamBuffer()
+    assertPushes(buffer, [[chunk, []]])
+    assert.equal(buffer.flush(), chunk)
+  }
+})
+
+test('lets a later HTML opener supersede an earlier incomplete one', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['<a <b>', ['<a <b>']],
+    ['<a <b', ['<a ']],
+  ])
+  assert.equal(buffer.flush(), '<b')
+})
+
+test('holds an enclosing link when an unclosed code span crosses its label', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['[foo `bar] tail](url)', []]])
+  assert.equal(buffer.flush(), '[foo `bar] tail](url)')
+})
+
+test('does not split complete outer ranges for nested other-grammar text', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['<a [foo>', ['<a [foo>']],
+    ['<a href="[foo">', ['<a href="[foo">']],
+    ['[foo](<bar)', ['[foo](<bar)']],
+  ])
+})
+
+test('continues past nested unsafe candidates to hold later top-level constructs', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [
+    ['<a [foo> [bar', ['<a [foo> ']],
+    ['](url) [foo](<bar) <baz', ['[bar](url) [foo](<bar) ']],
+  ])
+  assert.equal(buffer.flush(), '<baz')
+})
+
+test('emits complete links surrounded by safe text', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['see [link](url) here', ['see [link](url) here']]])
+})
+
+test('holds from the first unclosed bracket even when a later link is complete', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['[unclosed and [closed](url)', []]])
+  assert.equal(buffer.flush(), '[unclosed and [closed](url)')
+})
+
+test('flush returns pending content and resets state', () => {
+  const buffer = createMarkdownStreamBuffer()
+
+  assertPushes(buffer, [['[incomplete', []]])
+  assert.equal(buffer.flush(), '[incomplete')
+  assert.equal(buffer.flush(), '')
+  assertPushes(buffer, [['safe', ['safe']]])
+})
+
+test('expires held content using the injected clock without sleeping', () => {
+  let currentTime = 100
+  const buffer = createMarkdownStreamBuffer({
+    maxHoldMs: 50,
+    now: () => currentTime,
+  })
+
+  assertPushes(buffer, [['[incomplete', []]])
+  currentTime += 49
+  assertPushes(buffer, [['', []]])
+  currentTime += 1
+  assertPushes(buffer, [
+    ['', ['[incomplete']],
+    ['safe', ['safe']],
+  ])
+})
+
+test('a zero hold duration flushes incomplete content immediately', () => {
+  const buffer = createMarkdownStreamBuffer({ maxHoldMs: 0, now: () => 0 })
+
+  assertPushes(buffer, [['[incomplete', ['[incomplete']]])
+})
+
+test('a zero hold duration releases an unsafe suffix after a safe prefix', () => {
+  const buffer = createMarkdownStreamBuffer({ maxHoldMs: 0, now: () => 0 })
+
+  assertPushes(buffer, [['safe [incomplete', ['safe ', '[incomplete']]])
+})
+
+test('an empty push without pending content does not start the hold clock', () => {
+  let calls = 0
+  const buffer = createMarkdownStreamBuffer({
+    now: () => {
+      calls += 1
+      return 0
+    },
+  })
+
+  assertPushes(buffer, [['', []]])
+  assert.equal(calls, 0)
+})
+
+test('validates public inputs and options', () => {
+  assert.throws(() => createMarkdownStreamBuffer(null), TypeError)
+  assert.throws(() => createMarkdownStreamBuffer({ maxHoldMs: -1 }), RangeError)
+  assert.throws(() => createMarkdownStreamBuffer({ maxHoldMs: Infinity }), RangeError)
+  assert.throws(() => createMarkdownStreamBuffer({ now: 'clock' }), TypeError)
+
+  const buffer = createMarkdownStreamBuffer()
+  assert.throws(() => buffer.push(Buffer.from('text')), TypeError)
+})
+
+test('streaming-buffer and package metadata exports load without the native binding', () => {
+  const commands = [
+    [
+      '--input-type=module',
+      '--eval',
+      "import { createMarkdownStreamBuffer } from '@jongleberry/vurst-markdown/streaming-buffer'; const buffer = createMarkdownStreamBuffer(); if (buffer.push('safe')[0] !== 'safe') process.exit(1)",
+    ],
+    [
+      '--eval',
+      "const { createMarkdownStreamBuffer } = require('@jongleberry/vurst-markdown/streaming-buffer'); const buffer = createMarkdownStreamBuffer(); if (buffer.push('safe')[0] !== 'safe') process.exit(1)",
+    ],
+    [
+      '--eval',
+      "const manifest = require('@jongleberry/vurst-markdown/package.json'); if (manifest.name !== '@jongleberry/vurst-markdown') process.exit(1)",
+    ],
+  ]
+
+  for (const args of commands) {
+    const result = spawnSync(process.execPath, args, {
+      cwd: new URL('..', import.meta.url),
+      encoding: 'utf8',
+    })
+    assert.equal(result.status, 0, result.stderr)
+  }
+})
