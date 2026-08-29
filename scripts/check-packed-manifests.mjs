@@ -93,6 +93,17 @@ try {
         throw new Error(`${packedManifest.name} packs ONNX Runtime assets`);
       }
     }
+
+    if (packedManifest.name === "@jongleberry/vurst-markdown") {
+      for (const entry of [
+        "package/streaming-buffer.js",
+        "package/streaming-buffer.d.ts",
+      ]) {
+        if (!packedEntries.split("\n").includes(entry)) {
+          throw new Error(`${packedManifest.name} does not pack ${entry}`);
+        }
+      }
+    }
   }
 } finally {
   await rm(packDirectory, { recursive: true, force: true });
