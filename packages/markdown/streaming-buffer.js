@@ -15,15 +15,16 @@ function findBalancedEnd(text, start, open, close, codeSpans) {
     codeSpanIndex += 1
   }
 
-  for (let index = start; index < text.length; index += 1) {
+  let index = start
+  while (index < text.length) {
     const codeSpan = codeSpans[codeSpanIndex]
     if (codeSpan !== undefined && index === codeSpan.start) {
-      index = codeSpan.end - 1
+      index = codeSpan.end
       codeSpanIndex += 1
       continue
     }
     if (text[index] === '\\') {
-      index += 1
+      index += 2
       continue
     }
     if (text[index] === open) {
@@ -32,8 +33,35 @@ function findBalancedEnd(text, start, open, close, codeSpans) {
       depth -= 1
       if (depth === 0) return index
     }
+    index += 1
   }
   return -1
+}
+
+function advanceCodeSpanIndex(codeSpans, codeSpanIndex, index) {
+  while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= index) {
+    codeSpanIndex += 1
+  }
+  return codeSpanIndex
+}
+
+function inspectLink(text, index, codeSpans) {
+  const labelEnd = findBalancedEnd(text, index, '[', ']', codeSpans)
+  const opener =
+    index > 0 && text[index - 1] === '!' && !isEscaped(text, index - 1) ? index - 1 : index
+  if (labelEnd === -1 || labelEnd === text.length - 1) {
+    return { opener, end: -1, nextSearchStart: index + 1 }
+  }
+  if (text[labelEnd + 1] !== '(') {
+    return { opener: null, end: -1, nextSearchStart: labelEnd + 1 }
+  }
+
+  const destinationEnd = findBalancedEnd(text, labelEnd + 1, '(', ')', [])
+  return {
+    opener,
+    end: destinationEnd === -1 ? -1 : destinationEnd + 1,
+    nextSearchStart: destinationEnd === -1 ? labelEnd + 1 : destinationEnd + 1,
+  }
 }
 
 function findLinkRanges(text, codeSpans) {
@@ -45,9 +73,7 @@ function findLinkRanges(text, codeSpans) {
     const index = text.indexOf('[', searchStart)
     if (index === -1) break
 
-    while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= index) {
-      codeSpanIndex += 1
-    }
+    codeSpanIndex = advanceCodeSpanIndex(codeSpans, codeSpanIndex, index)
     const codeSpan = codeSpans[codeSpanIndex]
     if (codeSpan !== undefined && codeSpan.start < index) {
       searchStart = codeSpan.end
@@ -59,30 +85,10 @@ function findLinkRanges(text, codeSpans) {
       continue
     }
 
-    const labelEnd = findBalancedEnd(text, index, '[', ']', codeSpans)
-    const opener =
-      index > 0 && text[index - 1] === '!' && !isEscaped(text, index - 1)
-        ? index - 1
-        : index
-    if (labelEnd === -1 || labelEnd === text.length - 1) {
-      unsafe.push(opener)
-      searchStart = index + 1
-      continue
-    }
-
-    if (text[labelEnd + 1] !== '(') {
-      searchStart = labelEnd + 1
-      continue
-    }
-
-    const destinationEnd = findBalancedEnd(text, labelEnd + 1, '(', ')', [])
-    if (destinationEnd === -1) {
-      unsafe.push(opener)
-      searchStart = labelEnd + 1
-      continue
-    }
-    complete.push({ start: opener, end: destinationEnd + 1 })
-    searchStart = destinationEnd + 1
+    const link = inspectLink(text, index, codeSpans)
+    if (link.opener !== null && link.end === -1) unsafe.push(link.opener)
+    if (link.end >= 0) complete.push({ start: link.opener, end: link.end })
+    searchStart = link.nextSearchStart
   }
   return { complete, unsafe }
 }
@@ -128,43 +134,45 @@ function findCodeSpans(text) {
   return { complete, unclosedStart: -1 }
 }
 
+function findHtmlTagEnd(text, opener) {
+  let index = opener + 1
+  while (index < text.length) {
+    if (text[index] === '>') return index
+    if (text[index] === '<') return -1
+    index += 1
+  }
+  return null
+}
+
 function findHtmlTagRanges(text, codeSpans) {
   const complete = []
   const unsafe = []
   let codeSpanIndex = 0
-  let index = 0
-  while (index < text.length) {
-    while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= index) {
-      codeSpanIndex += 1
-    }
+  let searchStart = 0
+  while (searchStart < text.length) {
+    const index = text.indexOf('<', searchStart)
+    if (index === -1) break
+
+    codeSpanIndex = advanceCodeSpanIndex(codeSpans, codeSpanIndex, index)
     const codeSpan = codeSpans[codeSpanIndex]
-    if (codeSpan !== undefined && index === codeSpan.start) {
-      index = codeSpan.end
+    if (codeSpan !== undefined && codeSpan.start < index) {
+      searchStart = codeSpan.end
       codeSpanIndex += 1
-      continue
-    }
-    if (text[index] !== '<') {
-      index += 1
       continue
     }
 
-    const opener = index
-    index += 1
-    let tagClosed = false
-    while (index < text.length) {
-      if (text[index] === '>') {
-        complete.push({ start: opener, end: index + 1 })
-        index += 1
-        tagClosed = true
-        break
-      }
-      if (text[index] === '<') {
-        unsafe.push(opener)
-        break
-      }
-      index += 1
+    const tagEnd = findHtmlTagEnd(text, index)
+    if (tagEnd === null) {
+      unsafe.push(index)
+      break
     }
-    if (!tagClosed && index === text.length) unsafe.push(opener)
+    if (tagEnd === -1) {
+      unsafe.push(index)
+      searchStart = index + 1
+      continue
+    }
+    complete.push({ start: index, end: tagEnd + 1 })
+    searchStart = tagEnd + 1
   }
   return { complete, unsafe }
 }
