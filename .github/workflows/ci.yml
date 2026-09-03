@@ -16,6 +16,8 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -85,7 +87,7 @@ jobs:
         with:
           files: coverage/lcov-html.info,coverage/lcov-markdown.info,coverage/lcov-ai.info
           fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
 
       - name: Install node deps (html)
         working-directory: packages/html
