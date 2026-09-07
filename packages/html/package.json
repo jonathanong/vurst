@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-html",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Rust + N-API: HTML sanitization, extraction, and boilerstrip.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -47,8 +47,8 @@
     "@types/node": "^24"
   },
   "optionalDependencies": {
-    "@jongleberry/vurst-html-darwin-arm64": "0.4.0",
-    "@jongleberry/vurst-html-linux-arm64-gnu": "0.4.0",
-    "@jongleberry/vurst-html-linux-x64-gnu": "0.4.0"
+    "@jongleberry/vurst-html-darwin-arm64": "0.4.1",
+    "@jongleberry/vurst-html-linux-arm64-gnu": "0.4.1",
+    "@jongleberry/vurst-html-linux-x64-gnu": "0.4.1"
   }
 }

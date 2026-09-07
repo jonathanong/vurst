@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-markdown-darwin-arm64",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Native addon for @jongleberry/vurst-markdown on macOS ARM64",
   "main": "vurst-markdown.darwin-arm64.node",
   "license": "MIT",
