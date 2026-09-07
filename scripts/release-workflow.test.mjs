@@ -59,6 +59,7 @@ describe("release workflow", () => {
     );
     const nativePublish = release.indexOf("Publish native platform packages");
     const primaryPublish = release.indexOf("Publish primary packages");
+    const primaryPublishBlock = release.slice(primaryPublish);
 
     assert.match(release, /node scripts\/native-packages\.mjs sync "\$version"/);
     assert.match(release, /pnpm install --lockfile-only --ignore-scripts/);
@@ -68,13 +69,17 @@ describe("release workflow", () => {
     assert.match(release, /npm install --prefix "\$consumer_dir" --ignore-scripts/);
     assert.match(release, /\(cd "\$consumer_dir" && npm init -y/);
     assert.doesNotMatch(release, /npm init --prefix/);
-    assert.match(release, /packages\/\{ai,html,markdown\}/);
+    assert.match(release, /packages\/\{ai,html,markdown,prompt,runtime\}/);
+    assert.match(release, /pnpm --dir "\$package_dir" pack --pack-destination "\$pack_dir"/);
     assert.match(release, /require\(packageRoot\('vurst-html'\)\)/);
+    assert.match(release, /require\(packageRoot\('vurst-prompt'\)\)/);
+    assert.match(release, /require\(packageRoot\('vurst-runtime'\)\)/);
     assert.match(release, /require\(packageRoot\('vurst-markdown'\)\)/);
     assert.match(release, /require\(packageRoot\('vurst-ai'\)\)/);
     assert.match(release, /npm publish "\.\/\$package_dir" --access public --dry-run/);
     assert.match(release, /grep -qE 'E404\|404 Not Found'/);
-    assert.match(release, /npm publish "\.\/\$package_dir" --access public --provenance/);
+    assert.match(release, /npm publish "\$tarball" --access public --provenance/);
+    assert.doesNotMatch(primaryPublishBlock, /npm publish "\.\/\$package_dir"/);
     assert.match(release, /id-token: write/);
     assert.doesNotMatch(release, /NODE_AUTH_TOKEN|NPM_TOKEN|pnpm publish/);
     assert.ok(releaseCreate >= 0);
