@@ -39,6 +39,10 @@ describe("release workflow", () => {
       for (const timeout of workflow.matchAll(/timeout-minutes: (\d+)/g)) {
         assert.ok(Number(timeout[1]) <= 30);
       }
+      assert.equal(
+        workflow.match(/uses: dtolnay\/rust-toolchain@/g)?.length,
+        workflow.match(/toolchain: stable/g)?.length,
+      );
     }
     assert.match(ci, /group: ci-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/);
     assert.match(ci, /cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/);
