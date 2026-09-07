@@ -46,6 +46,10 @@ describe("release workflow", () => {
     }
     assert.match(ci, /group: ci-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/);
     assert.match(ci, /cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/);
+    assert.equal(
+      [...`${release}\n${ci}`.matchAll(/uses: actions\/checkout@/g)].length - 1,
+      [...`${release}\n${ci}`.matchAll(/persist-credentials: false/g)].length,
+    );
   });
 
   it("stages and publishes native packages through npm trusted publishing", async () => {
@@ -57,6 +61,8 @@ describe("release workflow", () => {
     const primaryPublish = release.indexOf("Publish primary packages");
 
     assert.match(release, /node scripts\/native-packages\.mjs sync "\$version"/);
+    assert.match(release, /pnpm install --lockfile-only --ignore-scripts/);
+    assert.match(release, /git add pnpm-lock\.yaml/);
     assert.match(release, /node scripts\/native-packages\.mjs stage --artifacts dist/);
     assert.match(release, /npm install --global npm@11\.19\.0/);
     assert.match(release, /npm install --prefix "\$consumer_dir" --ignore-scripts/);
