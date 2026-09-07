@@ -1,0 +1,33 @@
+{
+  "name": "@jongleberry/vurst-markdown-linux-x64-gnu",
+  "version": "0.4.0",
+  "description": "Native addon for @jongleberry/vurst-markdown on Linux x64 with glibc",
+  "main": "vurst-markdown.linux-x64-gnu.node",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonathanong/vurst.git",
+    "directory": "packages/vurst-markdown-linux-x64-gnu"
+  },
+  "files": [
+    "*.node",
+    "README.md",
+    "LICENSE"
+  ],
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "libc": [
+    "glibc"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
+import { NATIVE_PACKAGES } from "./native-packages.mjs";
+
 const execFileAsync = promisify(execFile);
 const packageDirectories = [
   "packages/ai",
@@ -11,6 +13,7 @@ const packageDirectories = [
   "packages/markdown",
   "packages/prompt",
   "packages/runtime",
+  ...NATIVE_PACKAGES.map(({ directory }) => directory),
 ];
 const dependencyFields = [
   "dependencies",
@@ -78,19 +81,48 @@ try {
         "@jongleberry/vurst-markdown",
       ].includes(packedManifest.name)
     ) {
-      if (packedManifest.scripts?.postinstall !== "node scripts/install.js") {
+      if (packedManifest.scripts?.postinstall) {
         throw new Error(
-          `${packedManifest.name} must run the GitHub Release installer during postinstall`,
+          `${packedManifest.name} must not run an install-time binary downloader`,
         );
       }
-      if (!packedEntries.split("\n").includes("package/scripts/install.js")) {
-        throw new Error(`${packedManifest.name} does not pack scripts/install.js`);
+      if (packedEntries.split("\n").some((entry) => entry.includes("scripts/install"))) {
+        throw new Error(`${packedManifest.name} packs an obsolete native installer`);
       }
       if (/(^|\/)[^/]+\.node$/m.test(packedEntries)) {
         throw new Error(`${packedManifest.name} packs a native .node binary`);
       }
       if (/(^|\/)onnxruntime\//m.test(packedEntries)) {
         throw new Error(`${packedManifest.name} packs ONNX Runtime assets`);
+      }
+
+      const expectedOptionalDependencies = Object.fromEntries(
+        NATIVE_PACKAGES.filter(({ kind }) => packedManifest.name.endsWith(`vurst-${kind}`)).map(
+          ({ name }) => [name, rootPackage.version],
+        ),
+      );
+      if (
+        JSON.stringify(packedManifest.optionalDependencies) !==
+        JSON.stringify(expectedOptionalDependencies)
+      ) {
+        throw new Error(
+          `${packedManifest.name} must pack exact platform optional dependencies`,
+        );
+      }
+    }
+
+    const nativePackage = NATIVE_PACKAGES.find(({ name }) => name === packedManifest.name);
+    if (nativePackage) {
+      if (packedManifest.version !== rootPackage.version) {
+        throw new Error(`${packedManifest.name} must pack version ${rootPackage.version}`);
+      }
+      if (packedManifest.publishConfig?.access !== "public") {
+        throw new Error(`${packedManifest.name} must publish publicly`);
+      }
+      for (const required of ["package/README.md", "package/LICENSE"]) {
+        if (!packedEntries.split("\n").includes(required)) {
+          throw new Error(`${packedManifest.name} does not pack ${required}`);
+        }
       }
     }
 

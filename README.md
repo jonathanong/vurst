@@ -32,18 +32,16 @@ Prebuilt binaries ship for:
 - Linux arm64 glibc (`aarch64-unknown-linux-gnu`)
 
 `@jongleberry/vurst-html`, `@jongleberry/vurst-markdown`, and
-`@jongleberry/vurst-ai` are lightweight npm packages. During `postinstall`,
-each package downloads only the native binary for the current platform from
-the matching GitHub Release and verifies its SHA-256 checksum. Re-running the
-installer reuses a binary only when its version marker matches the installed
-npm package; missing or stale markers trigger a fresh download.
+`@jongleberry/vurst-ai` install their native addons through platform-specific
+optional npm packages. A clean install does not run lifecycle scripts or
+download files from GitHub Releases. Optional dependencies must remain enabled
+so the package manager can select the package matching the current platform.
 
-The matching ONNX Runtime shared library is downloaded with
-`@jongleberry/vurst-ai`, so no system install is required. glibc 2.17+
-compatible (manylinux2014). Package-manager lifecycle scripts and access to
-GitHub Releases are required during a clean install. Source builds can set
-`VURST_SKIP_BINARY_DOWNLOAD=1`; controlled mirrors and installer tests can set
-`VURST_RELEASE_BASE_URL`.
+The matching ONNX Runtime shared library ships inside the selected
+`@jongleberry/vurst-ai-*` platform package, so no system install is required.
+Linux packages require glibc 2.17+ (manylinux2014). Source builds can load a
+locally built addon beside the JavaScript entrypoint or set
+`NAPI_RS_NATIVE_LIBRARY_PATH`.
 
 ## `@jongleberry/vurst-html`
 

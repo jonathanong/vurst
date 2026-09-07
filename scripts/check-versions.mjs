@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 
+import { NATIVE_PACKAGES } from "./native-packages.mjs";
+
 const npmPackagePaths = [
   "package.json",
   "packages/ai/package.json",
@@ -7,6 +9,7 @@ const npmPackagePaths = [
   "packages/markdown/package.json",
   "packages/prompt/package.json",
   "packages/runtime/package.json",
+  ...NATIVE_PACKAGES.map(({ directory }) => `${directory}/package.json`),
 ];
 
 const cargoPackagePaths = [
@@ -49,6 +52,22 @@ if (mismatches.length > 0) {
     console.error(`${path}: ${version}`);
   }
   process.exit(1);
+}
+
+for (const kind of ["ai", "html", "markdown"]) {
+  const loader = await readFile(`packages/${kind}/index.js`, "utf8");
+  const loaderVersions = [
+    ...loader.matchAll(/bindingPackageVersion !== '([^']+)'/g),
+    ...loader.matchAll(/version mismatch, expected ([^ ]+) but/g),
+  ].map((match) => match[1]);
+  if (
+    loaderVersions.length === 0 ||
+    loaderVersions.some((version) => version !== expected)
+  ) {
+    throw new Error(
+      `packages/${kind}/index.js contains a native package version other than ${expected}`,
+    );
+  }
 }
 
 console.log(`All package versions are ${expected}.`);

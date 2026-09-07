@@ -38,8 +38,7 @@
     "index.d.ts",
     "streaming-buffer.js",
     "streaming-buffer.d.ts",
-    "README.md",
-    "scripts/"
+    "README.md"
   ],
   "napi": {
     "binaryName": "vurst-markdown",
@@ -52,8 +51,7 @@
   "scripts": {
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
-    "test": "node --test __test__/*.test.mjs",
-    "postinstall": "node scripts/install.js"
+    "test": "node --test __test__/*.test.mjs"
   },
   "publishConfig": {
     "access": "public",
@@ -63,7 +61,9 @@
     "@napi-rs/cli": "^3.6.2",
     "@types/node": "^24"
   },
-  "dependencies": {
-    "https-proxy-agent": "^7.0.6"
+  "optionalDependencies": {
+    "@jongleberry/vurst-markdown-darwin-arm64": "0.4.0",
+    "@jongleberry/vurst-markdown-linux-arm64-gnu": "0.4.0",
+    "@jongleberry/vurst-markdown-linux-x64-gnu": "0.4.0"
   }
 }
