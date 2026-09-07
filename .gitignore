@@ -10,5 +10,6 @@ packages/*/*.node.version
 packages/*/.vurst-native-version.tmp-*
 packages/*/*.node.tmp-*
 packages/ai/onnxruntime/
+packages/vurst-ai-*/onnxruntime/
 .DS_Store
 .jules/

@@ -9,10 +9,6 @@ importers:
   .: {}
 
   packages/ai:
-    dependencies:
-      https-proxy-agent:
-        specifier: ^7.0.6
-        version: 7.0.6
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.6.2
@@ -20,12 +16,18 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.12.4
+    optionalDependencies:
+      '@jongleberry/vurst-ai-darwin-arm64':
+        specifier: 0.4.0
+        version: link:../vurst-ai-darwin-arm64
+      '@jongleberry/vurst-ai-linux-arm64-gnu':
+        specifier: 0.4.0
+        version: link:../vurst-ai-linux-arm64-gnu
+      '@jongleberry/vurst-ai-linux-x64-gnu':
+        specifier: 0.4.0
+        version: link:../vurst-ai-linux-x64-gnu
 
   packages/html:
-    dependencies:
-      https-proxy-agent:
-        specifier: ^7.0.6
-        version: 7.0.6
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.6.2
@@ -33,12 +35,18 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.12.4
+    optionalDependencies:
+      '@jongleberry/vurst-html-darwin-arm64':
+        specifier: 0.4.0
+        version: link:../vurst-html-darwin-arm64
+      '@jongleberry/vurst-html-linux-arm64-gnu':
+        specifier: 0.4.0
+        version: link:../vurst-html-linux-arm64-gnu
+      '@jongleberry/vurst-html-linux-x64-gnu':
+        specifier: 0.4.0
+        version: link:../vurst-html-linux-x64-gnu
 
   packages/markdown:
-    dependencies:
-      https-proxy-agent:
-        specifier: ^7.0.6
-        version: 7.0.6
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.6.2
@@ -46,6 +54,16 @@ importers:
       '@types/node':
         specifier: ^24
         version: 24.12.4
+    optionalDependencies:
+      '@jongleberry/vurst-markdown-darwin-arm64':
+        specifier: 0.4.0
+        version: link:../vurst-markdown-darwin-arm64
+      '@jongleberry/vurst-markdown-linux-arm64-gnu':
+        specifier: 0.4.0
+        version: link:../vurst-markdown-linux-arm64-gnu
+      '@jongleberry/vurst-markdown-linux-x64-gnu':
+        specifier: 0.4.0
+        version: link:../vurst-markdown-linux-x64-gnu
 
   packages/prompt:
     dependencies:
@@ -54,6 +72,24 @@ importers:
         version: link:../html
 
   packages/runtime: {}
+
+  packages/vurst-ai-darwin-arm64: {}
+
+  packages/vurst-ai-linux-arm64-gnu: {}
+
+  packages/vurst-ai-linux-x64-gnu: {}
+
+  packages/vurst-html-darwin-arm64: {}
+
+  packages/vurst-html-linux-arm64-gnu: {}
+
+  packages/vurst-html-linux-x64-gnu: {}
+
+  packages/vurst-markdown-darwin-arm64: {}
+
+  packages/vurst-markdown-linux-arm64-gnu: {}
+
+  packages/vurst-markdown-linux-x64-gnu: {}
 
 packages:
 
@@ -611,10 +647,6 @@ packages:
   '@types/node@24.12.4':
     resolution: {integrity: sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA==}
 
-  agent-base@7.1.4:
-    resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
-    engines: {node: '>= 14'}
-
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
@@ -671,10 +703,6 @@ packages:
 
   fast-wrap-ansi@0.2.2:
     resolution: {integrity: sha512-7F2Fl+TjRSenLqlU3UjSH0iyqopqoZIu7eZVpEirP2g1GtWa2G/ecEmBdgz31+Mxr+ELclgg6sokpSFIQiZ02Q==}
-
-  https-proxy-agent@7.0.6:
-    resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
-    engines: {node: '>= 14'}
 
   iconv-lite@0.7.2:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
@@ -1197,8 +1225,6 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
-  agent-base@7.1.4: {}
-
   argparse@2.0.1: {}
 
   before-after-hook@4.0.0: {}
@@ -1234,13 +1260,6 @@ snapshots:
   fast-wrap-ansi@0.2.2:
     dependencies:
       fast-string-width: 3.0.2
-
-  https-proxy-agent@7.0.6:
-    dependencies:
-      agent-base: 7.1.4
-      debug: 4.4.3
-    transitivePeerDependencies:
-      - supports-color
 
   iconv-lite@0.7.2:
     dependencies:

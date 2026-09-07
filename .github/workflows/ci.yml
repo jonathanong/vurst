@@ -5,22 +5,26 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: read
-
 env:
   CARGO_TERM_COLOR: always
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     permissions:
+      contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -30,17 +34,20 @@ jobs:
         run: pnpm run check:versions
       - name: Check packed package manifests
         run: pnpm run check:packed-manifests
-      - name: Check native installer
-        run: pnpm run check:native-installer
+      - name: Check native packages
+        run: pnpm run check:native-packages
+      - name: Check npm publishing bootstrap
+        run: pnpm run check:bootstrap-npm-publishing
       - name: Check release workflow
         run: pnpm run check:release-workflow
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@d1031067263f94b142dd6c0ce24c5eb9d02d52a0 # stable
         with:
+          toolchain: stable
           components: clippy, rustfmt, llvm-tools-preview
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@84f5ac3124727fb3d284d4d22ee9ab3654fd09a6 # v2.87.7
         with:
           tool: cargo-llvm-cov,cargo-nextest
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -83,7 +90,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: coverage/lcov-html.info,coverage/lcov-markdown.info,coverage/lcov-ai.info
           fail_ci_if_error: false
@@ -91,7 +98,7 @@ jobs:
 
       - name: Install node deps (html)
         working-directory: packages/html
-        run: npm install --ignore-scripts
+        run: npm install --ignore-scripts --omit=optional
 
       - name: Build native module (html, debug)
         working-directory: packages/html
@@ -103,7 +110,7 @@ jobs:
 
       - name: Install node deps (markdown)
         working-directory: packages/markdown
-        run: npm install --ignore-scripts
+        run: npm install --ignore-scripts --omit=optional
 
       - name: Build native module (markdown, debug)
         working-directory: packages/markdown
@@ -115,7 +122,7 @@ jobs:
 
       - name: Install node deps (ai)
         working-directory: packages/ai
-        run: npm install --ignore-scripts
+        run: npm install --ignore-scripts --omit=optional
 
       - name: Build native module (ai, debug)
         working-directory: packages/ai
@@ -142,7 +149,9 @@ jobs:
   build-smoke:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 30
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -154,31 +163,34 @@ jobs:
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@d1031067263f94b142dd6c0ce24c5eb9d02d52a0 # stable
         with:
+          toolchain: stable
           targets: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           prefix-key: v1-ci-${{ matrix.target }}
 
       - name: Install node deps and build (html)
         working-directory: packages/html
         run: |
-          npm install --ignore-scripts
+          npm install --ignore-scripts --omit=optional
           npx napi build --platform --release --target ${{ matrix.target }}
 
       - name: Install node deps and build (markdown)
         working-directory: packages/markdown
         run: |
-          npm install --ignore-scripts
+          npm install --ignore-scripts --omit=optional
           npx napi build --platform --release --target ${{ matrix.target }}
 
       - name: Install node deps and build (ai)
         working-directory: packages/ai
         run: |
-          npm install --ignore-scripts
+          npm install --ignore-scripts --omit=optional
           npx napi build --platform --release --target ${{ matrix.target }}

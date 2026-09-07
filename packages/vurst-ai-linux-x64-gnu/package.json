@@ -1,0 +1,35 @@
+{
+  "name": "@jongleberry/vurst-ai-linux-x64-gnu",
+  "version": "0.4.0",
+  "description": "Native addon for @jongleberry/vurst-ai on Linux x64 with glibc",
+  "main": "index.js",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonathanong/vurst.git",
+    "directory": "packages/vurst-ai-linux-x64-gnu"
+  },
+  "files": [
+    "index.js",
+    "*.node",
+    "onnxruntime/",
+    "README.md",
+    "LICENSE"
+  ],
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "libc": [
+    "glibc"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
