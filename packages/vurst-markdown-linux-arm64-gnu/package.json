@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-markdown-linux-arm64-gnu",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Native addon for @jongleberry/vurst-markdown on Linux ARM64 with glibc",
   "main": "vurst-markdown.linux-arm64-gnu.node",
   "license": "MIT",

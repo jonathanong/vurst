@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-ai",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Rust + N-API: AI-generated text detection.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -46,8 +46,8 @@
     "@types/node": "^24"
   },
   "optionalDependencies": {
-    "@jongleberry/vurst-ai-darwin-arm64": "0.4.1",
-    "@jongleberry/vurst-ai-linux-arm64-gnu": "0.4.1",
-    "@jongleberry/vurst-ai-linux-x64-gnu": "0.4.1"
+    "@jongleberry/vurst-ai-darwin-arm64": "0.4.2",
+    "@jongleberry/vurst-ai-linux-arm64-gnu": "0.4.2",
+    "@jongleberry/vurst-ai-linux-x64-gnu": "0.4.2"
   }
 }

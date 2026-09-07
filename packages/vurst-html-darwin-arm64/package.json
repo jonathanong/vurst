@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-html-darwin-arm64",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Native addon for @jongleberry/vurst-html on macOS ARM64",
   "main": "vurst-html.darwin-arm64.node",
   "license": "MIT",
