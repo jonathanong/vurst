@@ -33,8 +33,8 @@ Prebuilt binaries ship for:
 
 `@jongleberry/vurst-html`, `@jongleberry/vurst-markdown`, and
 `@jongleberry/vurst-ai` install their native addons through platform-specific
-optional npm packages. A clean install does not run lifecycle scripts or
-download files from GitHub Releases. Optional dependencies must remain enabled
+optional npm packages. These packages do not use lifecycle scripts to download
+native addons or files from GitHub Releases. Optional dependencies must remain enabled
 so the package manager can select the package matching the current platform.
 
 The matching ONNX Runtime shared library ships inside the selected
