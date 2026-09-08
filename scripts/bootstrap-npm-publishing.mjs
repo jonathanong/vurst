@@ -68,6 +68,24 @@ export function parseOtp(argv) {
   return argv[0];
 }
 
+export function parseArguments(argv) {
+  if (argv.length < 1 || argv[0].length === 0 || argv[0].startsWith("-")) {
+    throw new Error(
+      "Usage: node scripts/bootstrap-npm-publishing.mjs <otp> [package ...]",
+    );
+  }
+  const [otp, ...requestedPackages] = argv;
+  const packageNames = requestedPackages.length
+    ? [...new Set(requestedPackages)]
+    : [...PLATFORM_PACKAGES];
+  for (const packageName of packageNames) {
+    if (!PLATFORM_PACKAGES.includes(packageName)) {
+      throw new Error(`Unknown Vurst platform package: ${packageName}`);
+    }
+  }
+  return { otp, packageNames };
+}
+
 function parseVersion(version) {
   const match = String(version).trim().match(/^(\d+)\.(\d+)(?:\.(\d+))?$/);
   if (!match) {
@@ -247,11 +265,20 @@ async function ensureTrust(run, packageName, otp, preflightStatus) {
 
 export async function bootstrap({
   otp,
+  packageNames = PLATFORM_PACKAGES,
   run = runCommand,
   temporaryRoot = tmpdir(),
 } = {}) {
   if (typeof otp !== "string" || otp.length === 0) {
     throw new Error("An OTP is required as the only positional argument");
+  }
+  if (!Array.isArray(packageNames) || packageNames.length === 0) {
+    throw new Error("At least one Vurst platform package is required");
+  }
+  for (const packageName of packageNames) {
+    if (!PLATFORM_PACKAGES.includes(packageName)) {
+      throw new Error(`Unknown Vurst platform package: ${packageName}`);
+    }
   }
 
   const versionResult = await npm(run, ["--version"], otp);
@@ -267,7 +294,7 @@ export async function bootstrap({
   const temporaryDirectories = [];
   try {
     const packageStates = [];
-    for (const packageName of PLATFORM_PACKAGES) {
+    for (const packageName of packageNames) {
       const exists = await packageExists(run, packageName, otp);
       let trustStatus;
       if (exists) {
@@ -310,7 +337,7 @@ export async function bootstrap({
 
     // A final read-only trust pass verifies every package without depending
     // on the eventually consistent public package view endpoint.
-    for (const packageName of PLATFORM_PACKAGES) {
+    for (const packageName of packageNames) {
       const status = inspectTrust(await trustList(run, packageName, otp));
       if (status !== "exact") {
         throw new Error(`Could not verify exact npm trust for ${packageName}`);
@@ -326,11 +353,11 @@ export async function bootstrap({
 }
 
 async function main() {
-  const otp = parseOtp(process.argv.slice(2));
+  const { otp, packageNames } = parseArguments(process.argv.slice(2));
   try {
-    await bootstrap({ otp });
+    await bootstrap({ otp, packageNames });
     console.log(
-      `Bootstrapped ${PLATFORM_PACKAGES.length} npm packages and verified OIDC trust.`,
+      `Bootstrapped ${packageNames.length} npm packages and verified OIDC trust.`,
     );
   } catch (error) {
     const message = redact(error?.message ?? String(error), otp);
