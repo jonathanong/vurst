@@ -6,6 +6,7 @@ import {
   bootstrap,
   inspectTrust,
   isSupportedNpmVersion,
+  parseArguments,
   parseOtp,
 } from "./bootstrap-npm-publishing.mjs";
 
@@ -100,6 +101,28 @@ test("accepts exactly one OTP and enforces npm 11.15", () => {
   assert.throws(() => isSupportedNpmVersion("11.19.0-dev"), /parse npm version/);
 });
 
+test("accepts an explicit subset of known platform packages", () => {
+  assert.deepEqual(parseArguments(["123456"]), {
+    otp: "123456",
+    packageNames: [...PLATFORM_PACKAGES],
+  });
+  assert.deepEqual(
+    parseArguments([
+      "123456",
+      "@jongleberry/vurst-ai-darwin-x64",
+      "@jongleberry/vurst-ai-darwin-x64",
+    ]),
+    {
+      otp: "123456",
+      packageNames: ["@jongleberry/vurst-ai-darwin-x64"],
+    },
+  );
+  assert.throws(
+    () => parseArguments(["123456", "@jongleberry/not-vurst"]),
+    /Unknown Vurst platform package/,
+  );
+});
+
 test("classifies exact, empty, and conflicting trust relationships", () => {
   assert.equal(inspectTrust("[]"), "empty");
   assert.equal(inspectTrust(exactTrust(PLATFORM_PACKAGES[0])), "exact");
@@ -177,6 +200,23 @@ test("skips publication and exact trust creation for existing packages", async (
   assert.equal(
     fake.calls.filter(([, args]) => args[0] === "trust" && args[1] === "list").length,
     PLATFORM_PACKAGES.length * 2,
+  );
+});
+
+test("bootstraps only explicitly selected packages", async () => {
+  const packageName = "@jongleberry/vurst-ai-darwin-x64";
+  const fake = runner();
+  await bootstrap({ otp: "123456", packageNames: [packageName], run: fake.run });
+
+  const packageCalls = fake.calls.filter(([, args]) => args.includes(packageName));
+  assert.ok(packageCalls.length > 0);
+  assert.ok(
+    fake.calls.every(
+      ([, args]) =>
+        !PLATFORM_PACKAGES.some(
+          candidate => candidate !== packageName && args.includes(candidate),
+        ),
+    ),
   );
 });
 
