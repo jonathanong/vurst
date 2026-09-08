@@ -100,8 +100,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-android-arm64')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-android-arm64/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -116,8 +116,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-android-arm-eabi')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-android-arm-eabi/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -137,8 +137,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-win32-x64-gnu')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-win32-x64-gnu/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -153,8 +153,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-win32-x64-msvc')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-win32-x64-msvc/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -170,8 +170,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-win32-ia32-msvc')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-win32-ia32-msvc/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -186,8 +186,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-win32-arm64-msvc')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-win32-arm64-msvc/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -205,8 +205,8 @@ function requireNative() {
     try {
       const binding = require('@jongleberry/vurst-ai-darwin-universal')
       const bindingPackageVersion = require('@jongleberry/vurst-ai-darwin-universal/package.json').version
-      if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-        throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+      if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+        throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
       }
       return binding
     } catch (e) {
@@ -221,8 +221,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-darwin-x64')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-darwin-x64/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -237,8 +237,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-darwin-arm64')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-darwin-arm64/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -257,8 +257,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-freebsd-x64')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-freebsd-x64/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -273,8 +273,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-freebsd-arm64')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-freebsd-arm64/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -294,8 +294,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-x64-musl')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-x64-musl/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -310,8 +310,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-x64-gnu')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-x64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -328,8 +328,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-arm64-musl')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-arm64-musl/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -344,8 +344,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-arm64-gnu')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-arm64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -362,8 +362,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-arm-musleabihf')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-arm-musleabihf/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -378,8 +378,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-arm-gnueabihf')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-arm-gnueabihf/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -396,8 +396,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-loong64-musl')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-loong64-musl/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -412,8 +412,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-loong64-gnu')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-loong64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -430,8 +430,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-riscv64-musl')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-riscv64-musl/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -446,8 +446,8 @@ function requireNative() {
         try {
           const binding = require('@jongleberry/vurst-ai-linux-riscv64-gnu')
           const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-riscv64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -463,8 +463,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-linux-ppc64-gnu')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-ppc64-gnu/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -479,8 +479,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-linux-s390x-gnu')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-linux-s390x-gnu/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -499,8 +499,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-openharmony-arm64')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-openharmony-arm64/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -515,8 +515,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-openharmony-x64')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-openharmony-x64/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -531,8 +531,8 @@ function requireNative() {
       try {
         const binding = require('@jongleberry/vurst-ai-openharmony-arm')
         const bindingPackageVersion = require('@jongleberry/vurst-ai-openharmony-arm/package.json').version
-        if (bindingPackageVersion !== '0.4.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.4.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '0.4.3' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 0.4.3 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {

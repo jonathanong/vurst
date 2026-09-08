@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-html-darwin-x64",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Native addon for @jongleberry/vurst-html on macOS x64",
   "main": "vurst-html.darwin-x64.node",
   "license": "MIT",
@@ -12,9 +12,17 @@
     "url": "git+https://github.com/jonathanong/vurst.git",
     "directory": "packages/vurst-html-darwin-x64"
   },
-  "files": ["*.node", "README.md", "LICENSE"],
-  "os": ["darwin"],
-  "cpu": ["x64"],
+  "files": [
+    "*.node",
+    "README.md",
+    "LICENSE"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
   "publishConfig": {
     "access": "public",
     "provenance": true

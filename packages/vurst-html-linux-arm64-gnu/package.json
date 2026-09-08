@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-html-linux-arm64-gnu",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Native addon for @jongleberry/vurst-html on Linux ARM64 with glibc",
   "main": "vurst-html.linux-arm64-gnu.node",
   "license": "MIT",

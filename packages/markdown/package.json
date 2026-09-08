@@ -1,6 +1,6 @@
 {
   "name": "@jongleberry/vurst-markdown",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Rust + N-API: Markdown chunking and rendering.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -63,9 +63,9 @@
     "@types/node": "^24"
   },
   "optionalDependencies": {
-    "@jongleberry/vurst-markdown-darwin-arm64": "0.4.2",
-    "@jongleberry/vurst-markdown-darwin-x64": "0.4.2",
-    "@jongleberry/vurst-markdown-linux-arm64-gnu": "0.4.2",
-    "@jongleberry/vurst-markdown-linux-x64-gnu": "0.4.2"
+    "@jongleberry/vurst-markdown-darwin-arm64": "0.4.3",
+    "@jongleberry/vurst-markdown-darwin-x64": "0.4.3",
+    "@jongleberry/vurst-markdown-linux-arm64-gnu": "0.4.3",
+    "@jongleberry/vurst-markdown-linux-x64-gnu": "0.4.3"
   }
 }
