@@ -28,6 +28,7 @@ pnpm add @jongleberry/vurst-runtime
 Prebuilt binaries ship for:
 
 - macOS arm64 (`aarch64-apple-darwin`)
+- macOS x64 (`x86_64-apple-darwin`)
 - Linux x64 glibc (`x86_64-unknown-linux-gnu`)
 - Linux arm64 glibc (`aarch64-unknown-linux-gnu`)
 

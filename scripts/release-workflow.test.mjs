@@ -17,6 +17,8 @@ describe("release workflow", () => {
     for (const workflow of [release, ci]) {
       assert.match(workflow, /pnpm run check:native-packages/);
       assert.match(workflow, /pnpm run check:bootstrap-npm-publishing/);
+      assert.match(workflow, /os: macos-15-intel/);
+      assert.match(workflow, /target: x86_64-apple-darwin/);
       assert.doesNotMatch(workflow, /check:native-installer/);
       for (const install of workflow.match(/^\s*npm install --ignore-scripts.*$/gm) ?? []) {
         assert.match(install, /--omit=optional/);
@@ -62,6 +64,8 @@ describe("release workflow", () => {
     const primaryPublishBlock = release.slice(primaryPublish);
 
     assert.match(release, /node scripts\/native-packages\.mjs sync "\$version"/);
+    assert.match(release, /ort_url_suffix: osx-x86_64/);
+    assert.match(release, /napi_suffix: darwin-x64/);
     assert.match(release, /pnpm install --lockfile-only --ignore-scripts/);
     assert.match(release, /git add pnpm-lock\.yaml/);
     assert.match(release, /node scripts\/native-packages\.mjs stage --artifacts dist/);

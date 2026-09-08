@@ -11,6 +11,7 @@ const loadErrors = []
 if (!process.env.ORT_DYLIB_PATH) {
   const dylibByPlatform = {
     'darwin-arm64': 'libonnxruntime.dylib',
+    'darwin-x64': 'libonnxruntime.dylib',
     'linux-x64': 'libonnxruntime.so',
     'linux-arm64': 'libonnxruntime.so',
   }

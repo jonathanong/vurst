@@ -149,6 +149,13 @@ jobs:
             platform_arch_key: darwin-arm64
             napi_suffix: darwin-arm64
             ort_asset_extension: .dylib
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            ort_url_suffix: osx-x86_64
+            ort_lib_name: libonnxruntime.dylib
+            platform_arch_key: darwin-x64
+            napi_suffix: darwin-x64
+            ort_asset_extension: .dylib
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             ort_url_suffix: linux-x64
@@ -299,7 +306,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for package_dir in packages/vurst-{ai,html,markdown}-{darwin-arm64,linux-arm64-gnu,linux-x64-gnu}; do
+          for package_dir in packages/vurst-{ai,html,markdown}-{darwin-arm64,darwin-x64,linux-arm64-gnu,linux-x64-gnu}; do
             npm publish "./$package_dir" --access public --dry-run
           done
 
@@ -437,7 +444,7 @@ jobs:
               exit 1
             fi
           }
-          for package_dir in packages/vurst-{ai,html,markdown}-{darwin-arm64,linux-arm64-gnu,linux-x64-gnu}; do
+          for package_dir in packages/vurst-{ai,html,markdown}-{darwin-arm64,darwin-x64,linux-arm64-gnu,linux-x64-gnu}; do
             package="$(node -p "require('./$package_dir/package.json').name")"
             publish_if_missing "$package" "$package_dir"
           done

@@ -28,6 +28,14 @@ export const NATIVE_PACKAGES = [
   },
   {
     kind: "ai",
+    platform: "darwin-x64",
+    target: "x86_64-apple-darwin",
+    extension: ".dylib",
+    os: "darwin",
+    cpu: "x64",
+  },
+  {
+    kind: "ai",
     platform: "linux-arm64-gnu",
     target: "aarch64-unknown-linux-gnu",
     extension: ".so",
@@ -53,6 +61,13 @@ export const NATIVE_PACKAGES = [
   },
   {
     kind: "html",
+    platform: "darwin-x64",
+    target: "x86_64-apple-darwin",
+    os: "darwin",
+    cpu: "x64",
+  },
+  {
+    kind: "html",
     platform: "linux-arm64-gnu",
     target: "aarch64-unknown-linux-gnu",
     os: "linux",
@@ -73,6 +88,13 @@ export const NATIVE_PACKAGES = [
     target: "aarch64-apple-darwin",
     os: "darwin",
     cpu: "arm64",
+  },
+  {
+    kind: "markdown",
+    platform: "darwin-x64",
+    target: "x86_64-apple-darwin",
+    os: "darwin",
+    cpu: "x64",
   },
   {
     kind: "markdown",
