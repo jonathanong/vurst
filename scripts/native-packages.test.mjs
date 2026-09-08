@@ -42,7 +42,7 @@ async function fixtureRoot() {
 }
 
 test("the native package matrix covers the supported targets exactly once", () => {
-  assert.equal(NATIVE_PACKAGES.length, 9);
+  assert.equal(NATIVE_PACKAGES.length, 12);
   assert.deepEqual(
     new Set(NATIVE_PACKAGES.map(({ kind }) => kind)),
     new Set(["ai", "html", "markdown"]),
@@ -52,7 +52,7 @@ test("the native package matrix covers the supported targets exactly once", () =
       NATIVE_PACKAGES.filter((entry) => entry.kind === kind).map(
         ({ platform }) => platform,
       ),
-      ["darwin-arm64", "linux-arm64-gnu", "linux-x64-gnu"],
+      ["darwin-arm64", "darwin-x64", "linux-arm64-gnu", "linux-x64-gnu"],
     );
   }
 });
@@ -112,7 +112,7 @@ test("stage copies every target artifact and each AI runtime library", async () 
       }
     }
     const staged = await stageNativePackages({ root, artifacts, version: VERSION });
-    assert.equal(staged.length, 12);
+    assert.equal(staged.length, 16);
     for (const entry of NATIVE_PACKAGES) {
       assert.equal(
         await readFile(join(root, entry.directory, entry.binary), "utf8"),
