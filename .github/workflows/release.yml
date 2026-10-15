@@ -49,7 +49,7 @@ jobs:
         run: pnpm run check:bootstrap-npm-publishing
       - name: Check release workflow
         run: pnpm run check:release-workflow
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # stable
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # stable
         with:
           toolchain: stable
           components: clippy, rustfmt
@@ -84,7 +84,7 @@ jobs:
           fetch-depth: 0
           ref: main
           token: ${{ secrets.RELEASE_TOKEN }}
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # stable
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # stable
         with:
           toolchain: stable
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -179,7 +179,7 @@ jobs:
         with:
           ref: v${{ needs.prepare.outputs.version }}
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # stable
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # stable
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
