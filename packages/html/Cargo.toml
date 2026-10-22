@@ -19,7 +19,7 @@ boilerstrip = "0.4"
 ego-tree = "0.11"
 encoding_rs = "0.8"
 entities = "1.0.1"
-html-escape = "0.2.13"
+html-escape = "0.3.0"
 napi = { version = "3", features = ["serde-json", "tokio_rt"] }
 napi-derive = "3"
 regex = "1.11"
