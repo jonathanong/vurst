@@ -18,7 +18,7 @@ comrak = { version = "0.56", default-features = false }
 ego-tree = "0.11"
 psl = "2"
 regex = "1.11"
-html-escape = "0.2.13"
+html-escape = "0.3.0"
 napi = { version = "3", features = ["serde-json", "tokio_rt"] }
 napi-derive = "3"
 scraper = "0.27"
