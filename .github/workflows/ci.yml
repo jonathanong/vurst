@@ -65,9 +65,10 @@ jobs:
           # Microsoft's PyPI wheel for the same version, pinned by sha256.
           curl -fsSL -o ort.whl https://files.pythonhosted.org/packages/ef/88/9cc25d2bafe6bc0d4d3c1db3ade98196d5b355c0b273e6a5dc09c5d5d0d5/onnxruntime-1.23.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
           echo "0f9b4ae77f8e3c9bee50c27bc1beede83f786fe1d52e99ac85aa8d65a01e9b77  ort.whl" | sha256sum -c -
-          mkdir -p onnxruntime
-          unzip -q -j ort.whl 'onnxruntime/capi/libonnxruntime.so.1.23.2' -d onnxruntime
-          echo "ORT_DYLIB_PATH=$PWD/onnxruntime/libonnxruntime.so.1.23.2" >> "$GITHUB_ENV"
+          mkdir -p onnxruntime/lib
+          unzip -q -j ort.whl 'onnxruntime/capi/libonnxruntime.so.1.23.2' -d onnxruntime/lib
+          mv onnxruntime/lib/libonnxruntime.so.1.23.2 onnxruntime/lib/libonnxruntime.so
+          echo "ORT_DYLIB_PATH=$PWD/onnxruntime/lib/libonnxruntime.so" >> "$GITHUB_ENV"
 
       - name: Run Rust tests with coverage (html)
         run: |
