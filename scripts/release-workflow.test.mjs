@@ -64,7 +64,7 @@ describe("release workflow", () => {
     const primaryPublishBlock = release.slice(primaryPublish);
 
     assert.match(release, /node scripts\/native-packages\.mjs sync "\$version"/);
-    assert.match(release, /ort_url_suffix: osx-x86_64/);
+    assert.match(release, /ort_wheel_url: .*macosx_13_0_x86_64\.whl/);
     assert.match(release, /napi_suffix: darwin-x64/);
     assert.match(release, /pnpm install --lockfile-only --ignore-scripts/);
     assert.match(release, /git add pnpm-lock\.yaml/);

@@ -19,7 +19,6 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  ONNXRUNTIME_VERSION: 1.23.2
 
 jobs:
   validate:
@@ -144,28 +143,36 @@ jobs:
         include:
           - os: macos-15
             target: aarch64-apple-darwin
-            ort_url_suffix: osx-arm64
+            ort_wheel_url: https://files.pythonhosted.org/packages/1b/9e/f748cd64161213adeef83d0cb16cb8ace1e62fa501033acdd9f9341fff57/onnxruntime-1.23.2-cp312-cp312-macosx_13_0_arm64.whl
+            ort_wheel_sha256: b8f029a6b98d3cf5be564d52802bb50a8489ab73409fa9db0bf583eabb7c2321
+            ort_wheel_lib: libonnxruntime.1.23.2.dylib
             ort_lib_name: libonnxruntime.dylib
             platform_arch_key: darwin-arm64
             napi_suffix: darwin-arm64
             ort_asset_extension: .dylib
           - os: macos-15-intel
             target: x86_64-apple-darwin
-            ort_url_suffix: osx-x86_64
+            ort_wheel_url: https://files.pythonhosted.org/packages/91/9d/a81aafd899b900101988ead7fb14974c8a58695338ab6a0f3d6b0100f30b/onnxruntime-1.23.2-cp312-cp312-macosx_13_0_x86_64.whl
+            ort_wheel_sha256: 218295a8acae83905f6f1aed8cacb8e3eb3bd7513a13fe4ba3b2664a19fc4a6b
+            ort_wheel_lib: libonnxruntime.1.23.2.dylib
             ort_lib_name: libonnxruntime.dylib
             platform_arch_key: darwin-x64
             napi_suffix: darwin-x64
             ort_asset_extension: .dylib
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            ort_url_suffix: linux-x64
+            ort_wheel_url: https://files.pythonhosted.org/packages/ef/88/9cc25d2bafe6bc0d4d3c1db3ade98196d5b355c0b273e6a5dc09c5d5d0d5/onnxruntime-1.23.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+            ort_wheel_sha256: 0f9b4ae77f8e3c9bee50c27bc1beede83f786fe1d52e99ac85aa8d65a01e9b77
+            ort_wheel_lib: libonnxruntime.so.1.23.2
             ort_lib_name: libonnxruntime.so
             platform_arch_key: linux-x64
             napi_suffix: linux-x64-gnu
             ort_asset_extension: .so
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            ort_url_suffix: linux-aarch64
+            ort_wheel_url: https://files.pythonhosted.org/packages/3c/35/4e40f2fba272a6698d62be2cd21ddc3675edfc1a4b9ddefcc4648f115315/onnxruntime-1.23.2-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
+            ort_wheel_sha256: 76ff670550dc23e58ea9bc53b5149b99a44e63b34b524f7b8547469aaa0dcb8c
+            ort_wheel_lib: libonnxruntime.so.1.23.2
             ort_lib_name: libonnxruntime.so
             platform_arch_key: linux-arm64
             napi_suffix: linux-arm64-gnu
@@ -195,10 +202,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ort_url="https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-${{ matrix.ort_url_suffix }}-${ONNXRUNTIME_VERSION}.tgz"
-          curl -fsSL -o ort.tgz "$ort_url"
-          tar -xzf ort.tgz
-          mv "onnxruntime-${{ matrix.ort_url_suffix }}-${ONNXRUNTIME_VERSION}" onnxruntime
+          # microsoft/onnxruntime GitHub releases are no longer reachable; use
+          # Microsoft's PyPI wheel for onnxruntime 1.23.2, pinned by sha256.
+          curl -fsSL -o ort.whl "${{ matrix.ort_wheel_url }}"
+          echo "${{ matrix.ort_wheel_sha256 }}  ort.whl" | shasum -a 256 -c -
+          mkdir -p onnxruntime/lib
+          unzip -q -j ort.whl "onnxruntime/capi/${{ matrix.ort_wheel_lib }}" -d onnxruntime/lib
+          mv "onnxruntime/lib/${{ matrix.ort_wheel_lib }}" "onnxruntime/lib/${{ matrix.ort_lib_name }}"
           echo "ORT_DYLIB_PATH=$PWD/onnxruntime/lib/${{ matrix.ort_lib_name }}" >> "$GITHUB_ENV"
 
       - name: Build html package
