@@ -261,7 +261,7 @@ pub async fn extract_dom_removals(
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let internal_options = options.map(std::convert::Into::into).unwrap_or_default();
+    let internal_options = options.map_or_default(std::convert::Into::into);
 
     runtime::await_blocking_result(runtime::spawn_blocking(move || {
         learn(&decoded_pages, &internal_options)
