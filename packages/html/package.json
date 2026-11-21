@@ -44,7 +44,7 @@
     "provenance": true
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.6.2",
+    "@napi-rs/cli": "^3.10.12",
     "@types/node": "^24"
   },
   "optionalDependencies": {
